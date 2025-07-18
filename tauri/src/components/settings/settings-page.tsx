@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { Copy, Check, Server, ExternalLink, Loader2 } from "lucide-react";
 
 import { Button } from "../ui/button";
@@ -9,8 +8,9 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Alert, AlertDescription } from "../ui/alert";
 
+const MCP_SERVER_URL = "http://127.0.0.1:54587";
+
 export function SettingsPage() {
-  const [mcpServerUrl, setMcpServerUrl] = useState<string>("");
   const [serverStatus, setServerStatus] = useState<"loading" | "running" | "error">("loading");
   const [copySuccess, setCopySuccess] = useState(false);
   const [error, setError] = useState<string>("");
@@ -19,28 +19,35 @@ export function SettingsPage() {
   const [lastTestTime, setLastTestTime] = useState<Date | null>(null);
 
   useEffect(() => {
-    fetchMcpServerUrl();
-    
-    // Check server status periodically
-    const interval = setInterval(fetchMcpServerUrl, 5000);
+    // Check server status on mount and periodically
+    checkServerStatus();
+    const interval = setInterval(checkServerStatus, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const fetchMcpServerUrl = async () => {
+  const checkServerStatus = async () => {
     try {
-      const url = await invoke<string>("get_archestra_mcp_server_url");
-      setMcpServerUrl(url);
-      setServerStatus("running");
-      setError("");
+      const response = await fetch(`${MCP_SERVER_URL}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000), // Shorter timeout for status checks
+      });
+      
+      if (response.ok) {
+        setServerStatus("running");
+        setError("");
+      } else {
+        setServerStatus("error");
+        setError(`Server responded with status: ${response.status}`);
+      }
     } catch (err) {
-      setError(err as string);
       setServerStatus("error");
+      setError("Server not reachable");
     }
   };
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(mcpServerUrl);
+      await navigator.clipboard.writeText(MCP_SERVER_URL);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
@@ -49,13 +56,11 @@ export function SettingsPage() {
   };
 
   const testServerConnection = async () => {
-    if (!mcpServerUrl) return;
-    
     setIsTestingConnection(true);
     setError("");
     
     try {
-      const response = await fetch(`${mcpServerUrl}/health`, {
+      const response = await fetch(`${MCP_SERVER_URL}/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +136,7 @@ export function SettingsPage() {
                   variant="outline"
                   size="sm"
                   onClick={testServerConnection}
-                  disabled={!mcpServerUrl || isTestingConnection}
+                  disabled={isTestingConnection}
                 >
                   {isTestingConnection ? (
                     <>
@@ -160,42 +165,40 @@ export function SettingsPage() {
             </Alert>
           )}
 
-          {mcpServerUrl && (
-            <div className="space-y-2">
-              <Label htmlFor="server-url">Server URL</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="server-url"
-                  value={mcpServerUrl}
-                  readOnly
-                  className="font-mono text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={copyToClipboard}
-                  className="shrink-0"
-                >
-                  {copySuccess ? (
-                    <Check className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => window.open(`${mcpServerUrl}/health`, '_blank')}
-                  className="shrink-0"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Use this URL to connect external MCP clients like Claude Desktop.
-              </p>
+          <div className="space-y-2">
+            <Label htmlFor="server-url">Server URL</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="server-url"
+                value={MCP_SERVER_URL}
+                readOnly
+                className="font-mono text-sm"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={copyToClipboard}
+                className="shrink-0"
+              >
+                {copySuccess ? (
+                  <Check className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => window.open(`${MCP_SERVER_URL}/health`, '_blank')}
+                className="shrink-0"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
             </div>
-          )}
+            <p className="text-sm text-muted-foreground">
+              Use this URL to connect external MCP clients like Claude Desktop.
+            </p>
+          </div>
 
           <div className="bg-muted p-4 rounded-lg">
             <h4 className="font-medium mb-2">Available Tools</h4>

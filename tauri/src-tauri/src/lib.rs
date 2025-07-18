@@ -120,7 +120,6 @@ pub fn run() {
             oauth::save_gmail_tokens,
             oauth::load_gmail_tokens,
             oauth::check_oauth_proxy_health,
-            archestra_mcp_server::get_archestra_mcp_server_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

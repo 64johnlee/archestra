@@ -10,11 +10,9 @@ use http_body_util::BodyExt;
 use hyper_util::rt::TokioIo;
 use hyper_util::server::conn::auto::Builder as ConnBuilder;
 use tokio::net::TcpListener;
-use crate::utils::get_free_port;
 
-// Global state for MCP server URL
-use std::sync::OnceLock;
-static MCP_SERVER_URL: OnceLock<Arc<Mutex<Option<String>>>> = OnceLock::new();
+// Fixed port for MCP server
+const MCP_SERVER_PORT: u16 = 54587;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArchestraContext {
@@ -346,16 +344,7 @@ pub async fn start_archestra_mcp_server(
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Starting Archestra MCP Server...");
     
-    // Get a free port
-    let port = get_free_port().map_err(|e| format!("Failed to get free port: {}", e))?;
-    let server_url = format!("http://127.0.0.1:{}", port);
-    
-    // Store the URL globally
-    {
-        let url_mutex = MCP_SERVER_URL.get_or_init(|| Arc::new(Mutex::new(None)));
-        let mut url_lock = url_mutex.lock().unwrap();
-        *url_lock = Some(server_url.clone());
-    }
+    let server_url = format!("http://127.0.0.1:{}", MCP_SERVER_PORT);
     
     // Register the Archestra MCP Server in the database if it doesn't exist
     if let Err(e) = register_archestra_mcp_server(&app_handle, &server_url).await {
@@ -371,7 +360,7 @@ pub async fn start_archestra_mcp_server(
     
     // Run the server in a background task
     tauri::async_runtime::spawn(async move {
-        if let Err(e) = server.run_http_server(port).await {
+        if let Err(e) = server.run_http_server(MCP_SERVER_PORT).await {
             eprintln!("Archestra MCP Server error: {}", e);
         }
         println!("Archestra MCP Server stopped");
@@ -402,16 +391,6 @@ async fn register_archestra_mcp_server(app_handle: &tauri::AppHandle, server_url
     
     println!("Archestra MCP Server registered in database with URL: {}", server_url);
     Ok(())
-}
-
-#[tauri::command]
-pub async fn get_archestra_mcp_server_url() -> Result<String, String> {
-    let url_mutex = MCP_SERVER_URL.get_or_init(|| Arc::new(Mutex::new(None)));
-    let url_lock = url_mutex.lock().unwrap();
-    match &*url_lock {
-        Some(url) => Ok(url.clone()),
-        None => Err("MCP server not started".to_string()),
-    }
 }
 
 #[cfg(test)]
