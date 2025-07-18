@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, Bot, Bug, Download } from "lucide-react";
+import { MessageCircle, Bot, Bug, Download, Power } from "lucide-react";
 
 import { useOllamaServer } from "./modules/chat/contexts/ollama-server-context";
 
@@ -40,6 +40,8 @@ function App() {
   }>({});
   const [activeTab, setActiveTab] = useState<"chat" | "mcp" | "models">("chat");
   const [debugInfo, setDebugInfo] = useState<string>("");
+  const [proxyRunning, setProxyRunning] = useState<boolean>(false);
+  const [proxyLoading, setProxyLoading] = useState<boolean>(false);
 
   const { isOllamaRunning } = useOllamaServer();
 
@@ -177,6 +179,37 @@ function App() {
     }
   }
 
+  async function checkProxyStatus() {
+    try {
+      const running = await invoke<boolean>("check_mcp_proxy_health");
+      setProxyRunning(running);
+    } catch (e) {
+      setProxyRunning(false);
+    }
+  }
+
+  useEffect(() => {
+    checkProxyStatus();
+    const interval = setInterval(checkProxyStatus, 100000000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function handleToggleProxy() {
+    setProxyLoading(true);
+    try {
+      console.log("Checking proxy status");
+      console.log({ proxyRunning });
+      if (proxyRunning) {
+        await invoke("stop_mcp_proxy");
+      } else {
+        await invoke("start_mcp_proxy");
+      }
+      setTimeout(checkProxyStatus, 1000); // Give it a moment to update
+    } finally {
+      setProxyLoading(false);
+    }
+  }
+
   console.log({ mcpServers, mcpTools });
 
   return (
@@ -210,6 +243,17 @@ function App() {
                 MCP Catalogs
               </TabsTrigger>
             </TabsList>
+
+            <Button
+              onClick={handleToggleProxy}
+              variant={proxyRunning ? "default" : "outline"}
+              className={`flex items-center gap-2 ${proxyRunning ? "bg-green-600 hover:bg-green-700" : ""}`}
+              disabled={proxyLoading}
+              title={proxyRunning ? "Stop Guardrails Proxy" : "Start MCP Proxy"}
+            >
+              <Power className={`h-4 w-4 ${proxyRunning ? "text-green-400" : "text-gray-400"}`} />
+              {proxyRunning ? "Guardrails Proxy Running" : "Start MCP Proxy"}
+            </Button>
 
             <Button onClick={debugMcpBridge} variant="outline" className="flex items-center gap-2">
               <Bug className="h-4 w-4" />
