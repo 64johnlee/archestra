@@ -53,11 +53,15 @@ pub fn run() {
             //     .map_err(|e| format!("Failed to load .env file: {}", e))?;
 
             // Initialize database
-            database::init_database(app.handle().clone())
+            database::migrate::init_database(app.handle().clone())
                 .map_err(|e| format!("Database error: {}", e))?;
 
             // Initialize Gmail OAuth proxy
             let _ = oauth::start_oauth_proxy(app.handle().clone());
+
+            // Initialize MCP bridge BEFORE starting servers that depend on it
+            let mcp_bridge = Arc::new(mcp_bridge::McpBridge::new());
+            app.manage(mcp_bridge::McpBridgeState(mcp_bridge));
 
             // Start all persisted MCP servers
             let app_handle = app.handle().clone();
@@ -67,10 +71,10 @@ pub fn run() {
                 }
             });
 
-            // Start the Archestra MCP Server
+            // Start the Archestra MCP Server (now that MCP bridge is initialized)
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = archestra_mcp_server::start_archestra_mcp_server(app_handle).await {
+                if let Err(e) = archestra_mcp_server::server::start_archestra_mcp_server(app_handle).await {
                     eprintln!("Failed to start Archestra MCP Server: {}", e);
                 }
             });
@@ -95,10 +99,6 @@ pub fn run() {
             });
             println!("Deep link handler set up successfully");
 
-            // Initialize MCP bridge
-            let mcp_bridge = Arc::new(mcp_bridge::McpBridge::new());
-            app.manage(mcp_bridge::McpBridgeState(mcp_bridge));
-
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -120,6 +120,14 @@ pub fn run() {
             oauth::save_gmail_tokens,
             oauth::load_gmail_tokens,
             oauth::check_oauth_proxy_health,
+            archestra_mcp_server::connect_cursor_client,
+            archestra_mcp_server::disconnect_cursor_client,
+            archestra_mcp_server::connect_claude_desktop_client,
+            archestra_mcp_server::disconnect_claude_desktop_client,
+            archestra_mcp_server::connect_vscode_client,
+            archestra_mcp_server::disconnect_vscode_client,
+            archestra_mcp_server::check_client_connection_status,
+            archestra_mcp_server::notify_new_mcp_tools_available,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

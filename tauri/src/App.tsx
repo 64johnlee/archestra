@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, Bot, Bug, Download, Settings, PanelLeft } from "lucide-react";
+import { MessageCircle, Bot, Bug, Download, Settings } from "lucide-react";
 
 import { useOllamaServer } from "./modules/chat/contexts/ollama-server-context";
 
