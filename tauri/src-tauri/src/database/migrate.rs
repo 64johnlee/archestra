@@ -11,7 +11,7 @@ const MIGRATIONS_SLICE: &[M<'_>] = &[
         args TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )"),
-    
+
     // Migration 2: Create client_connections table
     M::up("CREATE TABLE IF NOT EXISTS client_connections (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,7 +21,10 @@ const MIGRATIONS_SLICE: &[M<'_>] = &[
         config_path TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )")
+    )"),
+
+    // Migration 3: Add env column to mcp_servers table
+    M::up("ALTER TABLE mcp_servers ADD COLUMN env TEXT DEFAULT '{}'")
 ];
 
 const MIGRATIONS: Migrations<'_> = Migrations::from_slice(MIGRATIONS_SLICE);
@@ -31,7 +34,7 @@ pub fn init_database(app: tauri::AppHandle) -> Result<(), String> {
 
     let db_path = get_database_path(&app)?;
     println!("🗄️  Database path: {}", db_path.display());
-    
+
     let mut conn = get_database_connection_with_app(&app)
         .map_err(|e| format!("Failed to get database connection: {}", e))?;
 
@@ -70,33 +73,33 @@ mod tests {
         
         // Apply migrations
         MIGRATIONS.to_latest(&mut conn).unwrap();
-        
+
         // Verify tables were created by checking schema
         let mut stmt = conn.prepare("SELECT name FROM sqlite_master WHERE type='table'").unwrap();
         let table_names: Vec<String> = stmt.query_map([], |row| {
             Ok(row.get::<_, String>(0)?)
         }).unwrap().map(|r| r.unwrap()).collect();
-        
+
         assert!(table_names.contains(&"mcp_servers".to_string()));
         assert!(table_names.contains(&"client_connections".to_string()));
-        
+
         // Test that we can insert into the tables (basic structure validation)
         conn.execute(
             "INSERT INTO mcp_servers (name, command, args) VALUES ('test', 'echo', '[]')",
             []
         ).unwrap();
-        
+
         conn.execute(
             "INSERT INTO client_connections (client_name, is_connected) VALUES ('test_client', 0)",
             []
         ).unwrap();
-        
+
         // Verify data can be read back
         let count: i32 = conn.query_row("SELECT COUNT(*) FROM mcp_servers", [], |row| {
             row.get(0)
         }).unwrap();
         assert_eq!(count, 1);
-        
+
         let count: i32 = conn.query_row("SELECT COUNT(*) FROM client_connections", [], |row| {
             row.get(0)
         }).unwrap();
