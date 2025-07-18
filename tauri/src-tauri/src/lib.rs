@@ -12,6 +12,7 @@ pub mod mcp;
 pub mod database;
 pub mod mcp_bridge;
 pub mod oauth;
+pub mod mcp_proxy;
 pub mod node_utils;
 pub mod archestra_mcp_server;
 
@@ -69,6 +70,11 @@ pub fn run() {
                 }
             });
 
+            // Start MCP proxy automatically on app startup
+            tauri::async_runtime::spawn(async {
+                let _ = crate::mcp_proxy::start_mcp_proxy().await;
+            });
+
             // Start the Archestra MCP Server
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -101,6 +107,14 @@ pub fn run() {
             let mcp_bridge = Arc::new(mcp_bridge::McpBridge::new());
             app.manage(mcp_bridge::McpBridgeState(mcp_bridge));
 
+            // Open devtools in debug mode
+            #[cfg(debug_assertions)]
+            {
+                let _window = app.get_webview_window("main").unwrap();
+                // window.open_devtools();
+                // window.close_devtools();
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -121,6 +135,9 @@ pub fn run() {
             oauth::save_gmail_tokens,
             oauth::load_gmail_tokens,
             oauth::check_oauth_proxy_health,
+            mcp_proxy::check_mcp_proxy_health,
+            mcp_proxy::start_mcp_proxy,
+            mcp_proxy::stop_mcp_proxy,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
