@@ -15,13 +15,9 @@ import {
   Plus,
   Download,
   Trash2,
-  ChevronRight,
-  ChevronLeft,
   ChevronDown,
   Server,
   Settings,
-  ExternalLink,
-  Copy,
   CheckCircle,
   XCircle,
 } from "lucide-react";
@@ -64,29 +60,31 @@ export function MCPCatalog({
   useEffect(() => {
     checkGmailTokens();
 
-    // Listen for OAuth callback messages
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'GMAIL_AUTH_SUCCESS') {
-        handleOAuthSuccess(event.data.tokens);
-      }
+    // Listen for OAuth success events from Tauri
+    const setupEventListeners = async () => {
+      const { listen } = await import('@tauri-apps/api/event');
+
+      const unlistenOauthSuccess = await listen('oauth-success', (event: any) => {
+        if (event.payload.provider === 'gmail') {
+          handleOAuthSuccess(event.payload.tokens);
+        }
+      });
+
+      const unlistenOauthError = await listen('oauth-error', (event: any) => {
+        console.error('OAuth error:', event.payload);
+        alert(`OAuth error: ${event.payload}`);
+      });
+
+      return () => {
+        unlistenOauthSuccess();
+        unlistenOauthError();
+      };
     };
 
-    window.addEventListener('message', handleMessage);
-
-    // Check for tokens in localStorage (fallback)
-    const storedTokens = localStorage.getItem('gmail_tokens');
-    if (storedTokens) {
-      try {
-        const tokens = JSON.parse(storedTokens);
-        handleOAuthSuccess(tokens);
-        localStorage.removeItem('gmail_tokens'); // Clean up
-      } catch (error) {
-        console.error('Failed to parse stored tokens:', error);
-      }
-    }
+    const cleanupPromise = setupEventListeners();
 
     return () => {
-      window.removeEventListener('message', handleMessage);
+      cleanupPromise.then(cleanup => cleanup());
     };
   }, []);
 
@@ -101,30 +99,37 @@ export function MCPCatalog({
 
   async function handleOAuthSuccess(tokens: any) {
     try {
-      // Save tokens to backend
-      await invoke("save_gmail_tokens", { tokens });
-
       // Update local state
       setGmailTokens(tokens);
 
-      // Add MCP server to the list
+      // Add MCP server to the list with proper args
       setMcpServers((prev) => ({
         ...prev,
         "Gmail MCP Server": {
           command: "npx",
-          args: ["@gongrzhe/server-gmail-autoauth-mcp"],
+          args: [
+            "@gongrzhe/server-gmail-autoauth-mcp",
+            `--access-token=${tokens.access_token}`,
+            `--refresh-token=${tokens.refresh_token}`
+          ],
         },
       }));
 
       // Close the setup dialog
       setShowGmailSetup(false);
 
+      // Update server status (the backend already started it)
+      setMcpServerStatus((prev) => ({
+        ...prev,
+        "Gmail MCP Server": "Gmail MCP server started successfully"
+      }));
+
       // Show success message
-      alert("Gmail authentication successful! The MCP server has been configured and added to your list.");
+      alert("Gmail authentication successful! The MCP server has been configured and started.");
 
     } catch (error) {
-      console.error("Failed to save Gmail tokens:", error);
-      alert("Failed to save Gmail tokens. Please try again.");
+      console.error("Failed to handle OAuth success:", error);
+      alert("Failed to update UI after OAuth success. Please try again.");
     }
   }
 
@@ -298,7 +303,7 @@ export function MCPCatalog({
       }
 
       // Start OAuth flow
-      const authResponse = await invoke("start_gmail_auth") as { auth_url: string };
+      await invoke("start_gmail_auth") as { auth_url: string };
 
       // The browser will open automatically and handle the OAuth flow
       // The callback will save tokens and close the setup dialog

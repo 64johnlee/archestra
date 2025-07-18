@@ -9,6 +9,6 @@ if (!targetTriple) {
   console.error('Failed to determine platform target triple');
 }
 fs.renameSync(
-  `gmail-oauth-proxy${ext}`,
+  `dist/gmail-oauth-proxy${ext}`,
   `../../src-tauri/binaries/gmail-oauth-proxy-${targetTriple}${ext}`
 );

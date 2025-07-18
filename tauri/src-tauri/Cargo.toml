@@ -1,5 +1,5 @@
 [package]
-name = "archestra-app"
+name = "archestra-ai"
 version = "0.1.0"
 description = "Archestra Desktop App"
 authors = ["Archestra"]
@@ -11,11 +11,15 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "tauri_app_lib"
+name = "archestra_ai_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+
+# https://v2.tauri.app/plugin/deep-linking/#desktop
+[target."cfg(any(target_os = \"macos\", windows, target_os = \"linux\"))".dependencies]
+tauri-plugin-single-instance = { version = "2.0.0", features = ["deep-link"] }
 
 [dependencies]
 tokio = { version = "1.37", features = ["process", "io-util", "macros", "rt-multi-thread"] }
@@ -28,6 +32,5 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 uuid = { version = "1.0", features = ["v4"] }
 reqwest = { version = "0.12", features = ["json", "stream", "blocking"] }
 futures-util = "0.3"
-dotenv = "0.15"
 tauri-plugin-deep-link = "2.4.0"
 url = "2.5"

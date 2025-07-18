@@ -3,6 +3,8 @@ use tauri_plugin_opener;
 use tauri::{Manager};
 use std::sync::Arc;
 use tauri_plugin_deep_link::DeepLinkExt;
+#[cfg(desktop)]
+use tauri_plugin_single_instance;
 
 pub mod utils;
 pub mod ollama;
@@ -13,14 +15,41 @@ pub mod oauth;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    // Configure the single instance plugin which should always be the first plugin you register
+    // https://v2.tauri.app/plugin/deep-linking/#desktop
+    #[cfg(desktop)]
+    {
+        println!("Setting up single instance plugin...");
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+          println!("SINGLE INSTANCE CALLBACK: a new app instance was opened with {argv:?}");
+
+          // HANDLER 1: Single Instance Deep Link Handler
+          // This handles deep links when the app is ALREADY RUNNING and user clicks a deep link
+          // Scenario: App is open → User clicks archestra-ai://foo-bar → This prevents opening
+          // a second instance and processes the deep link in the existing app
+          for arg in argv {
+            if arg.starts_with("archestra-ai://") {
+              println!("SINGLE INSTANCE: Found deep link in argv: {}", arg);
+              let app_handle = app.clone();
+              tauri::async_runtime::spawn(async move {
+                oauth::handle_oauth_callback(app_handle, arg.to_string()).await;
+              });
+            }
+          }
+        }));
+        println!("Single instance plugin set up successfully");
+    }
+
+    builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
-            // Load .env file
-            utils::load_dotenv_file()
-                .map_err(|e| format!("Failed to load .env file: {}", e))?;
+            // // Load .env file
+            // utils::load_dotenv_file()
+            //     .map_err(|e| format!("Failed to load .env file: {}", e))?;
 
             // Initialize database
             database::init_database(app.handle().clone())
@@ -37,19 +66,25 @@ pub fn run() {
                 }
             });
 
-            // Handle OAuth callback deep links
+            // HANDLER 2: Deep Link Plugin Handler
+            // This handles deep links when the app is FIRST LAUNCHED via deep link
+            // Scenario: App is NOT running → User clicks archestra-ai://foo-bar → App starts up
+            // and this handler processes the initial deep link during startup
             // https://v2.tauri.app/plugin/deep-linking/#listening-to-deep-links
+            println!("Setting up deep link handler...");
             let app_handle = app.handle().clone();
             app.deep_link().on_open_url(move |event| {
                 let urls = event.urls();
-                println!("deep link URLs: {:?}", urls);
+                println!("DEEP LINK PLUGIN: Received URLs: {:?}", urls);
                 for url in urls {
+                    println!("DEEP LINK PLUGIN: Processing URL: {}", url);
                     let app_handle = app_handle.clone();
                     tauri::async_runtime::spawn(async move {
                         oauth::handle_oauth_callback(app_handle, url.to_string()).await;
                     });
                 }
             });
+            println!("Deep link handler set up successfully");
 
             // Initialize MCP bridge
             let mcp_bridge = Arc::new(mcp_bridge::McpBridge::new());

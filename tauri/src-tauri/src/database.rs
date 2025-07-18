@@ -8,18 +8,23 @@ pub fn get_database_connection() -> Result<Connection> {
     Ok(conn)
 }
 
+pub fn get_database_connection_with_app(app: &tauri::AppHandle) -> Result<Connection> {
+    let data_dir = app.path()
+        .app_data_dir()
+        .map_err(|e| rusqlite::Error::InvalidPath(e.to_string().into()))?;
+
+    std::fs::create_dir_all(&data_dir)
+        .map_err(|e| rusqlite::Error::InvalidPath(e.to_string().into()))?;
+
+    let db_path = data_dir.join("mcp_servers.db");
+    let conn = Connection::open(db_path)?;
+    Ok(conn)
+}
+
 pub fn init_database(app: tauri::AppHandle) -> Result<(), String> {
     println!("Initializing database...");
 
-    // Create the database if it doesn't exist
-    let data_dir = app.path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get data dir: {}", e))?;
-
-    std::fs::create_dir_all(&data_dir)
-        .map_err(|e| format!("Failed to create data dir: {}", e))?;
-
-    let conn = get_database_connection()
+    let conn = get_database_connection_with_app(&app)
         .map_err(|e| format!("Failed to get database connection: {}", e))?;
 
     conn.execute(

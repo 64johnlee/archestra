@@ -28,12 +28,12 @@ struct OllamaToolResponse {
 pub async fn start_ollama_server(app_handle: tauri::AppHandle) -> Result<u16, String> {
     use tauri_plugin_shell::process::CommandEvent;
 
-    let port = get_free_port();
+    let port = get_free_port()?;
     println!("Starting Ollama server as sidecar on port {}...", port);
 
     let sidecar_result = app_handle.shell()
         .sidecar("ollama")
-        .unwrap()
+        .map_err(|e| format!("Failed to get sidecar: {:?}", e))?
         .env("OLLAMA_HOST", format!("127.0.0.1:{}", port))
         .args(&["serve"])
         .spawn();

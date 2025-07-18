@@ -67,43 +67,15 @@
             statusDiv.innerHTML = `
                 <h3>✅ Authentication Successful!</h3>
                 <p>Your Gmail account has been successfully connected.</p>
-                <p>You can now close this window and return to your desktop application.</p>
+                <p>Redirecting to desktop application...</p>
             `;
 
-            // Try to communicate with the Tauri app
-            if (window.__TAURI__) {
-                // We're in the Tauri app, save the tokens
-                window.__TAURI__.invoke('save_gmail_tokens', {
-                    tokens: {
-                        access_token: accessToken,
-                        refresh_token: refreshToken,
-                        expiry_date: expiryDate ? parseInt(expiryDate) : null
-                    }
-                }).then(() => {
-                    console.log('Tokens saved successfully');
-                }).catch((err) => {
-                    console.error('Failed to save tokens:', err);
-                });
-            } else {
-                // We're in a browser, try to communicate via localStorage or postMessage
-                localStorage.setItem('gmail_tokens', JSON.stringify({
-                    access_token: accessToken,
-                    refresh_token: refreshToken,
-                    expiry_date: expiryDate ? parseInt(expiryDate) : null
-                }));
-
-                // Try to notify the parent window
-                if (window.opener) {
-                    window.opener.postMessage({
-                        type: 'GMAIL_AUTH_SUCCESS',
-                        tokens: {
-                            access_token: accessToken,
-                            refresh_token: refreshToken,
-                            expiry_date: expiryDate ? parseInt(expiryDate) : null
-                        }
-                    }, '*');
-                }
-            }
+            // Redirect to the Tauri app via deep-link
+            const deepLinkUrl = `archestra-ai://oauth-callback?access_token=${accessToken}&refresh_token=${refreshToken}&expiry_date=${expiryDate || ''}`;
+            
+            setTimeout(() => {
+                window.location.href = deepLinkUrl;
+            }, 1000); // Give user time to see the success message
         } else {
             statusDiv.className = 'error';
             statusDiv.innerHTML = `

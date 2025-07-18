@@ -1,5 +1,4 @@
 const express = require('express');
-const cors = require('cors');
 const { google } = require('googleapis');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -8,15 +7,8 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT;
-const TAURI_DEEP_LINK_SCHEME = 'archestra-ai://';
 
-// Middleware
-// app.use(cors({
-//   origin: [TAURI_SERVER_URL],
-//   credentials: true
-// }));
 app.use(express.json());
-app.use(express.static('public'));
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
@@ -24,9 +16,10 @@ app.use((req, res, next) => {
 
 // Load OAuth credentials
 const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  `http://localhost:${PORT}/auth/callback`
+  // TODO: remove these when deployed to GCP Cloud Run + rotate current oauth client credentials
+  '354887056155-h9pvmcfhl631cfv1vb9ndi7scfncsdbt.apps.googleusercontent.com',
+  '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',
+  `http://localhost:${PORT}/oauth-callback`
 );
 
 // Store temporary auth states (in production, use Redis or database)
@@ -84,17 +77,22 @@ app.get('/auth/gmail', (req, res) => {
 });
 
 // OAuth callback
-app.get('/auth/callback', async (req, res) => {
+app.get('/oauth-callback', async (req, res) => {
   const { code, state } = req.query;
 
+  console.log('OAuth callback received:', { code: code ? 'present' : 'missing', state: state || 'missing' });
+
   if (!code || !state) {
-    return res.status(400).send('Missing authorization code or state');
+    console.log('Missing code or state, redirecting to error');
+    return res.redirect(`/oauth-callback.html?error=${encodeURIComponent('Missing authorization code or state')}`);
   }
 
   // Verify state
   const storedState = authStates.get(state);
+
   if (!storedState) {
-    return res.status(400).send('Invalid or expired state');
+    console.log('Invalid or expired state, redirecting to error');
+    return res.redirect(`/oauth-callback.html?error=${encodeURIComponent('Invalid or expired state')}`);
   }
 
   try {
@@ -104,30 +102,29 @@ app.get('/auth/callback', async (req, res) => {
     // Clean up state
     authStates.delete(state);
 
-    // Return tokens to desktop app via Tauri protocol
-    const redirectUrl = `${TAURI_DEEP_LINK_SCHEME}/oauth-callback?access_token=${tokens.access_token}&refresh_token=${tokens.refresh_token}&expiry_date=${tokens.expiry_date}`;
+    // Redirect to the callback page with tokens
+    const redirectUrl = `/oauth-callback.html?access_token=${tokens.access_token}&refresh_token=${tokens.refresh_token}&expiry_date=${tokens.expiry_date}`;
 
     res.redirect(redirectUrl);
   } catch (error) {
     console.error('Token exchange error:', error);
-    const errorUrl = `${TAURI_DEEP_LINK_SCHEME}/oauth-callback?error=${encodeURIComponent(error.message)}`;
+    const errorUrl = `/oauth-callback.html?error=${encodeURIComponent(error.message)}`;
     res.redirect(errorUrl);
   }
 });
 
 // Health check
 app.get('/health', (req, res) => {
-  console.log('Health check requested');
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Serve static files
+app.use(express.static('public'));
 
 // Start server
 app.listen(PORT, () => {
   console.log(`OAuth proxy server running on port ${PORT}`);
   console.log(`Auth URL: http://localhost:${PORT}/auth/gmail`);
   console.log(`Health check URL: http://localhost:${PORT}/health`);
-  console.log('Environment variables:');
-  console.log('- PORT:', process.env.PORT);
-  console.log('- GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not set');
-  console.log('- GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Not set');
+  console.log(`Callback URL: http://localhost:${PORT}/oauth-callback`);
 });
