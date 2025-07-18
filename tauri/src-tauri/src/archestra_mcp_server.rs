@@ -2,8 +2,19 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use tokio::io::{stdin, stdout, AsyncBufReadExt, AsyncWriteExt, BufReader};
+use std::net::SocketAddr;
 use uuid::Uuid;
+use hyper::service::service_fn;
+use hyper::{body::Incoming, Request, Response, Method, StatusCode};
+use http_body_util::BodyExt;
+use hyper_util::rt::TokioIo;
+use hyper_util::server::conn::auto::Builder as ConnBuilder;
+use tokio::net::TcpListener;
+use crate::utils::get_free_port;
+
+// Global state for MCP server URL
+use std::sync::OnceLock;
+static MCP_SERVER_URL: OnceLock<Arc<Mutex<Option<String>>>> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArchestraContext {
@@ -223,45 +234,110 @@ impl ArchestraServer {
         }))
     }
 
-    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut stdin = BufReader::new(stdin());
-        let mut stdout = stdout();
-        let mut line = String::new();
+    pub async fn run_http_server(&self, port: u16) -> Result<(), Box<dyn std::error::Error>> {
+        let addr = SocketAddr::from(([127, 0, 0, 1], port));
+        let listener = TcpListener::bind(addr).await?;
+        println!("Archestra MCP Server listening on http://{}", addr);
 
         loop {
-            line.clear();
-            let bytes_read = stdin.read_line(&mut line).await?;
-            
-            if bytes_read == 0 {
-                break; // EOF
-            }
+            let (stream, _) = listener.accept().await?;
+            let server = self.clone();
 
-            let line = line.trim();
-            if line.is_empty() {
-                continue;
-            }
+            tokio::spawn(async move {
+                let io = TokioIo::new(stream);
+                let conn_builder = ConnBuilder::new(hyper_util::rt::TokioExecutor::new());
 
-            match serde_json::from_str::<Value>(line) {
-                Ok(request) => {
-                    match self.handle_mcp_request(request).await {
-                        Ok(response) => {
-                            let response_str = serde_json::to_string(&response)?;
-                            stdout.write_all(response_str.as_bytes()).await?;
-                            stdout.write_all(b"\n").await?;
-                            stdout.flush().await?;
-                        }
-                        Err(err) => {
-                            eprintln!("Error handling request: {}", err);
-                        }
+                if let Err(e) = conn_builder.serve_connection(io, service_fn(move |req| {
+                    let server = server.clone();
+                    async move {
+                        server.handle_http_request(req).await
+                    }
+                })).await {
+                    eprintln!("Connection error: {}", e);
+                }
+            });
+        }
+    }
+
+    async fn handle_http_request(&self, req: Request<Incoming>) -> Result<Response<String>, hyper::Error> {
+        // Log the incoming request
+        println!("MCP Server: {} {} from {}", 
+            req.method(), 
+            req.uri().path(), 
+            req.headers().get("user-agent").and_then(|v| v.to_str().ok()).unwrap_or("unknown")
+        );
+
+        // Set CORS headers
+        let mut response = Response::builder();
+        response = response.header("Access-Control-Allow-Origin", "*");
+        response = response.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        response = response.header("Access-Control-Allow-Headers", "Content-Type");
+
+        match (req.method(), req.uri().path()) {
+            (&Method::OPTIONS, _) => {
+                Ok(response.status(StatusCode::OK).body(String::new()).unwrap())
+            }
+            (&Method::POST, "/mcp") => {
+                let body_bytes = match req.into_body().collect().await {
+                    Ok(collected) => collected.to_bytes(),
+                    Err(_) => {
+                        return Ok(response
+                            .status(StatusCode::BAD_REQUEST)
+                            .body("Failed to read request body".to_string()).unwrap());
+                    }
+                };
+
+                let request_json: Value = match serde_json::from_slice(&body_bytes) {
+                    Ok(json) => json,
+                    Err(_) => {
+                        return Ok(response
+                            .status(StatusCode::BAD_REQUEST)
+                            .body("Invalid JSON".to_string()).unwrap());
+                    }
+                };
+
+                // Log the MCP request details
+                if let Some(method) = request_json.get("method") {
+                    println!("MCP Request: {} (id: {})", 
+                        method.as_str().unwrap_or("unknown"), 
+                        request_json.get("id").and_then(|v| v.as_i64()).unwrap_or(0)
+                    );
+                }
+
+                match self.handle_mcp_request(request_json).await {
+                    Ok(response_json) => {
+                        let response_str = serde_json::to_string(&response_json).unwrap();
+                        Ok(response
+                            .status(StatusCode::OK)
+                            .header("Content-Type", "application/json")
+                            .body(response_str).unwrap())
+                    }
+                    Err(err) => {
+                        let error_response = serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "error": {
+                                "code": -32603,
+                                "message": err
+                            }
+                        });
+                        Ok(response
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .header("Content-Type", "application/json")
+                            .body(serde_json::to_string(&error_response).unwrap()).unwrap())
                     }
                 }
-                Err(err) => {
-                    eprintln!("Error parsing JSON: {}", err);
-                }
+            }
+            (&Method::GET, "/health") => {
+                Ok(response
+                    .status(StatusCode::OK)
+                    .body("OK".to_string()).unwrap())
+            }
+            _ => {
+                Ok(response
+                    .status(StatusCode::NOT_FOUND)
+                    .body("Not Found".to_string()).unwrap())
             }
         }
-
-        Ok(())
     }
 }
 
@@ -270,8 +346,19 @@ pub async fn start_archestra_mcp_server(
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Starting Archestra MCP Server...");
     
+    // Get a free port
+    let port = get_free_port().map_err(|e| format!("Failed to get free port: {}", e))?;
+    let server_url = format!("http://127.0.0.1:{}", port);
+    
+    // Store the URL globally
+    {
+        let url_mutex = MCP_SERVER_URL.get_or_init(|| Arc::new(Mutex::new(None)));
+        let mut url_lock = url_mutex.lock().unwrap();
+        *url_lock = Some(server_url.clone());
+    }
+    
     // Register the Archestra MCP Server in the database if it doesn't exist
-    if let Err(e) = register_archestra_mcp_server(&app_handle).await {
+    if let Err(e) = register_archestra_mcp_server(&app_handle, &server_url).await {
         eprintln!("Failed to register Archestra MCP Server: {}", e);
     }
     
@@ -284,17 +371,17 @@ pub async fn start_archestra_mcp_server(
     
     // Run the server in a background task
     tauri::async_runtime::spawn(async move {
-        if let Err(e) = server.run().await {
+        if let Err(e) = server.run_http_server(port).await {
             eprintln!("Archestra MCP Server error: {}", e);
         }
         println!("Archestra MCP Server stopped");
     });
     
-    println!("Archestra MCP Server started successfully");
+    println!("Archestra MCP Server started successfully on {}", server_url);
     Ok(())
 }
 
-async fn register_archestra_mcp_server(app_handle: &tauri::AppHandle) -> Result<(), String> {
+async fn register_archestra_mcp_server(app_handle: &tauri::AppHandle, server_url: &str) -> Result<(), String> {
     use crate::database::get_database_connection_with_app;
     
     let conn = get_database_connection_with_app(app_handle)
@@ -302,8 +389,8 @@ async fn register_archestra_mcp_server(app_handle: &tauri::AppHandle) -> Result<
     
     // Create the server configuration
     let server_name = "archestra-mcp-server";
-    let command = "archestra-mcp-server"; // This would be the executable path
-    let args = vec!["--user", "archestra_user"];
+    let command = server_url; // Use the HTTP URL as the command
+    let args = vec!["--http"];
     let args_json = serde_json::to_string(&args)
         .map_err(|e| format!("Failed to serialize args: {}", e))?;
     
@@ -313,8 +400,18 @@ async fn register_archestra_mcp_server(app_handle: &tauri::AppHandle) -> Result<
         [server_name, command, &args_json],
     ).map_err(|e| format!("Failed to register MCP server: {}", e))?;
     
-    println!("Archestra MCP Server registered in database");
+    println!("Archestra MCP Server registered in database with URL: {}", server_url);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_archestra_mcp_server_url() -> Result<String, String> {
+    let url_mutex = MCP_SERVER_URL.get_or_init(|| Arc::new(Mutex::new(None)));
+    let url_lock = url_mutex.lock().unwrap();
+    match &*url_lock {
+        Some(url) => Ok(url.clone()),
+        None => Err("MCP server not started".to_string()),
+    }
 }
 
 #[cfg(test)]
