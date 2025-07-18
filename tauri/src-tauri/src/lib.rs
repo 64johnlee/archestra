@@ -13,6 +13,9 @@ pub mod database;
 pub mod mcp_bridge;
 pub mod oauth;
 pub mod mcp_proxy;
+pub mod node_utils;
+pub mod archestra_mcp_server;
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -72,6 +75,14 @@ pub fn run() {
                 let _ = crate::mcp_proxy::start_mcp_proxy().await;
             });
 
+            // Start the Archestra MCP Server
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = archestra_mcp_server::start_archestra_mcp_server(app_handle).await {
+                    eprintln!("Failed to start Archestra MCP Server: {}", e);
+                }
+            });
+
             // HANDLER 2: Deep Link Plugin Handler
             // This handles deep links when the app is FIRST LAUNCHED via deep link
             // Scenario: App is NOT running → User clicks archestra-ai://foo-bar → App starts up
@@ -111,7 +122,6 @@ pub fn run() {
             ollama::stop_ollama_server,
             ollama::ollama_chat_with_tools,
             ollama::ollama_chat_with_tools_streaming,
-            mcp::run_mcp_server_in_sandbox,
             mcp::save_mcp_server,
             mcp::load_mcp_servers,
             mcp::delete_mcp_server,
