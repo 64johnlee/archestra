@@ -1,12 +1,10 @@
 use axum::{
-    routing::{any, post},
+    routing::any,
     Router,
-    extract::{Extension, Json, Path},
+    extract::{Extension, OriginalUri},
     http::{HeaderMap, StatusCode, Method},
     response::IntoResponse,
-    extract::OriginalUri,
 };
-use serde_json::Value;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tauri::command;
@@ -14,7 +12,10 @@ use tokio::net::TcpStream;
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
 use tokio::task::JoinHandle;
-use axum::body::{Body, to_bytes};
+use axum::body::Body;
+use futures_util::StreamExt;
+use async_stream::stream;
+use bytes::Bytes;
 
 static MCP_PROXY_HANDLE: Lazy<Mutex<Option<JoinHandle<()>>>> = Lazy::new(|| Mutex::new(None));
 
@@ -29,42 +30,62 @@ async fn proxy_handler(
     OriginalUri(uri): OriginalUri,
     body: Body,
 ) -> impl IntoResponse {
-    // Read the body as bytes (limit to 2MB)
-    let body_bytes = to_bytes(body, 2 * 1024 * 1024).await.unwrap_or_default();
+    // Create a stream of Bytes from the body
+    let mut first = true;
+    let req_stream = stream! {
+        let mut stream = body.into_data_stream();
+        while let Some(chunk_result) = stream.next().await {
+            match chunk_result {
+                Ok(chunk) => {
+                    if first {
+                        match std::str::from_utf8(&chunk) {
+                            Ok(s) => println!("[MCP Proxy] Body (utf8, first chunk): {}", s),
+                            Err(_) => println!("[MCP Proxy] Body (hex, first chunk): {}", hex::encode(&chunk)),
+                        }
+                        first = false;
+                    }
+                    yield Ok::<Bytes, std::io::Error>(chunk);
+                }
+                Err(e) => {
+                    yield Err(std::io::Error::new(std::io::ErrorKind::Other, e));
+                    break;
+                }
+            }
+        }
+    };
+    let reqwest_body = reqwest::Body::wrap_stream(req_stream);
     println!("[MCP Proxy] {} {}", method, uri.path());
     println!("[MCP Proxy] Headers:");
     for (name, value) in headers.iter() {
         println!("  {}: {:?}", name, value);
     }
-    // Print body as string if valid UTF-8, else as hex
-    match std::str::from_utf8(&body_bytes) {
-        Ok(s) => println!("[MCP Proxy] Body (utf8): {}", s),
-        Err(_) => println!("[MCP Proxy] Body (hex): {}", hex::encode(&body_bytes)),
-    }
     // Build client request
     let client = reqwest::Client::new();
     let mut req_builder = client
         .request(method.clone(), format!("{}{}", config.backend_url, uri.path()))
-        .body(body_bytes.clone());
-
+        .body(reqwest_body);
     // Forward headers, except for 'host' and 'content-length'
     for (name, value) in headers.iter() {
         if name != "host" && name != "content-length" {
             req_builder = req_builder.header(name, value);
         }
     }
-
     let req = req_builder;
-
     match req.send().await {
         Ok(resp) => {
             let status = StatusCode::from_u16(resp.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
-            let body = axum::body::Body::from(resp.bytes().await.unwrap_or_default());
-            (status, body)
+            let mut resp_headers = HeaderMap::new();
+            for (k, v) in resp.headers().iter() {
+                resp_headers.insert(k, v.clone());
+            }
+            let stream = resp.bytes_stream().map(|chunk| chunk.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
+            let body = Body::from_stream(stream);
+            (status, resp_headers, body)
         }
         Err(e) => (
             StatusCode::BAD_GATEWAY,
-            axum::body::Body::from(format!("Proxy error: {}", e)),
+            HeaderMap::new(),
+            Body::from(format!("Proxy error: {}", e)),
         ),
     }
 }
