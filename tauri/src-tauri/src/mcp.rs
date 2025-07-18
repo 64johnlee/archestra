@@ -1,9 +1,12 @@
 use crate::database::connection::get_database_connection_with_app;
+use std::collections::HashMap;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct McpServerDefinition {
     pub command: String,
     pub args: Vec<String>,
+    #[serde(default)]
+    pub env: HashMap<String, String>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -12,74 +15,16 @@ pub struct McpServersConfig {
 }
 
 #[tauri::command]
-pub async fn run_mcp_server_in_sandbox(
-    _app: tauri::AppHandle,
-    server_name: String,
-    config: McpServerDefinition,
-) -> Result<String, String> {
-    use std::process::Stdio;
-    use tokio::io::{AsyncBufReadExt, BufReader};
-    use tokio::process::Command as TokioCommand;
-
-    println!("Starting MCP server '{}' in sandbox", server_name);
-
-    // Build the command with all arguments
-    let mut child = TokioCommand::new("sandbox-exec")
-        .arg("-f").arg("./sandbox-exec-profiles/mcp-server-everything-for-now.sb")
-        .arg(&config.command)
-        .args(&config.args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("Failed to spawn sandboxed MCP server: {}", e))?;
-
-    println!("MCP server '{}' started in sandbox!", server_name);
-
-    // Handle stdout
-    if let Some(stdout) = child.stdout.take() {
-        let mut reader = BufReader::new(stdout).lines();
-        let server_name_clone = server_name.clone();
-        tauri::async_runtime::spawn(async move {
-            while let Ok(Some(line)) = reader.next_line().await {
-                print!("[MCP Server '{}' stdout] {}\n", server_name_clone, line);
-            }
-        });
-    }
-
-    // Handle stderr
-    if let Some(stderr) = child.stderr.take() {
-        let mut reader = BufReader::new(stderr).lines();
-        let server_name_clone = server_name.clone();
-        tauri::async_runtime::spawn(async move {
-            while let Ok(Some(line)) = reader.next_line().await {
-                eprint!("[MCP Server '{}' stderr] {}\n", server_name_clone, line);
-            }
-        });
-    }
-
-    // Wait for the process to complete
-    match child.wait().await {
-        Ok(status) => {
-            if status.success() {
-                Ok(format!("MCP server '{}' completed successfully", server_name))
-            } else {
-                Ok(format!("MCP server '{}' exited with status: {:?}", server_name, status))
-            }
-        }
-        Err(e) => Err(format!("MCP server failed: {}", e))
-    }
-}
-
-
-#[tauri::command]
-pub async fn save_mcp_server(app: tauri::AppHandle, name: String, command: String, args: Vec<String>) -> Result<(), String> {
+pub async fn save_mcp_server(app: tauri::AppHandle, name: String, command: String, args: Vec<String>, env: HashMap<String, String>) -> Result<(), String> {
+    use crate::database::get_database_connection_with_app;
     let conn = get_database_connection_with_app(&app).map_err(|e| format!("Failed to get database connection: {}", e))?;
 
     let args_json = serde_json::to_string(&args).map_err(|e| format!("Failed to serialize args: {}", e))?;
+    let env_json = serde_json::to_string(&env).map_err(|e| format!("Failed to serialize env: {}", e))?;
 
     conn.execute(
-        "INSERT OR REPLACE INTO mcp_servers (name, command, args) VALUES (?1, ?2, ?3)",
-        [&name, &command, &args_json],
+        "INSERT OR REPLACE INTO mcp_servers (name, command, args, env) VALUES (?1, ?2, ?3, ?4)",
+        [&name, &command, &args_json, &env_json],
     ).map_err(|e| format!("Failed to save MCP server: {}", e))?;
 
     Ok(())
@@ -89,15 +34,47 @@ pub async fn save_mcp_server(app: tauri::AppHandle, name: String, command: Strin
 pub async fn load_mcp_servers(app: tauri::AppHandle) -> Result<std::collections::HashMap<String, McpServerDefinition>, String> {
     let conn = get_database_connection_with_app(&app).map_err(|e| format!("Failed to get database connection: {}", e))?;
 
-    let mut stmt = conn.prepare("SELECT name, command, args FROM mcp_servers").map_err(|e| format!("Failed to prepare statement: {}", e))?;
+    // Check if env column exists by querying table info
+    let mut has_env_column = false;
+    let mut stmt = conn.prepare("PRAGMA table_info(mcp_servers)").map_err(|e| format!("Failed to check table info: {}", e))?;
+    let rows = stmt.query_map([], |row| {
+        let column_name: String = row.get(1)?;
+        Ok(column_name)
+    }).map_err(|e| format!("Failed to query table info: {}", e))?;
+
+    for row in rows {
+        if let Ok(column_name) = row {
+            if column_name == "env" {
+                has_env_column = true;
+                break;
+            }
+        }
+    }
+
+    // Query with or without env column based on schema
+    let query = if has_env_column {
+        "SELECT name, command, args, env FROM mcp_servers"
+    } else {
+        "SELECT name, command, args FROM mcp_servers"
+    };
+
+    let mut stmt = conn.prepare(query).map_err(|e| format!("Failed to prepare statement: {}", e))?;
     let rows = stmt.query_map([], |row| {
         let args_json: String = row.get(2)?;
         let args: Vec<String> = serde_json::from_str(&args_json).map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?;
+
+        let env_json: Option<String> = row.get(3).unwrap_or(None);
+        match env_json {
+            Some(json) => serde_json::from_str(&json).unwrap_or_default(),
+            None => HashMap::new(),
+        }
+        
         Ok((
             row.get::<_, String>(0)?,
             McpServerDefinition {
                 command: row.get(1)?,
                 args,
+                env,
             }
         ))
     }).map_err(|e| format!("Failed to query MCP servers: {}", e))?;
@@ -151,14 +128,20 @@ pub async fn start_all_mcp_servers(app: tauri::AppHandle) -> Result<(), String> 
 
     println!("Found {} MCP servers to start", servers.len());
 
-    // Start each server in the background
+    // Start each server using the new MCP bridge
     for (server_name, config) in servers {
         let app_clone = app.clone();
 
         tauri::async_runtime::spawn(async move {
-            match run_mcp_server_in_sandbox(app_clone, server_name, config).await {
-                Ok(result) => println!("MCP server started successfully: {}", result),
-                Err(e) => eprintln!("Failed to start MCP server: {}", e),
+            match crate::mcp_bridge::start_persistent_mcp_server(
+                app_clone,
+                server_name.clone(),
+                config.command,
+                config.args,
+                Some(config.env)
+            ).await {
+                Ok(_) => println!("MCP server '{}' started successfully", server_name),
+                Err(e) => eprintln!("Failed to start MCP server '{}': {}", server_name, e),
             }
         });
     }

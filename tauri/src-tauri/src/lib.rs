@@ -12,7 +12,10 @@ pub mod mcp;
 pub mod database;
 pub mod mcp_bridge;
 pub mod oauth;
+pub mod mcp_proxy;
+pub mod node_utils;
 pub mod archestra_mcp_server;
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -71,6 +74,11 @@ pub fn run() {
                 }
             });
 
+            // Start MCP proxy automatically on app startup
+            tauri::async_runtime::spawn(async {
+                let _ = crate::mcp_proxy::start_mcp_proxy().await;
+            });
+
             // Start the Archestra MCP Server (now that MCP bridge is initialized)
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -99,6 +107,14 @@ pub fn run() {
             });
             println!("Deep link handler set up successfully");
 
+            // Open devtools in debug mode
+            #[cfg(debug_assertions)]
+            {
+                let _window = app.get_webview_window("main").unwrap();
+                // window.open_devtools();
+                // window.close_devtools();
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -106,7 +122,6 @@ pub fn run() {
             ollama::stop_ollama_server,
             ollama::ollama_chat_with_tools,
             ollama::ollama_chat_with_tools_streaming,
-            mcp::run_mcp_server_in_sandbox,
             mcp::save_mcp_server,
             mcp::load_mcp_servers,
             mcp::delete_mcp_server,
@@ -128,6 +143,9 @@ pub fn run() {
             archestra_mcp_server::disconnect_vscode_client,
             archestra_mcp_server::check_client_connection_status,
             archestra_mcp_server::notify_new_mcp_tools_available,
+            mcp_proxy::check_mcp_proxy_health,
+            mcp_proxy::start_mcp_proxy,
+            mcp_proxy::stop_mcp_proxy,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
