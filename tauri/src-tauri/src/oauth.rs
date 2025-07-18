@@ -5,6 +5,7 @@ use tauri_plugin_shell::process::CommandEvent;
 use crate::utils::get_free_port;
 use tauri_plugin_opener::OpenerExt;
 use tauri::Emitter;
+use crate::database::connection::get_database_connection_with_app;
 
 // Global state for OAuth proxy
 static OAUTH_PROXY_PORT: OnceLock<u16> = OnceLock::new();
@@ -48,8 +49,6 @@ pub async fn start_gmail_auth(app: tauri::AppHandle) -> Result<AuthResponse, Str
 
 #[tauri::command]
 pub fn save_gmail_tokens(app: tauri::AppHandle, tokens: GmailTokens) -> Result<(), String> {
-    use crate::database::get_database_connection_with_app;
-
     let conn = get_database_connection_with_app(&app).map_err(|e| format!("Failed to get database connection: {}", e))?;
 
     // Save tokens as JSON in the args field of the MCP server record
@@ -66,7 +65,7 @@ pub fn save_gmail_tokens(app: tauri::AppHandle, tokens: GmailTokens) -> Result<(
 }
 
 pub fn save_gmail_tokens_to_db(app: tauri::AppHandle, tokens: GmailTokens) -> Result<(), String> {
-    use crate::database::get_database_connection_with_app;
+    use crate::database::connection::get_database_connection_with_app;
 
     let conn = get_database_connection_with_app(&app)
         .map_err(|e| format!("Failed to get database connection: {}", e))?;
@@ -91,8 +90,6 @@ pub fn save_gmail_tokens_to_db(app: tauri::AppHandle, tokens: GmailTokens) -> Re
 
 #[tauri::command]
 pub fn load_gmail_tokens(app: tauri::AppHandle) -> Result<Option<GmailTokens>, String> {
-    use crate::database::get_database_connection_with_app;
-
     let conn = get_database_connection_with_app(&app).map_err(|e| format!("Failed to get database connection: {}", e))?;
 
     // Query for Gmail MCP server tokens
