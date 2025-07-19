@@ -1,5 +1,5 @@
 use sea_orm::entity::prelude::*;
-use sea_orm::{Set, DeleteResult};
+use sea_orm::{DeleteResult, Set};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -13,9 +13,8 @@ pub struct Model {
     pub id: i32,
     #[sea_orm(unique)]
     pub name: String,
-    pub command: String,
-    pub args: String, // JSON string containing Vec<String>
-    pub env: String, // JSON string containing HashMap<String, String>
+    pub server_config: String, // JSON string containing ServerConfig
+    pub meta: Option<String>, // JSON string containing additional metadata
     pub created_at: DateTimeUtc,
 }
 
@@ -25,47 +24,100 @@ pub enum Relation {}
 impl ActiveModelBehavior for ActiveModel {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct McpServerDefinition {
-    pub name: String,
+pub struct ServerConfig {
+    pub transport: String, // "stdio" or "http"
     pub command: String,
     pub args: Vec<String>,
     pub env: HashMap<String, String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpServerDefinition {
+    pub name: String,
+    pub server_config: ServerConfig,
+    pub meta: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConnectorCatalogEntry {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub image: Option<String>,
+    pub category: String,
+    pub tags: Vec<String>,
+    pub author: String,
+    pub version: String,
+    pub homepage: String,
+    pub repository: String,
+    pub server_config: ServerConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConnectorCatalog {
+    pub connectors: Vec<ConnectorCatalogEntry>,
+}
+
 impl Model {
-    /// Save an MCP server definition to the database
-    pub async fn save_server(
+    /// Save an MCP server definition to the database (without starting it)
+    pub async fn save_server_without_lifecycle(
         db: &DatabaseConnection,
         definition: &McpServerDefinition,
     ) -> Result<Model, DbErr> {
-        let args_json = serde_json::to_string(&definition.args)
-            .map_err(|e| DbErr::Custom(format!("Failed to serialize args: {}", e)))?;
-        
-        let env_json = serde_json::to_string(&definition.env)
-            .map_err(|e| DbErr::Custom(format!("Failed to serialize env: {}", e)))?;
+        let server_config_json = serde_json::to_string(&definition.server_config)
+            .map_err(|e| DbErr::Custom(format!("Failed to serialize server_config: {}", e)))?;
+
+        let meta_json = if let Some(meta) = &definition.meta {
+            Some(serde_json::to_string(meta)
+                .map_err(|e| DbErr::Custom(format!("Failed to serialize meta: {}", e)))?)
+        } else {
+            None
+        };
 
         let active_model = ActiveModel {
             name: Set(definition.name.clone()),
-            command: Set(definition.command.clone()),
-            args: Set(args_json),
-            env: Set(env_json),
+            server_config: Set(server_config_json),
+            meta: Set(meta_json),
             created_at: Set(chrono::Utc::now()),
             ..Default::default()
         };
 
         // Use on_conflict to handle upsert by name
-        let result = Entity::insert(active_model)
+        Entity::insert(active_model)
             .on_conflict(
                 sea_orm::sea_query::OnConflict::column(Column::Name)
-                    .update_columns([
-                        Column::Command,
-                        Column::Args,
-                        Column::Env,
-                    ])
+                    .update_columns([Column::ServerConfig, Column::Meta])
                     .to_owned(),
             )
             .exec_with_returning(db)
-            .await?;
+            .await
+    }
+
+    /// Save an MCP server definition to the database and start it
+    pub async fn save_server(
+        db: &DatabaseConnection,
+        app_handle: &tauri::AppHandle,
+        definition: &McpServerDefinition,
+    ) -> Result<Model, DbErr> {
+        // Check if server exists to determine if this is an update
+        let existing_server = Self::find_by_name(db, &definition.name).await?;
+        let is_update = existing_server.is_some();
+        
+        // If updating, stop the existing server first
+        if is_update {
+            if let Err(e) = sandbox::stop_mcp_server(app_handle, &definition.name).await {
+                eprintln!("Warning: Failed to stop server before update: {}", e);
+            }
+        }
+        
+        // Save to database
+        let result = Self::save_server_without_lifecycle(db, definition).await?;
+
+        // Start the server after saving
+        if let Err(e) = sandbox::start_mcp_server(app_handle, definition).await {
+            eprintln!("Warning: Failed to start server after save: {}", e);
+            // Don't fail the save operation, but log the error
+        }
 
         Ok(result)
     }
@@ -78,17 +130,29 @@ impl Model {
         let mut servers = HashMap::new();
 
         for model in models {
-            let args: Vec<String> = serde_json::from_str(&model.args)
-                .map_err(|e| DbErr::Custom(format!("Failed to parse args for {}: {}", model.name, e)))?;
-            
-            let env: HashMap<String, String> = serde_json::from_str(&model.env)
-                .map_err(|e| DbErr::Custom(format!("Failed to parse env for {}: {}", model.name, e)))?;
+            let server_config: ServerConfig =
+                serde_json::from_str(&model.server_config).map_err(|e| {
+                    DbErr::Custom(format!(
+                        "Failed to parse server_config for {}: {}",
+                        model.name, e
+                    ))
+                })?;
+
+            let meta = if let Some(meta_json) = &model.meta {
+                Some(serde_json::from_str(meta_json).map_err(|e| {
+                    DbErr::Custom(format!(
+                        "Failed to parse meta for {}: {}",
+                        model.name, e
+                    ))
+                })?)
+            } else {
+                None
+            };
 
             let definition = McpServerDefinition {
                 name: model.name.clone(),
-                command: model.command,
-                args,
-                env,
+                server_config,
+                meta,
             };
 
             servers.insert(model.name, definition);
@@ -97,8 +161,17 @@ impl Model {
         Ok(servers)
     }
 
-    /// Delete an MCP server by name
-    pub async fn delete_by_name(db: &DatabaseConnection, server_name: &str) -> Result<DeleteResult, DbErr> {
+    /// Delete an MCP server by name and stop it
+    pub async fn delete_by_name(
+        db: &DatabaseConnection,
+        app_handle: &tauri::AppHandle,
+        server_name: &str,
+    ) -> Result<DeleteResult, DbErr> {
+        // Stop the server before deleting
+        if let Err(e) = sandbox::stop_mcp_server(app_handle, server_name).await {
+            eprintln!("Warning: Failed to stop server before deletion: {}", e);
+        }
+        
         Entity::delete_many()
             .filter(Column::Name.eq(server_name))
             .exec(db)
@@ -116,17 +189,20 @@ impl Model {
             .await?;
 
         if let Some(model) = model {
-            let args: Vec<String> = serde_json::from_str(&model.args)
-                .map_err(|e| DbErr::Custom(format!("Failed to parse args: {}", e)))?;
-            
-            let env: HashMap<String, String> = serde_json::from_str(&model.env)
-                .map_err(|e| DbErr::Custom(format!("Failed to parse env: {}", e)))?;
+            let server_config: ServerConfig = serde_json::from_str(&model.server_config)
+                .map_err(|e| DbErr::Custom(format!("Failed to parse server_config: {}", e)))?;
+
+            let meta = if let Some(meta_json) = &model.meta {
+                Some(serde_json::from_str(meta_json)
+                    .map_err(|e| DbErr::Custom(format!("Failed to parse meta: {}", e)))?)
+            } else {
+                None
+            };
 
             Ok(Some(McpServerDefinition {
                 name: model.name,
-                command: model.command,
-                args,
-                env,
+                server_config,
+                meta,
             }))
         } else {
             Ok(None)
@@ -135,28 +211,34 @@ impl Model {
 
     /// Convert a Model to McpServerDefinition
     pub fn to_definition(self) -> Result<McpServerDefinition, String> {
-        let args: Vec<String> = serde_json::from_str(&self.args)
-            .map_err(|e| format!("Failed to parse args: {}", e))?;
-        
-        let env: HashMap<String, String> = serde_json::from_str(&self.env)
-            .map_err(|e| format!("Failed to parse env: {}", e))?;
+        let server_config: ServerConfig = serde_json::from_str(&self.server_config)
+            .map_err(|e| format!("Failed to parse server_config: {}", e))?;
+
+        let meta = if let Some(meta_json) = &self.meta {
+            Some(serde_json::from_str(meta_json)
+                .map_err(|e| format!("Failed to parse meta: {}", e))?)
+        } else {
+            None
+        };
 
         Ok(McpServerDefinition {
             name: self.name,
-            command: self.command,
-            args,
-            env,
+            server_config,
+            meta,
         })
     }
 }
 
 impl From<McpServerDefinition> for ActiveModel {
     fn from(definition: McpServerDefinition) -> Self {
+        let meta_json = definition.meta.map(|meta| 
+            serde_json::to_string(&meta).unwrap_or_default()
+        );
+        
         ActiveModel {
             name: Set(definition.name),
-            command: Set(definition.command),
-            args: Set(serde_json::to_string(&definition.args).unwrap_or_default()),
-            env: Set(serde_json::to_string(&definition.env).unwrap_or_default()),
+            server_config: Set(serde_json::to_string(&definition.server_config).unwrap_or_default()),
+            meta: Set(meta_json),
             created_at: Set(chrono::Utc::now()),
             ..Default::default()
         }
@@ -165,80 +247,120 @@ impl From<McpServerDefinition> for ActiveModel {
 
 // Tauri commands for MCP server management
 #[tauri::command]
-pub async fn save_mcp_server(app: tauri::AppHandle, name: String, command: String, args: Vec<String>, env: std::collections::HashMap<String, String>) -> Result<(), String> {
+pub async fn save_mcp_server(
+    app: tauri::AppHandle,
+    name: String,
+    command: String,
+    args: Vec<String>,
+    env: std::collections::HashMap<String, String>,
+) -> Result<(), String> {
     use crate::database::connection::get_database_connection_with_app;
-    
-    let db = get_database_connection_with_app(&app).await
+
+    let db = get_database_connection_with_app(&app)
+        .await
         .map_err(|e| format!("Failed to connect to database: {}", e))?;
 
-    let definition = McpServerDefinition {
-        name: name.clone(),
-        command: command.clone(),
-        args: args.clone(),
-        env: env.clone(),
+    let server_config = ServerConfig {
+        transport: "stdio".to_string(),
+        command,
+        args,
+        env,
     };
 
-    Model::save_server(&db, &definition).await
-        .map_err(|e| format!("Failed to save MCP server: {}", e))?;
+    let definition = McpServerDefinition {
+        name,
+        server_config,
+        meta: None,
+    };
 
-    // Check if Ollama is running and if so, start the MCP server immediately
-    if crate::ollama::get_ollama_port().is_ok() {
-        println!("Ollama is running, starting MCP server '{}' immediately", name);
-        
-        // Start the server in the background
-        let app_clone = app.clone();
-        tauri::async_runtime::spawn(async move {
-            match crate::mcp_bridge::start_persistent_mcp_server(
-                app_clone,
-                name.clone(),
-                command,
-                args,
-                Some(env)
-            ).await {
-                Ok(_) => println!("✅ MCP server '{}' started successfully", name),
-                Err(e) => eprintln!("❌ Failed to start MCP server '{}': {}", name, e),
-            }
-        });
-    } else {
-        println!("Ollama is not running, MCP server '{}' will start when Ollama starts", name);
-    }
+    Model::save_server(&db, &app, &definition)
+        .await
+        .map_err(|e| format!("Failed to save MCP server: {}", e))?;
 
     Ok(())
 }
 
 #[tauri::command]
-pub async fn load_mcp_servers(app: tauri::AppHandle) -> Result<std::collections::HashMap<String, McpServerDefinition>, String> {
+pub async fn save_mcp_server_from_catalog(
+    app: tauri::AppHandle,
+    connector_id: String,
+) -> Result<(), String> {
     use crate::database::connection::get_database_connection_with_app;
-    
-    let db = get_database_connection_with_app(&app).await
+
+    // Load the catalog
+    let catalog = get_mcp_connector_catalog().await?;
+
+    // Find the connector by ID
+    let connector = catalog
+        .connectors
+        .iter()
+        .find(|c| c.id == connector_id)
+        .ok_or_else(|| format!("Connector with ID '{}' not found in catalog", connector_id))?;
+
+    let db = get_database_connection_with_app(&app)
+        .await
         .map_err(|e| format!("Failed to connect to database: {}", e))?;
 
-    Model::load_all_servers(&db).await
+    let definition = McpServerDefinition {
+        name: connector.title.clone(),
+        server_config: connector.server_config.clone(),
+        meta: None,
+    };
+
+    Model::save_server(&db, &app, &definition)
+        .await
+        .map_err(|e| format!("Failed to save MCP server: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn load_mcp_servers(
+    app: tauri::AppHandle,
+) -> Result<std::collections::HashMap<String, McpServerDefinition>, String> {
+    use crate::database::connection::get_database_connection_with_app;
+
+    let db = get_database_connection_with_app(&app)
+        .await
+        .map_err(|e| format!("Failed to connect to database: {}", e))?;
+
+    Model::load_all_servers(&db)
+        .await
         .map_err(|e| format!("Failed to load MCP servers: {}", e))
 }
 
 #[tauri::command]
 pub async fn delete_mcp_server(app: tauri::AppHandle, name: String) -> Result<(), String> {
     use crate::database::connection::get_database_connection_with_app;
-    
-    let db = get_database_connection_with_app(&app).await
+
+    let db = get_database_connection_with_app(&app)
+        .await
         .map_err(|e| format!("Failed to connect to database: {}", e))?;
 
-    Model::delete_by_name(&db, &name).await
+    Model::delete_by_name(&db, &app, &name)
+        .await
         .map_err(|e| format!("Failed to delete MCP server: {}", e))?;
 
     Ok(())
 }
 
+#[tauri::command]
+pub async fn get_mcp_connector_catalog() -> Result<ConnectorCatalog, String> {
+    let catalog_json = include_str!("catalog.json");
+    serde_json::from_str(catalog_json).map_err(|e| format!("Failed to parse catalog: {}", e))
+}
+
 pub async fn start_all_mcp_servers(app: tauri::AppHandle) -> Result<(), String> {
     use crate::database::connection::get_database_connection_with_app;
-    
+
     println!("Starting all persisted MCP servers...");
 
-    let db = get_database_connection_with_app(&app).await
+    let db = get_database_connection_with_app(&app)
+        .await
         .map_err(|e| format!("Failed to connect to database: {}", e))?;
 
-    let servers = Model::load_all_servers(&db).await
+    let servers = Model::load_all_servers(&db)
+        .await
         .map_err(|e| format!("Failed to load MCP servers: {}", e))?;
 
     if servers.is_empty() {
@@ -257,18 +379,18 @@ pub async fn start_all_mcp_servers(app: tauri::AppHandle) -> Result<(), String> 
 
         tauri::async_runtime::spawn(async move {
             if startup_delay > 0 {
-                println!("⏳ Waiting {}ms before starting MCP server '{}'", startup_delay, server_name);
+                println!(
+                    "⏳ Waiting {}ms before starting MCP server '{}'",
+                    startup_delay, server_name
+                );
                 tokio::time::sleep(tokio::time::Duration::from_millis(startup_delay)).await;
             }
-            
-            println!("🚀 Starting MCP server '{}' (server #{} of total)", server_name, server_count);
-            match crate::mcp_bridge::start_persistent_mcp_server(
-                app_clone,
-                server_name.clone(),
-                config.command,
-                config.args,
-                Some(config.env)
-            ).await {
+
+            println!(
+                "🚀 Starting MCP server '{}' (server #{} of total)",
+                server_name, server_count
+            );
+            match sandbox::start_mcp_server(&app_clone, &config).await {
                 Ok(_) => println!("✅ MCP server '{}' started successfully", server_name),
                 Err(e) => eprintln!("❌ Failed to start MCP server '{}': {}", server_name, e),
             }
@@ -288,38 +410,45 @@ mod tests {
     async fn test_save_server() {
         // Use in-memory database for testing
         let db = sea_orm::Database::connect("sqlite::memory:").await.unwrap();
-        
+
         // Run migrations
         use crate::database::migration::Migrator;
         use sea_orm_migration::MigratorTrait;
         Migrator::up(&db, None).await.unwrap();
 
-        let definition = McpServerDefinition {
-            name: "test_server".to_string(),
+        let server_config = ServerConfig {
+            transport: "stdio".to_string(),
             command: "echo".to_string(),
             args: vec!["hello".to_string()],
             env: HashMap::new(),
         };
 
-        let result = Model::save_server(&db, &definition).await;
+        let definition = McpServerDefinition {
+            name: "test_server".to_string(),
+            server_config,
+            meta: None,
+        };
+
+        let result = Model::save_server_without_lifecycle(&db, &definition).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_to_definition() {
+        let server_config_json =
+            r#"{"transport":"stdio","command":"echo","args":["hello"],"env":{}}"#;
         let model = Model {
             id: 1,
             name: "test_server".to_string(),
-            command: "echo".to_string(),
-            args: r#"["hello"]"#.to_string(),
-            env: r#"{}"#.to_string(),
+            server_config: server_config_json.to_string(),
+            meta: None,
             created_at: chrono::Utc::now(),
         };
 
         let definition = model.to_definition().unwrap();
         assert_eq!(definition.name, "test_server");
-        assert_eq!(definition.command, "echo");
-        assert_eq!(definition.args, vec!["hello"]);
-        assert!(definition.env.is_empty());
+        assert_eq!(definition.server_config.command, "echo");
+        assert_eq!(definition.server_config.args, vec!["hello"]);
+        assert!(definition.server_config.env.is_empty());
     }
 }

@@ -2,7 +2,7 @@ use tauri_plugin_shell::ShellExt;
 use tauri::Manager;
 use tauri::Emitter;
 use crate::utils::get_free_port;
-use crate::mcp_bridge::McpBridgeState;
+use crate::mcp_client::McpClientState;
 use std::sync::{OnceLock, Arc, Mutex};
 use tokio::sync::oneshot;
 
@@ -51,7 +51,7 @@ pub async fn start_ollama_server_on_startup(app_handle: tauri::AppHandle) -> Res
     match sidecar_result {
         Ok((mut rx, _child)) => {
             println!("Ollama server started successfully on port {}!", port);
-            
+
             // Store the port globally
             OLLAMA_PORT.set(port).map_err(|_| "Failed to store Ollama port")?;
 
@@ -95,8 +95,8 @@ pub async fn ollama_chat_with_tools(
     model: String,
     messages: Vec<OllamaMessage>,
 ) -> Result<serde_json::Value, String> {
-    let bridge_state = app.state::<McpBridgeState>();
-    let available_tools = bridge_state.0.get_all_tools();
+    let client_state = app.state::<McpClientState>();
+    let available_tools = client_state.0.get_all_tools();
 
     // Convert MCP tools to Ollama tool format
     let mut ollama_tools = Vec::new();
@@ -218,7 +218,7 @@ pub async fn ollama_chat_with_tools(
 
         println!("Executing tool '{}' on server '{}'", tool_name, server_name);
 
-        let content = match bridge_state.0.execute_tool(server_name, tool_name, arguments.clone()).await {
+        let content = match client_state.0.execute_tool(server_name, tool_name, arguments.clone()).await {
             Ok(result) => {
                 // Format the result to be human-readable
                 if let Some(content) = result.get("content").and_then(|c| c.as_str()) {
@@ -256,8 +256,8 @@ pub async fn ollama_chat_with_tools_streaming(
     model: String,
     messages: Vec<OllamaMessage>,
 ) -> Result<(), String> {
-    let bridge_state = app.state::<McpBridgeState>();
-    let available_tools = bridge_state.0.get_all_tools();
+    let client_state = app.state::<McpClientState>();
+    let available_tools = client_state.0.get_all_tools();
 
     // Convert MCP tools to Ollama tool format and create system message
     let mut ollama_tools = Vec::new();
@@ -317,7 +317,7 @@ pub async fn ollama_chat_with_tools_streaming(
 
     // Create a cancellation channel
     let (cancel_tx, mut cancel_rx) = oneshot::channel::<()>();
-    
+
     // Store the cancellation sender
     if let Some(cancellation) = STREAMING_CANCELLATION.get() {
         let mut guard = cancellation.lock().unwrap();
@@ -346,20 +346,20 @@ pub async fn ollama_chat_with_tools_streaming(
             // Check for cancellation
             _ = &mut cancel_rx => {
                 println!("🛑 Streaming cancelled by user");
-                
+
                 // Clear the cancellation sender
                 if let Some(cancellation) = STREAMING_CANCELLATION.get() {
                     let mut guard = cancellation.lock().unwrap();
                     *guard = None;
                 }
-                
+
                 // Emit cancellation event
                 app.emit("ollama-cancelled", serde_json::json!({}))
                     .map_err(|e| format!("Failed to emit cancellation event: {}", e))?;
-                
+
                 return Ok(());
             }
-            
+
             // Process streaming chunks
             chunk_result = stream.next() => {
                 match chunk_result {
@@ -452,7 +452,7 @@ pub async fn ollama_chat_with_tools_streaming(
 
                     println!("Executing tool '{}' on server '{}'", tool_name, server_name);
 
-                    let content = match bridge_state.0.execute_tool(server_name, tool_name, arguments.clone()).await {
+                    let content = match client_state.0.execute_tool(server_name, tool_name, arguments.clone()).await {
                         Ok(result) => {
                             // Format the result to be human-readable
                             if let Some(content) = result.get("content").and_then(|c| c.as_str()) {
@@ -513,7 +513,7 @@ pub async fn ollama_chat_with_tools_streaming(
 #[tauri::command]
 pub fn cancel_ollama_streaming() -> Result<(), String> {
     println!("🛑 Cancel streaming requested");
-    
+
     if let Some(cancellation) = STREAMING_CANCELLATION.get() {
         let mut guard = cancellation.lock().unwrap();
         if let Some(sender) = guard.take() {
@@ -530,6 +530,6 @@ pub fn cancel_ollama_streaming() -> Result<(), String> {
         println!("❌ Cancellation state not initialized");
         return Err("Cancellation state not initialized".to_string());
     }
-    
+
     Ok(())
 }
