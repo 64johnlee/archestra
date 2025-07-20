@@ -17,7 +17,9 @@ use rmcp::{
     schemars,
     service::RequestContext,
     tool, tool_handler, tool_router,
-    transport::sse_server::{SseServer, SseServerConfig},
+    transport::streamable_http_server::{
+        session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
+    },
     ErrorData as McpError, RoleServer, ServerHandler,
 };
 use serde::{Deserialize, Serialize};
@@ -27,7 +29,6 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
-use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 // Fixed port for MCP server
@@ -336,27 +337,28 @@ impl ServerHandler for ArchestraMcpServer {
 pub async fn start_archestra_mcp_server(user_id: String) -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([127, 0, 0, 1], MCP_SERVER_PORT));
 
-    // Configure SSE server for MCP
-    let config = SseServerConfig {
-        bind: addr,
-        sse_path: "/mcp".to_string(),
-        post_path: "/mcp".to_string(),
+    // Configure StreamableHTTP server for MCP
+    let config = StreamableHttpServerConfig {
         sse_keep_alive: Some(std::time::Duration::from_secs(30)),
-        ct: CancellationToken::new(),
+        stateful_mode: true, // Enable stateful mode for session management
     };
 
-    // Create SSE server and router
-    let (sse_mcp_server, sse_mcp_router) = SseServer::new(config);
-    let archestra_mcp_server = ArchestraMcpServer::new(user_id);
+    // Create StreamableHTTP service with a factory closure
+    let streamable_service = StreamableHttpService::new(
+        move || Ok(ArchestraMcpServer::new(user_id.clone())),
+        Arc::new(LocalSessionManager::default()),
+        config,
+    );
+
+    // Convert to axum service
+    let mcp_service = axum::routing::any_service(streamable_service);
 
     // Create main router
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/proxy/{server_name}", post(handle_proxy_request))
-        .merge(sse_mcp_router);
+        .route("/mcp", mcp_service);
 
-    let ct = sse_mcp_server.with_service(move || archestra_mcp_server.clone());
-    let addr = SocketAddr::from(([127, 0, 0, 1], MCP_SERVER_PORT));
     let listener = TcpListener::bind(addr).await?;
 
     println!(
@@ -367,11 +369,7 @@ pub async fn start_archestra_mcp_server(user_id: String) -> Result<(), Box<dyn s
     println!("  - Proxy endpoints: http://{}/proxy/<server_name>", addr);
     println!("  - Health check: http://{}/health", addr);
 
-    let server = axum::serve(listener, app).with_graceful_shutdown(async move {
-        // Wait for cancellation signal
-        ct.cancelled().await;
-        println!("Archestra MCP Server is shutting down...");
-    });
+    let server = axum::serve(listener, app);
 
     if let Err(e) = server.await {
         eprintln!("Server error: {}", e);
