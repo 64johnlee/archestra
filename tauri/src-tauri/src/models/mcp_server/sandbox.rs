@@ -340,13 +340,32 @@ impl McpServerManager {
         server_name: &str,
         request_body: String,
     ) -> Result<String, String> {
+        println!("🔍 Looking up server '{}' in manager", server_name);
         let servers = self.servers.read().await;
+        println!("📊 Total servers in manager: {}", servers.len());
+        
+        // List all available servers for debugging
+        for (name, _) in servers.iter() {
+            println!("   - Available server: '{}'", name);
+        }
+        
         let server = servers
             .get(server_name)
-            .ok_or_else(|| format!("Server '{}' not found", server_name))?;
+            .ok_or_else(|| {
+                println!("❌ Server '{}' not found in manager", server_name);
+                format!("Server '{}' not found", server_name)
+            })?;
+            
+        println!("✅ Found server '{}', type: {:?}", server_name, 
+            match &server.server_type {
+                ServerType::Http { url, .. } => format!("HTTP ({})", url),
+                ServerType::Process => "Process".to_string(),
+            }
+        );
 
         match &server.server_type {
             ServerType::Http { url, headers } => {
+                println!("🌐 Forwarding HTTP request to: {}", url);
                 // For HTTP servers, forward the request as-is
                 let mut req = self
                     .http_client
@@ -355,52 +374,96 @@ impl McpServerManager {
                     .header("Content-Type", "application/json");
 
                 for (key, value) in headers {
+                    println!("📎 Adding header: {} = {}", key, value);
                     req = req.header(key, value);
                 }
 
+                println!("📡 Sending HTTP request...");
                 let response = req
                     .send()
                     .await
-                    .map_err(|e| format!("HTTP request failed: {}", e))?;
+                    .map_err(|e| {
+                        println!("❌ HTTP request failed: {}", e);
+                        format!("HTTP request failed: {}", e)
+                    })?;
 
+                println!("📨 Received HTTP response, status: {}", response.status());
                 let response_text = response
                     .text()
                     .await
-                    .map_err(|e| format!("Failed to read response: {}", e))?;
+                    .map_err(|e| {
+                        println!("❌ Failed to read HTTP response: {}", e);
+                        format!("Failed to read response: {}", e)
+                    })?;
 
+                println!("✅ HTTP response received successfully");
                 Ok(response_text)
             }
             ServerType::Process => {
+                println!("🔧 Processing request for process-based server");
                 // For process servers, send via stdin and wait for response
                 let stdin_tx = server
                     .stdin_tx
                     .as_ref()
-                    .ok_or_else(|| "No stdin channel available".to_string())?;
+                    .ok_or_else(|| {
+                        println!("❌ No stdin channel available for server '{}'", server_name);
+                        "No stdin channel available".to_string()
+                    })?;
 
+                println!("📤 Sending request to process stdin...");
                 stdin_tx
                     .send(format!("{}\n", request_body))
                     .await
-                    .map_err(|e| format!("Failed to send request: {}", e))?;
+                    .map_err(|e| {
+                        println!("❌ Failed to send request to stdin: {}", e);
+                        format!("Failed to send request: {}", e)
+                    })?;
 
                 // Parse request to get ID for response matching
                 let request: JsonRpcRequest = serde_json::from_str(&request_body)
-                    .map_err(|e| format!("Failed to parse request: {}", e))?;
+                    .map_err(|e| {
+                        println!("❌ Failed to parse JSON-RPC request: {}", e);
+                        format!("Failed to parse request: {}", e)
+                    })?;
 
+                println!("🕐 Waiting for response with ID: {:?}", request.id);
                 // Wait for response with matching ID
                 let start_time = Instant::now();
+                let mut iteration_count = 0;
                 loop {
-                    if start_time.elapsed() > REQUEST_TIMEOUT {
+                    iteration_count += 1;
+                    let elapsed = start_time.elapsed();
+                    
+                    if elapsed > REQUEST_TIMEOUT {
+                        println!("⏰ Request timeout after {} iterations ({:?})", iteration_count, elapsed);
                         return Err("Request timeout".to_string());
                     }
 
+                    if iteration_count % 100 == 0 {
+                        println!("⏳ Still waiting... iteration {}, elapsed: {:?}", iteration_count, elapsed);
+                    }
+
                     let mut buffer = server.response_buffer.lock().await;
+                    let buffer_size = buffer.len();
+                    
+                    if iteration_count % 100 == 0 && buffer_size > 0 {
+                        println!("📋 Response buffer size: {}", buffer_size);
+                    }
+                    
                     while let Some(entry) = buffer.pop_front() {
+                        println!("📨 Processing buffer entry: {}", entry.content);
                         if let Ok(response) =
                             serde_json::from_str::<JsonRpcResponse>(&entry.content)
                         {
+                            println!("✅ Parsed JSON-RPC response with ID: {:?}", response.id);
                             if response.id == request.id {
+                                println!("🎯 Found matching response for ID: {:?}", request.id);
                                 return Ok(entry.content);
+                            } else {
+                                println!("🔄 Response ID {:?} doesn't match request ID {:?}", response.id, request.id);
                             }
+                        } else {
+                            println!("❌ Failed to parse response as JSON-RPC: {}", entry.content);
                         }
                         // Put it back if it's not our response
                         buffer.push_front(entry);
@@ -413,6 +476,7 @@ impl McpServerManager {
             }
         }
     }
+
 }
 
 // Create a global instance of the manager

@@ -76,20 +76,25 @@ async fn health_check() -> &'static str {
     "OK"
 }
 
+
 // Proxy request endpoint
 async fn handle_proxy_request(
     Path(server_name): Path<String>,
     req: axum::http::Request<Body>,
 ) -> axum::http::Response<Body> {
     println!(
-        "MCP Server Proxy: Forwarding raw request to server '{}'",
+        "🚀 MCP Server Proxy: Starting request to server '{}'",
         server_name
     );
 
     // Read the request body
     let body_bytes = match axum::body::to_bytes(req.into_body(), usize::MAX).await {
-        Ok(bytes) => bytes,
-        Err(_) => {
+        Ok(bytes) => {
+            println!("📥 Successfully read request body ({} bytes)", bytes.len());
+            bytes
+        }
+        Err(e) => {
+            println!("❌ Failed to read request body: {}", e);
             return axum::http::Response::builder()
                 .status(axum::http::StatusCode::BAD_REQUEST)
                 .header("Content-Type", "application/json")
@@ -100,8 +105,12 @@ async fn handle_proxy_request(
 
     // Convert bytes to string
     let request_body = match String::from_utf8(body_bytes.to_vec()) {
-        Ok(body) => body,
-        Err(_) => {
+        Ok(body) => {
+            println!("📝 Request body: {}", body);
+            body
+        }
+        Err(e) => {
+            println!("❌ Invalid UTF-8 in request body: {}", e);
             return axum::http::Response::builder()
                 .status(axum::http::StatusCode::BAD_REQUEST)
                 .header("Content-Type", "application/json")
@@ -110,16 +119,21 @@ async fn handle_proxy_request(
         }
     };
 
+    println!("🔄 Forwarding request to forward_raw_request function...");
     // Forward the raw JSON-RPC request to the McpServerManager
     match forward_raw_request(&server_name, request_body).await {
-        Ok(raw_response) => axum::http::Response::builder()
-            .status(axum::http::StatusCode::OK)
-            .header("Content-Type", "application/json")
-            .body(Body::from(raw_response))
-            .unwrap(),
+        Ok(raw_response) => {
+            println!("✅ Successfully received response from server '{}'", server_name);
+            println!("📤 Response: {}", raw_response);
+            axum::http::Response::builder()
+                .status(axum::http::StatusCode::OK)
+                .header("Content-Type", "application/json")
+                .body(Body::from(raw_response))
+                .unwrap()
+        }
         Err(e) => {
             println!(
-                "MCP Server Proxy: Failed to forward request to '{}': {}",
+                "❌ MCP Server Proxy: Failed to forward request to '{}': {}",
                 server_name, e
             );
 
