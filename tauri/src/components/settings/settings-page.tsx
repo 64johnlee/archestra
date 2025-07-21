@@ -12,26 +12,22 @@ import {
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
-import { Button } from "../../components/ui/button";
+import { Button } from "../ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
-import { Alert, AlertDescription } from "../../components/ui/alert";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../components/ui/tabs";
-import { useArchestraMcpClient } from "../../hooks/use-archestra-mcp-client";
+} from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Alert, AlertDescription } from "../ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { fetch } from "@tauri-apps/plugin-http";
+
+const MCP_SERVER_URL = "http://localhost:54587";
 
 type ClientStatus = "disconnected" | "connected" | "connecting" | "error";
 
@@ -41,7 +37,7 @@ interface ClientConnection {
   error?: string;
 }
 
-export default function SettingsPage() {
+export function SettingsPage() {
   const [serverStatus, setServerStatus] = useState<
     "loading" | "running" | "error"
   >("loading");
@@ -52,8 +48,6 @@ export default function SettingsPage() {
     "success" | "error" | null
   >(null);
   const [lastTestTime, setLastTestTime] = useState<Date | null>(null);
-
-  const { MCP_SERVER_URL } = useArchestraMcpClient();
 
   // Client connection states
   const [clientConnections, setClientConnections] = useState<
