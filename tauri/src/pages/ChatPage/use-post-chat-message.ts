@@ -8,12 +8,22 @@ interface IArgs {
   mcpTools: MCPTool[];
   executeTool?: (serverName: string, toolName: string, args: any) => Promise<any>;
 }
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { useState, useCallback, useEffect } from "react";
+import { IChatMessage, ToolCallInfo } from "./types";
+import { parseThinkingContent, markMessageAsCancelled } from "./utils";
+
+import { useConnectorCatalog } from "../../hooks/use-connector-catalog";
+import { useOllamaClient } from "../../hooks/llm-providers/ollama/use-ollama-client";
 
 // TODO: remove these constants
 export const CHAT_SCROLL_AREA_ID = "chat-scroll-area";
 export const CHAT_SCROLL_AREA_SELECTOR = `#${CHAT_SCROLL_AREA_ID} [data-radix-scroll-area-viewport]`;
 
 export function usePostChatMessage({ ollamaClient, mcpTools, executeTool }: IArgs) {
+  const { ollamaClient: _ollamaClient, ollamaPort } = useOllamaClient()
+  const { installedMcpServers } = useConnectorCatalog();
   const [chatHistory, setChatHistory] = useState<IChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
@@ -152,10 +162,10 @@ export function usePostChatMessage({ ollamaClient, mcpTools, executeTool }: IArg
             model.includes("granite"));
 
         console.log("🔧 Tool calling debug:", {
-          mcpToolsCount: mcpTools.length,
+          mcpToolsCount: installedMcpServers.length,
           modelSupportsTools,
           model,
-          willUseMcpTools: mcpTools.length > 0 && modelSupportsTools,
+          willUseMcpTools: installedMcpServers.length > 0 && modelSupportsTools,
         });
 
         // Add warning if tools are available but model doesn't support them
@@ -425,7 +435,7 @@ export function usePostChatMessage({ ollamaClient, mcpTools, executeTool }: IArg
 
       setIsChatLoading(false);
     },
-    [ollamaClient, mcpTools, chatHistory, updateStreamingMessage, triggerScroll, executeTool],
+    [ollamaPort, installedMcpServers, ollamaClient, mcpTools, chatHistory, updateStreamingMessage, triggerScroll, executeTool],
   );
 
   const isStreaming = streamingMessageId !== null;

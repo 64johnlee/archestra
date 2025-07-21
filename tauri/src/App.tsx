@@ -1,5 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import * as React from "react";
 import {
   MessageCircle,
@@ -68,28 +67,6 @@ function App() {
     },
   ];
 
-  useEffect(() => {
-    loadMcpServersFromDb();
-  }, []);
-
-  async function loadMcpServersFromDb() {
-    try {
-      const servers = await invoke<{
-        [key: string]: {
-          server_config: {
-            transport: string;
-            command: string;
-            args: string[];
-            env: { [key: string]: string };
-          };
-        };
-      }>("load_mcp_servers");
-      setMcpServers(servers);
-    } catch (error) {
-      console.error("Failed to load MCP servers:", error);
-    }
-  }
-
   const renderContent = () => {
     switch (activeView) {
       case "chat":
@@ -104,13 +81,7 @@ function App() {
       case "llm-providers":
         return <LLMProvidersPage activeProvider={activeSubView} />;
       case "mcp":
-        return (
-          <ConnectorCatalogPage
-            mcpServers={mcpServers}
-            setMcpServers={setMcpServers}
-            setMcpServerStatus={setMcpServerStatus}
-          />
-        );
+        return <ConnectorCatalogPage />;
       case "settings":
         return <SettingsPage />;
       default:

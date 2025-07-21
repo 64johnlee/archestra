@@ -31,31 +31,31 @@ import {
 } from "../../../components/kibo/ai-input";
 import { useOllamaClient } from "../../../hooks/llm-providers/ollama/use-ollama-client";
 import type { MCPTool } from "../../../types/mcp";
+import { useConnectorCatalog, type McpServerWithTools } from "../../../hooks/use-connector-catalog";
+import { usePostChatMessage } from "../use-post-chat-message";
 
-interface ChatInputProps {
-  clearChatHistory: () => void;
-  onSubmit: (message: string, model: string) => Promise<void>;
-  onStop?: () => void;
-  disabled: boolean;
-  mcpTools: MCPTool[];
-  isLoadingTools?: boolean;
-  isStreaming?: boolean;
-}
+interface ChatInputProps {}
 
-export default function ChatInput({
-  onSubmit,
-  clearChatHistory,
-  disabled,
-  mcpTools,
-  isLoadingTools = false,
-  onStop,
-  isStreaming,
-}: ChatInputProps) {
+export default function ChatInput(_props: ChatInputProps) {
+  const { isLoadingMcpServerTools, installedMcpServers } = useConnectorCatalog();
+  const {
+    isChatLoading,
+    isStreaming,
+    sendChatMessage,
+    clearChatHistory,
+    cancelStreaming,
+  } = usePostChatMessage();
+
   const [message, setMessage] = useState("");
-  const [selectedModel, setSelectedModel] = useState<string>("");
   const [status, setStatus] = useState<"submitted" | "streaming" | "ready" | "error">("ready");
   const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
-  const { installedModels, loadingInstalledModels, loadingInstalledModelsError } = useOllamaClient();
+  const {
+    installedModels,
+    loadingInstalledModels,
+    loadingInstalledModelsError,
+    selectedModel,
+    setSelectedModel,
+  } = useOllamaClient();
 
   useEffect(() => {
     if (isStreaming) {
@@ -64,12 +64,6 @@ export default function ChatInput({
       setStatus("ready");
     }
   }, [isStreaming]);
-
-  useEffect(() => {
-    if (installedModels.length > 0 && !selectedModel) {
-      setSelectedModel(installedModels[0].name);
-    }
-  }, [installedModels, selectedModel]);
 
   const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
     if (e) {
@@ -83,7 +77,7 @@ export default function ChatInput({
     setStatus("submitted");
 
     try {
-      await onSubmit(message.trim(), selectedModel);
+      await sendChatMessage(message.trim(), selectedModel);
       setMessage("");
       setStatus("ready");
     } catch (error) {
@@ -117,21 +111,21 @@ export default function ChatInput({
     clearChatHistory();
   };
 
+  const disabled = isChatLoading || isStreaming;
+
   // Group tools by server
-  const toolsByServer = mcpTools.reduce((acc, tool) => {
-    if (!acc[tool.serverName]) {
-      acc[tool.serverName] = [];
-    }
-    acc[tool.serverName].push(tool.tool);
+  const toolsByServer = installedMcpServers.reduce((acc, mcpServer) => {
+    acc[mcpServer.name] = mcpServer.tools;
     return acc;
-  }, {} as Record<string, Array<{name: string; description?: string; inputSchema: any}>>);
+  }, {} as Record<string, McpServerWithTools["tools"]>);
+  const totalNumberOfTools = installedMcpServers.reduce((acc, mcpServer) => acc + mcpServer.tools.length, 0);
 
   return (
     <div className="space-y-2">
       {/* Tools Menu */}
-      {isToolsMenuOpen && (mcpTools.length > 0 || isLoadingTools) && (
+      {isToolsMenuOpen && (totalNumberOfTools > 0 || isLoadingMcpServerTools) && (
         <div className="border rounded-lg p-3 bg-muted/50">
-          {isLoadingTools ? (
+          {isLoadingMcpServerTools ? (
             <div className="flex items-center gap-2">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               <span className="text-sm text-muted-foreground">Loading available tools...</span>
@@ -142,7 +136,7 @@ export default function ChatInput({
                 <Wrench className="h-4 w-4 text-blue-600" />
                 <span className="text-sm font-medium">Available Tools</span>
                 <Badge variant="secondary" className="text-xs">
-                  Total: {mcpTools.length}
+                  Total: {totalNumberOfTools}
                 </Badge>
               </div>
               {Object.entries(toolsByServer).map(([serverName, tools]) => (
@@ -239,7 +233,7 @@ export default function ChatInput({
             <AIInputButton>
               <MicIcon size={16} />
             </AIInputButton>
-            {(mcpTools.length > 0 || isLoadingTools) && (
+            {(totalNumberOfTools > 0 || isLoadingMcpServerTools) && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -252,7 +246,7 @@ export default function ChatInput({
                   </TooltipTrigger>
                   <TooltipContent>
                     <span>
-                      {isLoadingTools ? "Loading tools..." : `${mcpTools.length} tools available`}
+                      {isLoadingMcpServerTools ? "Loading tools..." : `${totalNumberOfTools} tools available`}
                     </span>
                   </TooltipContent>
                 </Tooltip>
@@ -262,7 +256,7 @@ export default function ChatInput({
           <AIInputSubmit
             status={status}
             disabled={disabled || (!message.trim() && status !== "streaming")}
-            onClick={status === "streaming" ? onStop : undefined}
+            onClick={status === "streaming" ? cancelStreaming : undefined}
           />
         </AIInputToolbar>
       </AIInput>

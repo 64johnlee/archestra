@@ -1,7 +1,4 @@
-import { ScrollArea } from "../../components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { AIReasoning, AIReasoningTrigger, AIReasoningContent } from "../../components/kibo/ai-reasoning";
-import { AIResponse } from "../../components/kibo/ai-response";
 import ChatInput from "./ChatInput";
 import ToolCallIndicator from "./ToolCallIndicator";
 import ToolExecutionResult from "./ToolExecutionResult";
@@ -36,6 +33,7 @@ export default function ChatPage({ mcpTools: _mcpToolsProp, isLoadingTools: _isL
     executeTool,
   });
 
+export default function ChatPage(_props: ChatPageProps) {
   return (
     <div className="space-y-4">
       {/* MCP Servers Display */}
@@ -169,5 +167,14 @@ export default function ChatPage({ mcpTools: _mcpToolsProp, isLoadingTools: _isL
         </CardContent>
       </Card>
     </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Chat</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <ChatHistory />
+        <ChatInput />
+      </CardContent>
+    </Card>
   );
 }
