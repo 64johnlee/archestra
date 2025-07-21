@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import {
   Search,
   Download,
@@ -6,9 +6,6 @@ import {
   Loader2,
   HardDrive,
   Cpu,
-  Package,
-  ChevronDown,
-  RefreshCw,
   Clock,
   Type,
 } from 'lucide-react';
@@ -23,36 +20,29 @@ import {
 } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
 import { ScrollArea } from '../../../../components/ui/scroll-area';
-import { Tabs, TabsList, TabsTrigger } from '../../../../components/ui/tabs';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '../../../../components/ui/collapsible';
-import { useOllamaClient } from '../../../../hooks/llm-providers/ollama/use-ollama-client';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../components/ui/select';
+import { useOllamaContext } from '../../../../contexts/llm-providers/ollama/ollama-context';
 
-interface OllamaModelsManagerProps {}
+interface ModelsCatalogProps {}
 
-export default function OllamaModelsManager({}: OllamaModelsManagerProps) {
+export default function ModelsCatalog({}: ModelsCatalogProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLabel, setSelectedLabel] = useState<string | undefined>(
-    undefined,
-  );
-  const [downloadingModels, setDownloadingModels] = useState<Set<string>>(
-    new Set(),
-  );
-  const [downloadProgress, _setDownloadProgress] = useState<
-    Record<string, number>
-  >({});
+  const [selectedLabel, setSelectedLabel] = useState<string>('all');
 
-  const [isExpanded, setIsExpanded] = useState(false);
   const {
-    ollamaClient,
     installedModels,
-    loadingInstalledModels,
+    downloadModel,
+    downloadProgress,
     availableModels,
+    modelsBeingDownloaded,
     allAvailableModelLabels,
-  } = useOllamaClient();
+  } = useOllamaContext();
 
   const filteredModels = availableModels.filter((model) => {
     const matchesSearch =
@@ -63,7 +53,7 @@ export default function OllamaModelsManager({}: OllamaModelsManagerProps) {
       );
 
     const matchesLabel =
-      selectedLabel === undefined || model.labels.includes(selectedLabel);
+      selectedLabel === 'all' || model.labels.includes(selectedLabel);
 
     return matchesSearch && matchesLabel;
   });
@@ -71,29 +61,6 @@ export default function OllamaModelsManager({}: OllamaModelsManagerProps) {
   const isModelInstalled = (modelName: string) => {
     return installedModels.some((model) => model.name === modelName);
   };
-
-  const handleDownloadModel = useCallback(
-    async (modelName: string, tag: string) => {
-      if (ollamaClient) {
-        const fullModelName = `${modelName}:${tag}`;
-
-        setDownloadingModels(new Set([...downloadingModels, fullModelName]));
-
-        // TODO: Handle progress from stream here
-        await ollamaClient.pull({
-          model: fullModelName,
-          stream: true,
-        });
-
-        setDownloadingModels((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(fullModelName);
-          return newSet;
-        });
-      }
-    },
-    [ollamaClient],
-  );
 
   const formatFileSize = (sizeStr: string) => {
     // Convert size strings like "7b", "13b", "70b" to more readable format
@@ -107,130 +74,8 @@ export default function OllamaModelsManager({}: OllamaModelsManagerProps) {
     return sizeStr;
   };
 
-  const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const parseModelName = (fullName: string) => {
-    const parts = fullName.split(':');
-    return {
-      name: parts[0],
-      tag: parts[1] || 'latest',
-    };
-  };
-
   return (
-    <div className="space-y-6">
-      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        <Card>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  <CardTitle>Currently Installed Models</CardTitle>
-                  {!isExpanded && (
-                    <div className="flex items-center gap-2 ml-2">
-                      <Badge variant="outline" className="text-xs">
-                        {installedModels.length} model
-                        {installedModels.length !== 1 ? 's' : ''}
-                      </Badge>
-                    </div>
-                  )}
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                  />
-                </div>
-              </div>
-            </CardHeader>
-          </CollapsibleTrigger>
-
-          <CollapsibleContent>
-            <CardContent>
-              {loadingInstalledModels ? (
-                <div className="text-center py-8">
-                  <RefreshCw className="h-8 w-8 text-muted-foreground mx-auto mb-4 animate-spin" />
-                  <p className="text-muted-foreground">
-                    Loading installed models...
-                  </p>
-                </div>
-              ) : installedModels.length === 0 ? (
-                <div className="text-center py-8">
-                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">
-                    No Models Installed
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Download some models from the Model Library to get started
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>
-                      Total models installed: {installedModels.length}
-                    </span>
-                  </div>
-
-                  <ScrollArea className="h-[400px]">
-                    <div className="space-y-3">
-                      {installedModels.map((model) => {
-                        const fullModelName = model.name;
-                        const { name, tag } = parseModelName(fullModelName);
-                        const modelDetails = model.details;
-
-                        return (
-                          <div
-                            key={fullModelName}
-                            className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-semibold">{name}</h3>
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    {tag}
-                                  </Badge>
-                                </div>
-                                <div className="flex flex-wrap gap-4 text-sm">
-                                  <div className="flex items-center gap-1">
-                                    <HardDrive className="h-3 w-3" />
-                                    <span>Size: {formatBytes(model.size)}</span>
-                                  </div>
-                                  <div>
-                                    <span className="font-medium">
-                                      Parameters:
-                                    </span>{' '}
-                                    {modelDetails.parameter_size}
-                                  </div>
-                                  <div>
-                                    <span className="font-medium">
-                                      Quantization:
-                                    </span>{' '}
-                                    {modelDetails.quantization_level}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-
+    <>
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-bold">Ollama Model Library</h1>
@@ -250,19 +95,19 @@ export default function OllamaModelsManager({}: OllamaModelsManagerProps) {
             />
           </div>
 
-          <Tabs
-            value={selectedLabel}
-            onValueChange={setSelectedLabel}
-            className="w-auto"
-          >
-            <TabsList>
+          <Select value={selectedLabel} onValueChange={setSelectedLabel}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
               {allAvailableModelLabels.map((label) => (
-                <TabsTrigger key={label} value={label}>
+                <SelectItem key={label} value={label}>
                   {label}
-                </TabsTrigger>
+                </SelectItem>
               ))}
-            </TabsList>
-          </Tabs>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -301,9 +146,9 @@ export default function OllamaModelsManager({}: OllamaModelsManagerProps) {
                   <div className="grid grid-cols-1 gap-3">
                     {model.tags.map(({ tag, context, size, inputs }) => {
                       const fullModelName = `${model.name}:${tag}`;
-                      const isDownloading =
-                        downloadingModels.has(fullModelName);
                       const progress = downloadProgress[fullModelName];
+                      const isDownloading =
+                        modelsBeingDownloaded.has(fullModelName);
                       const isInstalled = isModelInstalled(fullModelName);
 
                       return (
@@ -320,9 +165,7 @@ export default function OllamaModelsManager({}: OllamaModelsManagerProps) {
                               size="sm"
                               variant={isInstalled ? 'secondary' : 'default'}
                               disabled={isDownloading}
-                              onClick={() =>
-                                handleDownloadModel(model.name, tag)
-                              }
+                              onClick={() => downloadModel(fullModelName)}
                               className="h-8 px-3"
                             >
                               {isDownloading ? (
@@ -386,6 +229,6 @@ export default function OllamaModelsManager({}: OllamaModelsManagerProps) {
           </div>
         )}
       </ScrollArea>
-    </div>
+    </>
   );
 }

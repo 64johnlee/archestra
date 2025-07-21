@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
-import { useExternalMcpClients } from '../../../hooks/use-external-mcp-clients';
+import { useExternalMcpClientContext } from '../../../contexts/external-mcp-clients-context';
 
 export default function ExternalClients() {
   const {
@@ -19,7 +19,7 @@ export default function ExternalClients() {
     isDisconnectingExternalMcpClient,
     connectExternalMcpClient,
     disconnectExternalMcpClient,
-  } = useExternalMcpClients();
+  } = useExternalMcpClientContext();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

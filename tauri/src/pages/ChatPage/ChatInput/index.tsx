@@ -36,21 +36,22 @@ import {
   AIInputModelSelectItem,
   AIInputModelSelectValue,
 } from '../../../components/kibo/ai-input';
-import { useOllamaClient } from '../../../hooks/llm-providers/ollama/use-ollama-client';
-import { useMCPServers } from '../../../hooks/use-mcp-servers';
-import { useChat } from '../../../hooks/use-chat';
+import { useOllamaContext } from '../../../contexts/llm-providers/ollama/ollama-context';
+import { useMCPServersContext } from '../../../contexts/mcp-servers-context';
+import { useChatContext } from '../../../contexts/chat-context';
 
 interface ChatInputProps {}
 
 export default function ChatInput(_props: ChatInputProps) {
-  const { installedMCPServers, loadingInstalledMCPServers } = useMCPServers();
+  const { installedMCPServers, loadingInstalledMCPServers } =
+    useMCPServersContext();
   const {
     isChatLoading,
     isStreaming,
     sendChatMessage,
     clearChatHistory,
     cancelStreaming,
-  } = useChat();
+  } = useChatContext();
 
   const {
     installedModels,
@@ -58,7 +59,7 @@ export default function ChatInput(_props: ChatInputProps) {
     loadingInstalledModelsError,
     selectedModel,
     setSelectedModel,
-  } = useOllamaClient();
+  } = useOllamaContext();
 
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState<
@@ -139,7 +140,6 @@ export default function ChatInput(_props: ChatInputProps) {
   return (
     <TooltipProvider>
       <div className="space-y-2">
-        {/* Tools Menu */}
         {isToolsMenuOpen &&
           (totalNumberOfTools > 0 || loadingInstalledMCPServers) && (
             <div className="border rounded-lg p-3 bg-muted/50">

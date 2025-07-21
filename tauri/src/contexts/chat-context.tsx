@@ -1,9 +1,15 @@
-import { useState, useCallback, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 import { Message as OllamaMessage, Tool as OllamaTool } from 'ollama/browser';
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { ChatMessage, ToolCallInfo } from '../types';
-import { useOllamaClient } from './llm-providers/ollama/use-ollama-client';
-import { useMCPServers } from './use-mcp-servers';
+import { useOllamaContext } from './llm-providers/ollama/ollama-context';
+import { useMCPServersContext } from './mcp-servers-context';
 
 interface ParsedContent {
   thinking: string;
@@ -15,6 +21,17 @@ interface ToolWithServerName {
   serverName: string;
   tool: Tool;
 }
+
+interface ChatContextType {
+  chatHistory: ChatMessage[];
+  isChatLoading: boolean;
+  isStreaming: boolean;
+  sendChatMessage: (message: string, model: string) => Promise<void>;
+  clearChatHistory: () => void;
+  cancelStreaming: () => void;
+}
+
+const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 /**
  * TODO: figure out a better way to do this...
@@ -110,9 +127,15 @@ export function parseThinkingContent(content: string): ParsedContent {
   };
 }
 
-export function useChat(onChatUpdate?: () => void) {
-  const { ollamaClient: ollamaClient } = useOllamaClient();
-  const { installedMCPServers, executeTool } = useMCPServers();
+export function ChatProvider({
+  children,
+  onChatUpdate,
+}: {
+  children: React.ReactNode;
+  onChatUpdate?: () => void;
+}) {
+  const { ollamaClient: ollamaClient } = useOllamaContext();
+  const { installedMCPServers, executeTool } = useMCPServersContext();
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
@@ -287,6 +310,7 @@ export function useChat(onChatUpdate?: () => void) {
           '🔧 Tools available:',
           tools?.length || 0,
           tools?.map((t) => t.function.name) || [],
+          tools,
         );
         console.log('🔧 Full tools schema:', JSON.stringify(tools, null, 2));
 
@@ -580,7 +604,7 @@ export function useChat(onChatUpdate?: () => void) {
 
   const isStreaming = streamingMessageId !== null;
 
-  return {
+  const value: ChatContextType = {
     chatHistory,
     isChatLoading,
     isStreaming,
@@ -588,4 +612,14 @@ export function useChat(onChatUpdate?: () => void) {
     clearChatHistory,
     cancelStreaming,
   };
+
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+}
+
+export function useChatContext() {
+  const context = useContext(ChatContext);
+  if (context === undefined) {
+    throw new Error('useChatContext must be used within a ChatProvider');
+  }
+  return context;
 }

@@ -1,4 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from 'react';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import {
@@ -9,8 +15,26 @@ import { fetch } from '@tauri-apps/plugin-http';
 import { invoke } from '@tauri-apps/api/core';
 
 import type { MCPServer, ConnectedMCPServer } from '../types';
-import { ARCHESTRA_SERVER_MCP_URL } from '../consts';
-import { constructProxiedMCPServerUrl } from '../lib/utils';
+
+const ARCHESTRA_SERVER_URL = 'http://localhost:54587';
+const ARCHESTRA_SERVER_MCP_URL = `${ARCHESTRA_SERVER_URL}/mcp`;
+
+interface MCPServersContextType {
+  archestraMCPServer: ConnectedMCPServer;
+  installedMCPServers: ConnectedMCPServer[];
+  loadingInstalledMCPServers: boolean;
+  errorLoadingInstalledMCPServers: string | null;
+  addMCPServerToInstalledMCPServers: (mcpServer: MCPServer) => void;
+  removeMCPServerFromInstalledMCPServers: (mcpServerName: string) => void;
+  executeTool: (
+    serverName: string,
+    request: CallToolRequest['params'],
+  ) => Promise<any>;
+}
+
+const MCPServersContext = createContext<MCPServersContextType | undefined>(
+  undefined,
+);
 
 const configureMCPClient = async (
   clientName: string,
@@ -38,7 +62,15 @@ const configureMCPClient = async (
   return client;
 };
 
-export function useMCPServers() {
+export function constructProxiedMCPServerUrl(mcpServerName: string) {
+  return `${ARCHESTRA_SERVER_URL}/proxy/${mcpServerName}`;
+}
+
+export function MCPServersProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [archestraMCPServer, setArchestraMCPServer] =
     useState<ConnectedMCPServer>({
       name: 'Archestra',
@@ -57,6 +89,32 @@ export function useMCPServers() {
   const [errorLoadingInstalledMCPServers, setErrorLoadingInstalledMCPServers] =
     useState<string | null>(null);
 
+  const addMCPServerToInstalledMCPServers = useCallback(
+    (mcpServer: MCPServer) => {
+      setInstalledMCPServers((prev) => [
+        ...prev,
+        {
+          ...mcpServer,
+          tools: [],
+          url: constructProxiedMCPServerUrl(mcpServer.name),
+          status: 'connecting',
+          error: undefined,
+          client: null,
+        },
+      ]);
+    },
+    [],
+  );
+
+  const removeMCPServerFromInstalledMCPServers = useCallback(
+    (mcpServerName: string) => {
+      setInstalledMCPServers((prev) =>
+        prev.filter((mcpServer) => mcpServer.name !== mcpServerName),
+      );
+    },
+    [],
+  );
+
   /**
    * Load the installed MCP servers
    */
@@ -67,16 +125,7 @@ export function useMCPServers() {
         const installedMCPServers = await invoke<MCPServer[]>(
           'load_installed_mcp_servers',
         );
-        setInstalledMCPServers(
-          installedMCPServers.map((mcpServer) => ({
-            ...mcpServer,
-            tools: [],
-            url: constructProxiedMCPServerUrl(mcpServer.name),
-            status: 'connecting',
-            error: undefined,
-            client: null,
-          })),
-        );
+        installedMCPServers.forEach(addMCPServerToInstalledMCPServers);
       } catch (error) {
         setErrorLoadingInstalledMCPServers(error as string);
       } finally {
@@ -249,13 +298,27 @@ export function useMCPServers() {
     };
   }, [installedMCPServers.length]);
 
-  return {
+  const value: MCPServersContextType = {
     archestraMCPServer,
     installedMCPServers,
     loadingInstalledMCPServers,
     errorLoadingInstalledMCPServers,
-    setInstalledMCPServers,
-    connectToMCPServer,
+    addMCPServerToInstalledMCPServers,
+    removeMCPServerFromInstalledMCPServers,
     executeTool,
   };
+
+  return (
+    <MCPServersContext.Provider value={value}>
+      {children}
+    </MCPServersContext.Provider>
+  );
+}
+
+export function useMCPServersContext() {
+  const context = useContext(MCPServersContext);
+  if (context === undefined) {
+    throw new Error('useMCPServers must be used within a MCPServersProvider');
+  }
+  return context;
 }

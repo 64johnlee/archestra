@@ -1,5 +1,11 @@
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { useCallback, useEffect, useState } from 'react';
 
 interface ExternalMcpClient {
   id: number;
@@ -11,7 +17,30 @@ interface ExternalMcpClient {
   updated_at: string;
 }
 
-export function useExternalMcpClients() {
+interface ExternalMCPClientsContextType {
+  supportedExternalMcpClientNames: string[];
+  isLoadingSupportedExternalMcpClientNames: boolean;
+  errorLoadingSupportedExternalMcpClientNames: string | null;
+  connectedExternalMcpClients: ExternalMcpClient[];
+  isLoadingConnectedExternalMcpClients: boolean;
+  errorLoadingConnectedExternalMcpClients: string | null;
+  isConnectingExternalMcpClient: boolean;
+  errorConnectingExternalMcpClient: string | null;
+  isDisconnectingExternalMcpClient: boolean;
+  errorDisconnectingExternalMcpClient: string | null;
+  connectExternalMcpClient: (clientName: string) => Promise<void>;
+  disconnectExternalMcpClient: (clientId: string) => Promise<void>;
+}
+
+const ExternalMCPClientsContext = createContext<
+  ExternalMCPClientsContextType | undefined
+>(undefined);
+
+export function ExternalMCPClientsProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [supportedExternalMcpClientNames, setSupportedExternalMcpClientNames] =
     useState<string[]>([]);
   const [
@@ -104,7 +133,7 @@ export function useExternalMcpClients() {
     }
   }, []);
 
-  return {
+  const value: ExternalMCPClientsContextType = {
     supportedExternalMcpClientNames,
     isLoadingSupportedExternalMcpClientNames,
     errorLoadingSupportedExternalMcpClientNames,
@@ -118,4 +147,20 @@ export function useExternalMcpClients() {
     connectExternalMcpClient,
     disconnectExternalMcpClient,
   };
+
+  return (
+    <ExternalMCPClientsContext.Provider value={value}>
+      {children}
+    </ExternalMCPClientsContext.Provider>
+  );
+}
+
+export function useExternalMcpClientContext() {
+  const context = useContext(ExternalMCPClientsContext);
+  if (context === undefined) {
+    throw new Error(
+      'useExternalMcpClients must be used within an ExternalMCPClientsProvider',
+    );
+  }
+  return context;
 }
