@@ -32,19 +32,28 @@ import {
 import { useOllamaClient } from "../../../hooks/llm-providers/ollama/use-ollama-client";
 import type { MCPTool } from "../../../types/mcp";
 import { useConnectorCatalog, type McpServerWithTools } from "../../../hooks/use-connector-catalog";
-import { usePostChatMessage } from "../use-post-chat-message";
+import { useArchestraMcpClient } from "../../../hooks/use-archestra-mcp-client";
 
-interface ChatInputProps {}
+interface ChatInputProps {
+  onSubmit: (message: string, model: string) => Promise<void>;
+  onStop: () => Promise<void>;
+  clearChatHistory: () => void;
+  disabled: boolean;
+  mcpTools: any[];
+  isLoadingTools: boolean;
+  isStreaming: boolean;
+}
 
-export default function ChatInput(_props: ChatInputProps) {
+export default function ChatInput({
+  onSubmit,
+  onStop,
+  clearChatHistory,
+  disabled,
+  mcpTools,
+  isLoadingTools,
+  isStreaming,
+}: ChatInputProps) {
   const { isLoadingMcpServerTools, installedMcpServers } = useConnectorCatalog();
-  const {
-    isChatLoading,
-    isStreaming,
-    sendChatMessage,
-    clearChatHistory,
-    cancelStreaming,
-  } = usePostChatMessage();
 
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"submitted" | "streaming" | "ready" | "error">("ready");
@@ -77,7 +86,7 @@ export default function ChatInput(_props: ChatInputProps) {
     setStatus("submitted");
 
     try {
-      await sendChatMessage(message.trim(), selectedModel);
+      await onSubmit(message.trim(), selectedModel);
       setMessage("");
       setStatus("ready");
     } catch (error) {
@@ -111,7 +120,7 @@ export default function ChatInput(_props: ChatInputProps) {
     clearChatHistory();
   };
 
-  const disabled = isChatLoading || isStreaming;
+  // Use the disabled prop passed from parent
 
   // Group tools by server
   const toolsByServer = installedMcpServers.reduce((acc, mcpServer) => {
@@ -141,16 +150,14 @@ export default function ChatInput(_props: ChatInputProps) {
               </div>
               {Object.entries(toolsByServer).map(([serverName, tools]) => (
                 <Collapsible key={serverName}>
-                  <CollapsibleTrigger asChild>
-                    <div className="flex items-center justify-between p-2 hover:bg-muted rounded cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{serverName}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {tools.length} tool{tools.length !== 1 ? 's' : ''}
-                        </Badge>
-                      </div>
-                      <ChevronDown className="h-4 w-4 transition-transform" />
+                  <CollapsibleTrigger className="flex items-center justify-between p-2 hover:bg-muted rounded cursor-pointer w-full">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{serverName}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {tools.length} tool{tools.length !== 1 ? 's' : ''}
+                      </Badge>
                     </div>
+                    <ChevronDown className="h-4 w-4 transition-transform" />
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="ml-4 space-y-1">
@@ -256,7 +263,7 @@ export default function ChatInput(_props: ChatInputProps) {
           <AIInputSubmit
             status={status}
             disabled={disabled || (!message.trim() && status !== "streaming")}
-            onClick={status === "streaming" ? cancelStreaming : undefined}
+            onClick={status === "streaming" ? onStop : undefined}
           />
         </AIInputToolbar>
       </AIInput>

@@ -1,9 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { ScrollArea } from "../../components/ui/scroll-area";
 import ChatInput from "./ChatInput";
 import ToolCallIndicator from "./ToolCallIndicator";
 import ToolExecutionResult from "./ToolExecutionResult";
 import McpServersDisplay from "../../components/mcp/McpServersDisplay";
 import { usePostChatMessage } from "./use-post-chat-message";
+import { AIReasoning, AIReasoningTrigger, AIReasoningContent } from "../../components/kibo/ai-reasoning";
+import { AIResponse } from "../../components/kibo/ai-response";
 
 import { cn } from "../../lib/utils";
 import { Wrench } from "lucide-react";
@@ -32,8 +35,6 @@ export default function ChatPage({ mcpTools: _mcpToolsProp, isLoadingTools: _isL
     mcpTools,
     executeTool,
   });
-
-export default function ChatPage(_props: ChatPageProps) {
   return (
     <div className="space-y-4">
       {/* MCP Servers Display */}
@@ -167,14 +168,5 @@ export default function ChatPage(_props: ChatPageProps) {
         </CardContent>
       </Card>
     </div>
-    <Card>
-      <CardHeader>
-        <CardTitle>Chat</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <ChatHistory />
-        <ChatInput />
-      </CardContent>
-    </Card>
   );
 }

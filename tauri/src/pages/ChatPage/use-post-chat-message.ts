@@ -1,21 +1,15 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Ollama, Message as OllamaMessage } from "ollama/browser";
 import { IChatMessage, MCPTool, ToolCallInfo } from "./types";
 import { parseThinkingContent, markMessageAsCancelled } from "./utils";
+import { useConnectorCatalog } from "../../hooks/use-connector-catalog";
+import { useOllamaClient } from "../../hooks/llm-providers/ollama/use-ollama-client";
 
 interface IArgs {
   ollamaClient: Ollama | null;
   mcpTools: MCPTool[];
   executeTool?: (serverName: string, toolName: string, args: any) => Promise<any>;
 }
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { useState, useCallback, useEffect } from "react";
-import { IChatMessage, ToolCallInfo } from "./types";
-import { parseThinkingContent, markMessageAsCancelled } from "./utils";
-
-import { useConnectorCatalog } from "../../hooks/use-connector-catalog";
-import { useOllamaClient } from "../../hooks/llm-providers/ollama/use-ollama-client";
 
 // TODO: remove these constants
 export const CHAT_SCROLL_AREA_ID = "chat-scroll-area";
@@ -154,10 +148,10 @@ export function usePostChatMessage({ ollamaClient, mcpTools, executeTool }: IArg
           (model.includes("functionary") ||
             model.includes("mistral") ||
             model.includes("command") ||
-            model.includes("qwen") ||
+            (model.includes("qwen") && !model.includes("0.6b")) || // qwen3:0.6b might not support tools
             model.includes("hermes") ||
-            model.includes("llama3") ||
-            model.includes("llama-3") ||
+            model.includes("llama3.1") || // llama3.1 has better tool support than 3.2
+            model.includes("llama-3.1") ||
             model.includes("phi") ||
             model.includes("granite"));
 
@@ -208,6 +202,7 @@ export function usePostChatMessage({ ollamaClient, mcpTools, executeTool }: IArg
 
         console.log("📡 Starting Ollama SDK streaming chat...");
         console.log("🔧 Tools available:", tools?.length || 0, tools?.map(t => t.function.name) || []);
+        console.log("🔧 Full tools schema:", JSON.stringify(tools, null, 2));
 
         const controller = new AbortController();
         setAbortController(controller);
@@ -242,11 +237,13 @@ export function usePostChatMessage({ ollamaClient, mcpTools, executeTool }: IArg
 
           if (part.done) {
             finalMessage = part.message;
+            console.log("🏁 Final message received:", JSON.stringify(finalMessage, null, 2));
             break;
           }
         }
 
         // Handle tool calls if present
+        console.log("🔍 Checking for tool calls. finalMessage:", !!finalMessage, "tool_calls:", finalMessage?.tool_calls, "executeTool:", !!executeTool);
         if (finalMessage?.tool_calls && executeTool) {
           console.log("🔧 Tool calls received:", finalMessage.tool_calls);
           
@@ -273,11 +270,20 @@ export function usePostChatMessage({ ollamaClient, mcpTools, executeTool }: IArg
                 : toolCall.function.arguments;
               
               console.log("🚀 Executing tool:", functionName, "with args:", args);
+              console.log("🔍 Available MCP tools:", mcpTools.map(t => `${t.serverName}_${t.tool.name}`));
               
               // Extract server name and tool name
-              const [serverName, toolName] = functionName.includes('_') 
-                ? functionName.split('_', 2)
-                : ['unknown', functionName];
+              // Find the matching MCP tool to get the correct server name
+              const matchingTool = mcpTools.find(tool => 
+                `${tool.serverName}_${tool.tool.name}` === functionName
+              );
+              
+              console.log("🎯 Matching tool found:", matchingTool);
+              
+              const serverName = matchingTool?.serverName || 'unknown';
+              const toolName = matchingTool?.tool.name || functionName;
+              
+              console.log("🎯 Resolved server name:", serverName, "tool name:", toolName);
               
               // Execute the MCP tool
               const result = await executeTool(serverName, toolName, args);
@@ -307,9 +313,13 @@ export function usePostChatMessage({ ollamaClient, mcpTools, executeTool }: IArg
               const errorMsg = error instanceof Error ? error.message : String(error);
               const errorFunctionName = toolCall.function.name;
               
-              const [errorServerName, errorToolName] = errorFunctionName.includes('_') 
-                ? errorFunctionName.split('_', 2)
-                : ['unknown', errorFunctionName];
+              // Find the matching MCP tool to get the correct server name
+              const errorMatchingTool = mcpTools.find(tool => 
+                `${tool.serverName}_${tool.tool.name}` === errorFunctionName
+              );
+              
+              const errorServerName = errorMatchingTool?.serverName || 'unknown';
+              const errorToolName = errorMatchingTool?.tool.name || errorFunctionName;
                 
               toolResults.push({
                 id: toolCall.id,

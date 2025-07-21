@@ -241,19 +241,26 @@ impl ArchestraMcpServer {
     async fn list_installed_mcp_servers(&self) -> Result<CallToolResult, McpError> {
         println!("Listing installed MCP servers");
 
-        match McpServerModel::load_all_servers(&*self.db).await {
+        match McpServerModel::load_installed_mcp_servers(&*self.db).await {
             Ok(servers) => {
                 let server_list: Vec<_> = servers
                     .into_iter()
-                    .map(|(name, definition)| {
-                        serde_json::json!({
-                            "name": name,
-                            "transport": definition.server_config.transport,
-                            "command": definition.server_config.command,
-                            "args": definition.server_config.args,
-                            "env_count": definition.server_config.env.len(),
-                            "has_meta": definition.meta.is_some()
-                        })
+                    .filter_map(|model| {
+                        let name = model.name.clone();
+                        match model.to_definition() {
+                            Ok(definition) => Some(serde_json::json!({
+                                "name": name,
+                                "transport": definition.server_config.transport,
+                                "command": definition.server_config.command,
+                                "args": definition.server_config.args,
+                                "env_count": definition.server_config.env.len(),
+                                "has_meta": definition.meta.is_some()
+                            })),
+                            Err(e) => {
+                                eprintln!("Failed to convert model to definition: {}", e);
+                                None
+                            }
+                        }
                     })
                     .collect();
 
