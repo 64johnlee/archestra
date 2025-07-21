@@ -2,7 +2,8 @@ use super::McpServerDefinition;
 use crate::database::connection::get_database_connection_with_app;
 use crate::models::mcp_server::Model;
 use crate::utils::node;
-use rmcp::model::{JsonRpcRequest, JsonRpcResponse, Resource as McpResource, Tool as McpTool};
+use rmcp::model::{JsonRpcResponse, Resource as McpResource, Tool as McpTool};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::process::Stdio;
 use std::sync::Arc;
@@ -15,6 +16,14 @@ use tokio::sync::{mpsc, Mutex as TokioMutex, RwLock};
 const MAX_BUFFER_SIZE: usize = 1000;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const CHANNEL_CAPACITY: usize = 100;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FlexibleJsonRpcRequest {
+    pub jsonrpc: String,
+    pub method: String,
+    pub params: Option<serde_json::Value>,
+    pub id: Option<serde_json::Value>, // Make ID optional to handle notifications
+}
 
 #[derive(Debug, Clone)]
 pub enum ServerType {
@@ -411,6 +420,18 @@ impl McpServerManager {
                     })?;
 
                 println!("📤 Sending request to process stdin...");
+                println!("📋 Raw request body: {}", request_body);
+                println!("📏 Request body length: {} bytes", request_body.len());
+                
+                // Let's also try to parse as generic JSON first to see what fields are present
+                if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&request_body) {
+                    println!("📊 Parsed as JSON. Keys present: {:?}", 
+                        json_value.as_object().map(|obj| obj.keys().collect::<Vec<_>>()));
+                    println!("📝 Full JSON structure: {}", serde_json::to_string_pretty(&json_value).unwrap_or_default());
+                } else {
+                    println!("❌ Request body is not valid JSON");
+                }
+                
                 stdin_tx
                     .send(format!("{}\n", request_body))
                     .await
@@ -419,12 +440,20 @@ impl McpServerManager {
                         format!("Failed to send request: {}", e)
                     })?;
 
-                // Parse request to get ID for response matching
-                let request: JsonRpcRequest = serde_json::from_str(&request_body)
+                // Parse request using our flexible structure
+                let request: FlexibleJsonRpcRequest = serde_json::from_str(&request_body)
                     .map_err(|e| {
                         println!("❌ Failed to parse JSON-RPC request: {}", e);
                         format!("Failed to parse request: {}", e)
                     })?;
+
+                println!("🔍 Parsed request - method: {}, id: {:?}", request.method, request.id);
+                
+                // Check if this is a notification (no ID) or a regular request
+                if request.id.is_none() {
+                    println!("📢 This is a JSON-RPC notification (no response expected)");
+                    return Ok("".to_string()); // Notifications don't expect responses
+                }
 
                 println!("🕐 Waiting for response with ID: {:?}", request.id);
                 // Wait for response with matching ID
@@ -456,7 +485,27 @@ impl McpServerManager {
                             serde_json::from_str::<JsonRpcResponse>(&entry.content)
                         {
                             println!("✅ Parsed JSON-RPC response with ID: {:?}", response.id);
-                            if response.id == request.id {
+                            
+                            // Convert request.id to match response.id format for comparison
+                            let ids_match = match &request.id {
+                                Some(req_id) => {
+                                    // Convert serde_json::Value to string for comparison
+                                    match req_id {
+                                        serde_json::Value::Number(n) => {
+                                            response.id.to_string() == n.to_string()
+                                        }
+                                        serde_json::Value::String(s) => {
+                                            response.id.to_string() == *s
+                                        }
+                                        _ => {
+                                            response.id.to_string() == req_id.to_string()
+                                        }
+                                    }
+                                }
+                                None => false, // Should not happen since we checked earlier
+                            };
+                            
+                            if ids_match {
                                 println!("🎯 Found matching response for ID: {:?}", request.id);
                                 return Ok(entry.content);
                             } else {
