@@ -1,4 +1,5 @@
-use crate::models::mcp_server::sandbox::forward_raw_request;
+use crate::models::mcp_server::{sandbox::forward_raw_request, Model as McpServerModel};
+use sea_orm::DatabaseConnection;
 use axum::{
     body::Body,
     extract::Path,
@@ -67,6 +68,7 @@ pub struct ArchestraMcpServer {
     context: Arc<Mutex<ArchestraContext>>,
     resources: Arc<Mutex<HashMap<String, ArchestraResource>>>,
     tool_router: ToolRouter<ArchestraMcpServer>,
+    db: Arc<DatabaseConnection>,
 }
 
 // Health check endpoint
@@ -142,7 +144,7 @@ async fn handle_proxy_request(
 
 #[tool_router]
 impl ArchestraMcpServer {
-    pub fn new(user_id: String) -> Self {
+    pub fn new(user_id: String, db: DatabaseConnection) -> Self {
         let mut resources = HashMap::new();
 
         // Add default resources
@@ -177,6 +179,7 @@ impl ArchestraMcpServer {
             })),
             resources: Arc::new(Mutex::new(resources)),
             tool_router: Self::tool_router(),
+            db: Arc::new(db),
         }
     }
 
@@ -218,6 +221,43 @@ impl ArchestraMcpServer {
             "Active models set to: {:?}",
             models
         ))]))
+    }
+
+    #[tool(description = "List all installed MCP servers that can be proxied")]
+    async fn list_installed_mcp_servers(&self) -> Result<CallToolResult, McpError> {
+        println!("Listing installed MCP servers");
+
+        match McpServerModel::load_all_servers(&*self.db).await {
+            Ok(servers) => {
+                let server_list: Vec<_> = servers
+                    .into_iter()
+                    .map(|(name, definition)| {
+                        serde_json::json!({
+                            "name": name,
+                            "transport": definition.server_config.transport,
+                            "command": definition.server_config.command,
+                            "args": definition.server_config.args,
+                            "env_count": definition.server_config.env.len(),
+                            "has_meta": definition.meta.is_some()
+                        })
+                    })
+                    .collect();
+
+                Ok(CallToolResult::success(vec![Content::text(
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "servers": server_list,
+                        "total_count": server_list.len()
+                    })).unwrap_or_else(|_| "{}".to_string()),
+                )]))
+            }
+            Err(e) => {
+                println!("Failed to load MCP servers: {}", e);
+                Err(McpError::internal_error(
+                    format!("Failed to load MCP servers: {}", e),
+                    None,
+                ))
+            }
+        }
     }
 }
 
@@ -334,7 +374,7 @@ impl ServerHandler for ArchestraMcpServer {
     }
 }
 
-pub async fn start_archestra_mcp_server(user_id: String) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_archestra_mcp_server(user_id: String, db: DatabaseConnection) -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([127, 0, 0, 1], MCP_SERVER_PORT));
 
     // Configure StreamableHTTP server for MCP
@@ -344,8 +384,9 @@ pub async fn start_archestra_mcp_server(user_id: String) -> Result<(), Box<dyn s
     };
 
     // Create StreamableHTTP service with a factory closure
+    let db_for_closure = Arc::new(db);
     let streamable_service = StreamableHttpService::new(
-        move || Ok(ArchestraMcpServer::new(user_id.clone())),
+        move || Ok(ArchestraMcpServer::new(user_id.clone(), (*db_for_closure).clone())),
         Arc::new(LocalSessionManager::default()),
         config,
     );
@@ -389,14 +430,22 @@ mod tests {
     use tower::util::ServiceExt;
 
     // Helper function to create a test server instance
-    fn create_test_server() -> ArchestraMcpServer {
-        ArchestraMcpServer::new("test_user_123".to_string())
+    async fn create_test_server() -> ArchestraMcpServer {
+        use sea_orm::Database;
+        let db = Database::connect("sqlite::memory:").await.unwrap();
+        
+        // Run migrations on in-memory database
+        use crate::database::migration::Migrator;
+        use sea_orm_migration::MigratorTrait;
+        Migrator::up(&db, None).await.unwrap();
+        
+        ArchestraMcpServer::new("test_user_123".to_string(), db)
     }
 
     // Test server creation and initialization
-    #[test]
-    fn test_server_creation() {
-        let server = create_test_server();
+    #[tokio::test]
+    async fn test_server_creation() {
+        let server = create_test_server().await;
         // Server should be created successfully with default resources
         let _ = server; // Ensure server is created without panic
     }
@@ -404,7 +453,7 @@ mod tests {
     // Test server info
     #[tokio::test]
     async fn test_server_info() {
-        let server = create_test_server();
+        let server = create_test_server().await;
         let info = server.get_info();
 
         assert_eq!(info.protocol_version, ProtocolVersion::V_2025_03_26);
@@ -418,10 +467,17 @@ mod tests {
     #[tokio::test]
     async fn test_server_startup() {
         let user_id = "test_user".to_string();
+        
+        // Create in-memory database
+        use sea_orm::Database;
+        let db = Database::connect("sqlite::memory:").await.unwrap();
+        use crate::database::migration::Migrator;
+        use sea_orm_migration::MigratorTrait;
+        Migrator::up(&db, None).await.unwrap();
 
         // Start server in a background task
         let server_task = tokio::spawn(async move {
-            let result = start_archestra_mcp_server(user_id).await;
+            let result = start_archestra_mcp_server(user_id, db).await;
             // Server should run until cancelled
             assert!(result.is_ok() || result.is_err());
         });
@@ -467,7 +523,7 @@ mod tests {
     // Test get_context tool
     #[tokio::test]
     async fn test_get_context_tool() {
-        let server = create_test_server();
+        let server = create_test_server().await;
 
         let result = server.get_context().await;
         assert!(result.is_ok());
@@ -492,7 +548,7 @@ mod tests {
     // Test update_context tool
     #[tokio::test]
     async fn test_update_context_tool() {
-        let server = create_test_server();
+        let server = create_test_server().await;
 
         // Update context with a key-value pair
         let params = UpdateContextRequest {
@@ -514,7 +570,7 @@ mod tests {
     // Test set_active_models tool
     #[tokio::test]
     async fn test_set_active_models_tool() {
-        let server = create_test_server();
+        let server = create_test_server().await;
 
         let params = SetActiveModelsRequest {
             models: vec!["gpt-4".to_string(), "claude-3-opus".to_string()],
@@ -573,7 +629,7 @@ mod tests {
     // Test concurrent context updates
     #[tokio::test]
     async fn test_concurrent_context_updates() {
-        let server = Arc::new(create_test_server());
+        let server = Arc::new(create_test_server().await);
 
         // Spawn multiple tasks that update context concurrently
         let mut handles = vec![];
@@ -603,6 +659,31 @@ mod tests {
                 context.project_context.get(&format!("key_{}", i)),
                 Some(&format!("value_{}", i))
             );
+        }
+    }
+
+    // Test list_installed_mcp_servers tool
+    #[tokio::test]
+    async fn test_list_installed_mcp_servers_tool() {
+        let server = create_test_server().await;
+
+        let result = server.list_installed_mcp_servers().await;
+        assert!(result.is_ok());
+
+        let tool_result = result.unwrap();
+        assert!(!tool_result.content.is_empty());
+
+        // Verify the response contains expected fields
+        let first_content = tool_result.content.first().unwrap();
+        match &first_content.raw {
+            rmcp::model::RawContent::Text(text) => {
+                let servers_response: serde_json::Value = serde_json::from_str(&text.text).unwrap();
+                assert!(servers_response["servers"].is_array());
+                assert!(servers_response["total_count"].is_number());
+                // Empty database should have 0 servers
+                assert_eq!(servers_response["total_count"], 0);
+            }
+            _ => panic!("Expected text content"),
         }
     }
 }
