@@ -18,7 +18,7 @@ jobs:
           components: rustfmt,clippy
 
       - name: Check Rust formatting
-        working-directory: tauri/src-tauri
+        working-directory: desktop/src-tauri
         run: cargo fmt --check
 
   frontend-linting-and-tests:
@@ -37,12 +37,12 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
-          cache-dependency-path: tauri/pnpm-lock.yaml
+          cache-dependency-path: desktop/pnpm-lock.yaml
 
       - name: Install dependencies
-        working-directory: tauri
+        working-directory: desktop
         run: pnpm install --frozen-lockfile
 
       - name: Check TypeScript formatting
-        working-directory: tauri
+        working-directory: desktop
         run: pnpm prettier --check "src/**/*.{ts,tsx,js,jsx}"
