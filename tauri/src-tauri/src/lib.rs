@@ -13,7 +13,7 @@ pub mod utils;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut builder = tauri::Builder::default();
+    let mut builder = tauri::Builder::default().plugin(tauri_plugin_http::init());
 
     // Configure the single instance plugin which should always be the first plugin you register
     // https://v2.tauri.app/plugin/deep-linking/#desktop
@@ -52,7 +52,7 @@ pub fn run() {
         .setup(|app| {
             // Initialize database
             let app_handle = app.handle().clone();
-            tauri::async_runtime::block_on(async {
+            let db = tauri::async_runtime::block_on(async {
                 database::init_database(&app_handle)
                     .await
                     .map_err(|e| format!("Database error: {}", e))
@@ -77,8 +77,9 @@ pub fn run() {
 
             // Start the Archestra MCP Server
             let user_id = "archestra_user".to_string();
+            let db_for_mcp = db.clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = archestra_mcp_server::start_archestra_mcp_server(user_id).await {
+                if let Err(e) = archestra_mcp_server::start_archestra_mcp_server(user_id, db_for_mcp).await {
                     eprintln!("Failed to start Archestra MCP Server: {}", e);
                 }
             });

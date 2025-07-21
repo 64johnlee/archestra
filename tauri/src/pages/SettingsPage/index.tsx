@@ -9,7 +9,8 @@ export default function SettingsPage() {
       <div>
         <h2 className="text-2xl font-bold mb-2">Settings</h2>
         <p className="text-muted-foreground">
-          Configure your Archestra AI desktop application settings and manage MCP connections.
+          Configure your Archestra AI desktop application settings and manage
+          MCP connections.
         </p>
       </div>
 
