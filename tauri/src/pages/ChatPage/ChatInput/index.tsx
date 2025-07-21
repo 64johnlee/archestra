@@ -30,15 +30,7 @@ import {
   AIInputModelSelectValue,
 } from "../../../components/kibo/ai-input";
 import { useOllamaClient } from "../../../hooks/llm-providers/ollama/use-ollama-client";
-
-interface MCPTool {
-  serverName: string;
-  tool: {
-    name: string;
-    description?: string;
-    inputSchema: any;
-  };
-}
+import type { MCPTool } from "../../../types/mcp";
 
 interface ChatInputProps {
   clearChatHistory: () => void;

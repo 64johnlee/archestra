@@ -12,7 +12,6 @@ import ChatPage from "./pages/ChatPage";
 import ConnectorCatalogPage from "./pages/ConnectorCatalogPage";
 import LLMProvidersPage from "./pages/LLMProvidersPage";
 import SettingsPage from "./pages/SettingsPage";
-import { useArchestraMcpClient } from "./hooks/use-archestra-mcp-client";
 
 import {
   Sidebar,
@@ -43,7 +42,6 @@ function App() {
   }>({});
   const [, setMcpServerStatus] = useState<{[key: string]: string}>({});
 
-  const { mcpTools, isLoadingMcpTools, executeTool } = useArchestraMcpClient();
   const [activeView, setActiveView] = useState<"chat" | "mcp" | "llm-providers" | "settings">("chat");
   const [activeSubView, setActiveSubView] = useState<"ollama">("ollama");
 
@@ -98,9 +96,8 @@ function App() {
         return (
           <div className="space-y-6">
             <ChatPage
-              mcpTools={mcpTools}
-              isLoadingTools={isLoadingMcpTools}
-              executeTool={executeTool}
+              mcpTools={[]}
+              isLoadingTools={false}
             />
           </div>
         );

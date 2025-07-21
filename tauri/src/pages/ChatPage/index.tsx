@@ -5,20 +5,14 @@ import { AIResponse } from "../../components/kibo/ai-response";
 import ChatInput from "./ChatInput";
 import ToolCallIndicator from "./ToolCallIndicator";
 import ToolExecutionResult from "./ToolExecutionResult";
+import McpServersDisplay from "../../components/mcp/McpServersDisplay";
 import { usePostChatMessage } from "./use-post-chat-message";
 
 import { cn } from "../../lib/utils";
 import { Wrench } from "lucide-react";
 import { useOllamaClient } from "../../hooks/llm-providers/ollama/use-ollama-client";
-
-interface MCPTool {
-  serverName: string;
-  tool: {
-    name: string;
-    description?: string;
-    inputSchema?: any;
-  };
-}
+import { useArchestraMcpClient } from "../../hooks/use-archestra-mcp-client";
+import type { MCPTool } from "../../types/mcp";
 
 interface ChatPageProps {
   mcpTools: MCPTool[];
@@ -26,19 +20,36 @@ interface ChatPageProps {
   executeTool?: (serverName: string, toolName: string, args: any) => Promise<any>;
 }
 
-export default function ChatPage({ mcpTools, isLoadingTools = false }: ChatPageProps) {
-  const { ollamaClient: _ollamaClient, ollamaPort } = useOllamaClient()
+export default function ChatPage({ mcpTools: _mcpToolsProp, isLoadingTools: _isLoadingToolsProp = false }: ChatPageProps) {
+  const { ollamaClient: _ollamaClient, ollamaPort } = useOllamaClient();
+  const { 
+    mcpTools, 
+    mcpServers, 
+    isLoadingMcpTools, 
+    refreshServers 
+  } = useArchestraMcpClient();
+  
   const { chatHistory, isChatLoading, isStreaming, sendChatMessage, clearChatHistory, cancelStreaming } = usePostChatMessage({
     ollamaPort,
     mcpTools,
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Chat</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
+      {/* MCP Servers Display */}
+      <McpServersDisplay
+        mcpServers={mcpServers}
+        mcpTools={mcpTools}
+        isLoading={isLoadingMcpTools}
+        onRefresh={refreshServers}
+      />
+
+      {/* Chat Interface */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Chat</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
         <ScrollArea
           id="chat-scroll-area"
           className="h-96 w-full rounded-md border p-4"
@@ -149,11 +160,12 @@ export default function ChatPage({ mcpTools, isLoadingTools = false }: ChatPageP
           onStop={cancelStreaming}
           clearChatHistory={clearChatHistory}
           disabled={!isStreaming && (isChatLoading || !ollamaPort)}
-          mcpTools={[]} // TODO: implement MCP tools, fetch from archestra mcp server
-          isLoadingTools={isLoadingTools}
+          mcpTools={mcpTools}
+          isLoadingTools={isLoadingMcpTools}
           isStreaming={isStreaming}
         />
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
