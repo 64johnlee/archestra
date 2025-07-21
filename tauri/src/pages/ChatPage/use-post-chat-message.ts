@@ -1,19 +1,19 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { useState, useCallback, useEffect } from "react";
-import { IChatMessage, ToolCallInfo, MCPTool } from "./types";
+import { useState, useCallback } from "react";
+import { Ollama, Message as OllamaMessage } from "ollama/browser";
+import { IChatMessage, MCPTool, ToolCallInfo } from "./types";
 import { parseThinkingContent, markMessageAsCancelled } from "./utils";
 
 interface IArgs {
-  ollamaPort: number | null;
+  ollamaClient: Ollama | null;
   mcpTools: MCPTool[];
+  executeTool?: (serverName: string, toolName: string, args: any) => Promise<any>;
 }
 
 // TODO: remove these constants
 export const CHAT_SCROLL_AREA_ID = "chat-scroll-area";
 export const CHAT_SCROLL_AREA_SELECTOR = `#${CHAT_SCROLL_AREA_ID} [data-radix-scroll-area-viewport]`;
 
-export function usePostChatMessage({ ollamaPort, mcpTools }: IArgs) {
+export function usePostChatMessage({ ollamaClient, mcpTools, executeTool }: IArgs) {
   const [chatHistory, setChatHistory] = useState<IChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
@@ -21,25 +21,23 @@ export function usePostChatMessage({ ollamaPort, mcpTools }: IArgs) {
   );
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
-  const [isToolBasedStreaming, setIsToolBasedStreaming] = useState(false);
 
   // Scroll to bottom when new messages are added or content changes
-  useEffect(() => {
-    const scrollToBottom = () => {
-      // Find the scroll area and scroll to bottom smoothly
-      const scrollArea = document.querySelector(CHAT_SCROLL_AREA_SELECTOR);
-      if (scrollArea) {
-        scrollArea.scrollTo({
-          top: scrollArea.scrollHeight,
-          behavior: "smooth",
-        });
-      }
-    };
+  const scrollToBottom = useCallback(() => {
+    const scrollArea = document.querySelector(CHAT_SCROLL_AREA_SELECTOR);
+    if (scrollArea) {
+      scrollArea.scrollTo({
+        top: scrollArea.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, []);
 
-    // Scroll after a short delay to ensure DOM is updated
+  // Trigger scroll after message changes
+  const triggerScroll = useCallback(() => {
     const timeoutId = setTimeout(scrollToBottom, 50);
     return () => clearTimeout(timeoutId);
-  }, [chatHistory, streamingMessageId]); // Trigger on both message changes and streaming status
+  }, [scrollToBottom]);
 
   const clearChatHistory = useCallback(() => {
     setChatHistory([]);
@@ -47,31 +45,19 @@ export function usePostChatMessage({ ollamaPort, mcpTools }: IArgs) {
 
   const cancelStreaming = useCallback(async () => {
     try {
-      console.log("🛑 Cancelling streaming, tool-based:", isToolBasedStreaming);
+      console.log("🛑 Cancelling streaming");
 
-      if (isToolBasedStreaming) {
-        // Cancel tool-based streaming
-        try {
-          await invoke("cancel_ollama_streaming");
-          console.log("✅ Tool-based streaming cancellation successful");
-        } catch (error) {
-          console.warn("⚠️ Tool-based streaming cancellation failed:", error);
-          // Continue with state reset even if backend cancellation failed
-        }
-      } else if (abortController) {
-        // Cancel fetch-based streaming
+      if (abortController) {
         abortController.abort();
         setAbortController(null);
-        console.log("✅ Fetch-based streaming cancelled");
+        console.log("✅ Streaming cancelled");
       }
 
-      // Always reset state immediately and clear tool execution states
+      // Reset state immediately
       setIsChatLoading(false);
       setStreamingMessageId(null);
-      setIsToolBasedStreaming(false);
 
-      // Clear any stuck tool execution states from the currently streaming message
-      // Don't add cancellation text here - let the event listeners handle that
+      // Clear any stuck execution states from the currently streaming message
       setChatHistory((prev) =>
         prev.map((msg) =>
           msg.id === streamingMessageId ||
@@ -91,9 +77,7 @@ export function usePostChatMessage({ ollamaPort, mcpTools }: IArgs) {
       // Still reset state even if cancellation failed
       setIsChatLoading(false);
       setStreamingMessageId(null);
-      setIsToolBasedStreaming(false);
 
-      // Clear any stuck tool execution states from the currently streaming message
       setChatHistory((prev) =>
         prev.map((msg) =>
           msg.id === streamingMessageId ||
@@ -104,182 +88,29 @@ export function usePostChatMessage({ ollamaPort, mcpTools }: IArgs) {
         ),
       );
     }
-  }, [abortController, isToolBasedStreaming, streamingMessageId]);
+  }, [abortController, streamingMessageId]);
 
-  // Set up streaming event listeners
-  useEffect(() => {
-    const setupListeners = async () => {
-      // Listen for streaming chunks
-      const unlistenChunk = await listen("ollama-chunk", (event: any) => {
-        const { total_content } = event.payload;
-
-        // Parse thinking content from tool-based streaming
-        const parsed = parseThinkingContent(total_content);
-
-        // Update the streaming message in chat history
-        setChatHistory((prev) => {
-          return prev.map((msg) =>
-            msg.id === streamingMessageId && msg.isStreaming
-              ? {
-                  ...msg,
-                  content: parsed.response,
-                  thinkingContent: parsed.thinking,
-                  isThinkingStreaming: parsed.isThinkingStreaming,
-                }
-              : msg,
-          );
-        });
-      });
-
-      // Listen for tool results
-      const unlistenToolResults = await listen(
-        "ollama-tool-results",
-        (event: any) => {
-          const { tool_results, message } = event.payload;
-
-          if (tool_results && tool_results.length > 0 && streamingMessageId) {
-            // Extract tool calls from the message to get server/tool names
-            const originalToolCalls = message?.tool_calls || [];
-
-            // Create tool call info from results
-            const toolCallsInfo: ToolCallInfo[] = tool_results.map(
-              (toolResult: any, index: number) => {
-                const toolId = `tool-${Date.now()}-${index}`;
-
-                // Try to match tool result with original tool call to get metadata
-                const matchingToolCall = originalToolCalls[index];
-                let serverName = "mcp";
-                let toolName = `tool-${index + 1}`;
-                let toolArguments = {};
-
-                if (matchingToolCall?.function) {
-                  const functionName = matchingToolCall.function.name;
-                  if (functionName && functionName.includes("_")) {
-                    const [server, tool] = functionName.split("_", 2);
-                    serverName = server;
-                    toolName = tool;
-                  }
-                  toolArguments = matchingToolCall.function.arguments || {};
-                }
-
-                // Extract text content from the complex structure
-                let resultContent = "";
-                if (toolResult.content) {
-                  if (typeof toolResult.content === "string") {
-                    resultContent = toolResult.content;
-                  } else if (Array.isArray(toolResult.content)) {
-                    // Handle array of content objects
-                    resultContent = toolResult.content
-                      .map((item: any) => item.text || item.content || item)
-                      .join("\n");
-                  } else if (toolResult.content.text) {
-                    resultContent = toolResult.content.text;
-                  } else {
-                    resultContent = JSON.stringify(toolResult.content, null, 2);
-                  }
-                } else if (toolResult.result) {
-                  resultContent = toolResult.result;
-                }
-
-                return {
-                  id: toolId,
-                  serverName,
-                  toolName,
-                  arguments: toolArguments,
-                  result: resultContent,
-                  error: toolResult.error,
-                  status: toolResult.error ? "error" : ("completed" as const),
-                  executionTime: 0,
-                  startTime: new Date(),
-                  endTime: new Date(),
-                };
-              },
-            );
-
-            // Update AI message with tool execution info
-            setChatHistory((prev) =>
-              prev.map((msg) =>
-                msg.id === streamingMessageId
-                  ? {
-                      ...msg,
-                      isToolExecuting: false,
-                      toolCalls: toolCallsInfo,
-                    }
-                  : msg,
-              ),
-            );
-
-            // Add individual tool result messages
-            for (const toolResult of tool_results) {
-              const toolMessage = {
-                id: (Date.now() + Math.random()).toString(),
-                role: "tool",
-                content: `Tool: ${toolResult.tool_name}\nResult: ${toolResult.result}`,
-                timestamp: new Date(),
-              };
-              setChatHistory((prev) => [...prev, toolMessage]);
+  // Helper function to update streaming message content
+  const updateStreamingMessage = useCallback((messageId: string, content: string) => {
+    const parsed = parseThinkingContent(content);
+    setChatHistory((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId && msg.isStreaming
+          ? {
+              ...msg,
+              content: parsed.response,
+              thinkingContent: parsed.thinking,
+              isThinkingStreaming: parsed.isThinkingStreaming,
             }
-          }
-        },
-      );
-
-      // Listen for completion
-      const unlistenComplete = await listen("ollama-complete", (event: any) => {
-        const { content } = event.payload;
-
-        // Finalize the streaming message
-        setChatHistory((prev) => {
-          return prev.map((msg) =>
-            msg.id === streamingMessageId && msg.isStreaming
-              ? {
-                  ...msg,
-                  content: content,
-                  isStreaming: false,
-                  isToolExecuting: false,
-                }
-              : msg,
-          );
-        });
-
-        setStreamingMessageId(null);
-        setIsChatLoading(false);
-        setIsToolBasedStreaming(false);
-      });
-
-      // Listen for cancellation
-      const unlistenCancelled = await listen("ollama-cancelled", () => {
-        console.log("Tool-based streaming cancelled");
-        setIsChatLoading(false);
-        setStreamingMessageId(null);
-        setIsToolBasedStreaming(false);
-
-        // Mark the last message as no longer streaming
-        setChatHistory((prev) => {
-          return prev.map((msg) =>
-            msg.id === streamingMessageId && msg.isStreaming
-              ? markMessageAsCancelled(msg)
-              : msg,
-          );
-        });
-      });
-
-      return () => {
-        unlistenChunk();
-        unlistenToolResults();
-        unlistenComplete();
-        unlistenCancelled();
-      };
-    };
-
-    const cleanup = setupListeners();
-    return () => {
-      cleanup.then((fn) => fn());
-    };
-  }, [streamingMessageId]);
+          : msg,
+      ),
+    );
+    triggerScroll();
+  }, [triggerScroll]);
 
   const sendChatMessage = useCallback(
     async (message: string, model: string) => {
-      if (!message.trim() || !ollamaPort) return;
+      if (!message.trim() || !ollamaClient) return;
 
       setIsChatLoading(true);
 
@@ -297,14 +128,14 @@ export function usePostChatMessage({ ollamaPort, mcpTools }: IArgs) {
         id: aiMsgId,
         role: "assistant",
         content: "",
-        thinkingContent: "", // Ensure clean slate
+        thinkingContent: "",
         timestamp: new Date(),
         isStreaming: true,
         isThinkingStreaming: false,
       };
       setChatHistory((prev) => [...prev, aiMessage]);
-
-      const currentMessage = message;
+      setStreamingMessageId(aiMsgId);
+      triggerScroll();
 
       try {
         // Check if the model supports tool calling
@@ -327,165 +158,244 @@ export function usePostChatMessage({ ollamaPort, mcpTools }: IArgs) {
           willUseMcpTools: mcpTools.length > 0 && modelSupportsTools,
         });
 
-        if (mcpTools.length > 0 && modelSupportsTools) {
-          console.log(
-            "🎯 Using streaming tool-enabled chat with",
-            mcpTools.length,
-            "tools",
-          );
+        // Add warning if tools are available but model doesn't support them
+        if (mcpTools.length > 0 && !modelSupportsTools) {
+          const warningMessage = {
+            id: (Date.now() + Math.random()).toString(),
+            role: "system",
+            content: `⚠️ MCP tools are available but ${model} doesn't support tool calling. Consider using functionary-small-v3.2 or another tool-enabled model.`,
+            timestamp: new Date(),
+          };
+          setChatHistory((prev) => [...prev, warningMessage]);
+        }
 
-          // Set the streaming message ID and mark as tool-based
-          setStreamingMessageId(aiMsgId);
-          setIsToolBasedStreaming(true);
+        // Prepare chat history for Ollama SDK
+        const ollamaMessages: OllamaMessage[] = [
+          ...chatHistory
+            .filter((msg) => msg.role === "user" || msg.role === "assistant")
+            .map((msg) => ({
+              role: msg.role as "user" | "assistant",
+              content: msg.content,
+            })),
+          { role: "user", content: message },
+        ];
 
-          // Mark AI message as tool executing
+        // Convert MCP tools to Ollama tool format
+        const tools = mcpTools.length > 0 && modelSupportsTools 
+          ? mcpTools.map(mcpTool => ({
+              type: 'function' as const,
+              function: {
+                name: `${mcpTool.serverName}_${mcpTool.tool.name}`,
+                description: mcpTool.tool.description || `Tool from ${mcpTool.serverName}`,
+                parameters: mcpTool.tool.inputSchema || {
+                  type: 'object',
+                  properties: {},
+                  required: []
+                }
+              }
+            }))
+          : undefined;
+
+        console.log("📡 Starting Ollama SDK streaming chat...");
+        console.log("🔧 Tools available:", tools?.length || 0, tools?.map(t => t.function.name) || []);
+
+        const controller = new AbortController();
+        setAbortController(controller);
+
+        const response = await ollamaClient.chat({
+          model: model,
+          messages: ollamaMessages,
+          stream: true,
+          tools: tools,
+          options: {
+            temperature: 0.7,
+            top_p: 0.95,
+            top_k: 40,
+            num_predict: 32768,
+          },
+        });
+
+        let accumulatedContent = "";
+        let finalMessage: any = null;
+
+        // Stream the initial response
+        for await (const part of response) {
+          if (controller.signal.aborted) {
+            console.log("Streaming cancelled by user");
+            break;
+          }
+
+          if (part.message?.content) {
+            accumulatedContent += part.message.content;
+            updateStreamingMessage(aiMsgId, accumulatedContent);
+          }
+
+          if (part.done) {
+            finalMessage = part.message;
+            break;
+          }
+        }
+
+        // Handle tool calls if present
+        if (finalMessage?.tool_calls && executeTool) {
+          console.log("🔧 Tool calls received:", finalMessage.tool_calls);
+          
+          // Mark message as executing tools
           setChatHistory((prev) =>
             prev.map((msg) =>
               msg.id === aiMsgId
                 ? {
                     ...msg,
                     isToolExecuting: true,
-                    content: "",
+                    content: accumulatedContent,
                   }
                 : msg,
             ),
           );
 
-          // Use the streaming tool-enabled chat
-          const messages = [
-            { role: "user", content: currentMessage, tool_calls: null },
-          ];
-
-          await invoke("ollama_chat_with_tools_streaming", {
-            port: ollamaPort,
-            model: model,
-            messages: messages,
-          });
-
-          // The response will be handled by the event listeners
-        } else {
-          console.log(
-            "📡 Using streaming chat (tools disabled or model doesn't support tools)",
+          // Execute tools and collect results
+          const toolResults: ToolCallInfo[] = [];
+          for (const toolCall of finalMessage.tool_calls) {
+            try {
+              const functionName = toolCall.function.name;
+              const args = typeof toolCall.function.arguments === 'string' 
+                ? JSON.parse(toolCall.function.arguments)
+                : toolCall.function.arguments;
+              
+              console.log("🚀 Executing tool:", functionName, "with args:", args);
+              
+              // Extract server name and tool name
+              const [serverName, toolName] = functionName.includes('_') 
+                ? functionName.split('_', 2)
+                : ['unknown', functionName];
+              
+              // Execute the MCP tool
+              const result = await executeTool(serverName, toolName, args);
+              const toolResultContent = typeof result === 'string' ? result : JSON.stringify(result);
+              
+              toolResults.push({
+                id: toolCall.id,
+                serverName,
+                toolName,
+                arguments: args,
+                result: toolResultContent,
+                status: 'completed' as const,
+                executionTime: 0,
+                startTime: new Date(),
+                endTime: new Date(),
+              });
+              
+              // Add tool result to conversation
+              ollamaMessages.push(finalMessage);
+              ollamaMessages.push({
+                role: 'tool',
+                content: toolResultContent,
+              });
+              
+            } catch (error) {
+              console.error("❌ Tool execution error:", error);
+              const errorMsg = error instanceof Error ? error.message : String(error);
+              const errorFunctionName = toolCall.function.name;
+              
+              const [errorServerName, errorToolName] = errorFunctionName.includes('_') 
+                ? errorFunctionName.split('_', 2)
+                : ['unknown', errorFunctionName];
+                
+              toolResults.push({
+                id: toolCall.id,
+                serverName: errorServerName,
+                toolName: errorToolName,
+                arguments: typeof toolCall.function.arguments === 'string' 
+                  ? JSON.parse(toolCall.function.arguments)
+                  : toolCall.function.arguments,
+                result: '',
+                error: errorMsg,
+                status: 'error' as const,
+                executionTime: 0,
+                startTime: new Date(),
+                endTime: new Date(),
+              });
+            }
+          }
+          
+          // Update message with tool results
+          setChatHistory((prev) =>
+            prev.map((msg) =>
+              msg.id === aiMsgId
+                ? {
+                    ...msg,
+                    isToolExecuting: false,
+                    toolCalls: toolResults,
+                  }
+                : msg,
+            ),
           );
 
-          // Add warning if tools are available but model doesn't support them
-          if (mcpTools.length > 0 && !modelSupportsTools) {
-            const warningMessage = {
-              id: (Date.now() + Math.random()).toString(),
-              role: "system",
-              content: `⚠️ MCP tools are available but ${model} doesn't support tool calling. Consider using functionary-small-v3.2 or another tool-enabled model.`,
-              timestamp: new Date(),
-            };
-            setChatHistory((prev) => [...prev, warningMessage]);
-          }
+          // Get final response from model after tool execution
+          if (toolResults.some(tr => tr.status === 'completed')) {
+            console.log("🔄 Getting final response after tool execution...");
+            
+            const finalResponse = await ollamaClient.chat({
+              model: model,
+              messages: ollamaMessages,
+              stream: true,
+              options: {
+                temperature: 0.7,
+                top_p: 0.95,
+                top_k: 40,
+                num_predict: 32768,
+              },
+            });
 
-          // Set the streaming message ID for non-tool streaming
-          setStreamingMessageId(aiMsgId);
-          setIsToolBasedStreaming(false);
-
-          // Create new AbortController for this request
-          const controller = new AbortController();
-          setAbortController(controller);
-
-          // Use streaming Ollama chat with thinking content parsing
-          const response = await fetch(
-            `http://localhost:${ollamaPort}/api/chat`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              signal: controller.signal,
-              body: JSON.stringify({
-                model: model,
-                messages: [
-                  ...chatHistory.map((msg) => ({
-                    role: msg.role,
-                    content: msg.content,
-                  })),
-                  { role: "user", content: currentMessage },
-                ],
-                stream: true,
-                options: {
-                  temperature: 0.7,
-                  top_p: 0.95,
-                  top_k: 40,
-                  num_predict: 32768,
-                },
-              }),
-            },
-          );
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const reader = response.body?.getReader();
-          if (!reader) {
-            throw new Error("No response body");
-          }
-
-          const decoder = new TextDecoder();
-          let accumulatedContent = "";
-
-          while (true) {
-            const { done, value } = await reader.read();
-
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            const lines = chunk.split("\n").filter((line) => line.trim());
-
-            for (const line of lines) {
-              try {
-                const data = JSON.parse(line);
-
-                if (data.message?.content) {
-                  accumulatedContent += data.message.content;
-
-                  const parsed = parseThinkingContent(accumulatedContent);
-
-                  setChatHistory((prev) =>
-                    prev.map((msg) =>
-                      msg.id === aiMsgId
-                        ? {
-                            ...msg,
-                            content: parsed.response,
-                            thinkingContent: parsed.thinking,
-                            isStreaming: !data.done,
-                            isThinkingStreaming:
-                              parsed.isThinkingStreaming && !data.done,
-                          }
-                        : msg,
-                    ),
-                  );
-                }
-
-                if (data.done) {
-                  setChatHistory((prev) =>
-                    prev.map((msg) =>
-                      msg.id === aiMsgId
-                        ? {
-                            ...msg,
-                            isStreaming: false,
-                            isThinkingStreaming: false,
-                          }
-                        : msg,
-                    ),
-                  );
-                  setStreamingMessageId(null);
-                  setAbortController(null);
-                  setIsToolBasedStreaming(false);
-                  break;
-                }
-              } catch (parseError) {
-                console.warn("Failed to parse chunk:", line);
+            let finalContent = "";
+            for await (const part of finalResponse) {
+              if (controller.signal.aborted) break;
+              
+              if (part.message?.content) {
+                finalContent += part.message.content;
+                updateStreamingMessage(aiMsgId, accumulatedContent + "\n\n" + finalContent);
+              }
+              
+              if (part.done) {
+                setChatHistory((prev) =>
+                  prev.map((msg) =>
+                    msg.id === aiMsgId
+                      ? {
+                          ...msg,
+                          content: accumulatedContent + "\n\n" + finalContent,
+                          isStreaming: false,
+                          isThinkingStreaming: false,
+                        }
+                      : msg,
+                  ),
+                );
+                break;
               }
             }
           }
+        } else {
+          // No tool calls, just finalize the message
+          setChatHistory((prev) =>
+            prev.map((msg) =>
+              msg.id === aiMsgId
+                ? {
+                    ...msg,
+                    isStreaming: false,
+                    isThinkingStreaming: false,
+                  }
+                : msg,
+            ),
+          );
         }
+
+        setStreamingMessageId(null);
+        setAbortController(null);
       } catch (error: any) {
+        console.error("Chat error:", error);
+
         // Handle abort specifically
-        if (error.name === "AbortError") {
-          console.log("Fetch-based streaming cancelled by user");
+        if (error.name === "AbortError" || abortController?.signal.aborted) {
+          console.log("Streaming cancelled by user");
           setChatHistory((prev) =>
             prev.map((msg) =>
               msg.id === aiMsgId ? markMessageAsCancelled(msg) : msg,
@@ -503,6 +413,7 @@ export function usePostChatMessage({ ollamaPort, mcpTools }: IArgs) {
                     ...msg,
                     content: `Error: ${errorMsg}`,
                     isStreaming: false,
+                    isThinkingStreaming: false,
                   }
                 : msg,
             ),
@@ -510,12 +421,11 @@ export function usePostChatMessage({ ollamaPort, mcpTools }: IArgs) {
         }
         setStreamingMessageId(null);
         setAbortController(null);
-        setIsToolBasedStreaming(false);
       }
 
       setIsChatLoading(false);
     },
-    [ollamaPort, mcpTools, chatHistory],
+    [ollamaClient, mcpTools, chatHistory, updateStreamingMessage, triggerScroll, executeTool],
   );
 
   const isStreaming = streamingMessageId !== null;

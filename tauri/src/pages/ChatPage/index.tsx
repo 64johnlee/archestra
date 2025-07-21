@@ -21,17 +21,19 @@ interface ChatPageProps {
 }
 
 export default function ChatPage({ mcpTools: _mcpToolsProp, isLoadingTools: _isLoadingToolsProp = false }: ChatPageProps) {
-  const { ollamaClient: _ollamaClient, ollamaPort } = useOllamaClient();
+  const { ollamaClient } = useOllamaClient();
   const { 
     mcpTools, 
     mcpServers, 
     isLoadingMcpTools, 
-    refreshServers 
+    refreshServers,
+    executeTool 
   } = useArchestraMcpClient();
   
   const { chatHistory, isChatLoading, isStreaming, sendChatMessage, clearChatHistory, cancelStreaming } = usePostChatMessage({
-    ollamaPort,
+    ollamaClient,
     mcpTools,
+    executeTool,
   });
 
   return (
@@ -159,7 +161,7 @@ export default function ChatPage({ mcpTools: _mcpToolsProp, isLoadingTools: _isL
           onSubmit={sendChatMessage}
           onStop={cancelStreaming}
           clearChatHistory={clearChatHistory}
-          disabled={!isStreaming && (isChatLoading || !ollamaPort)}
+          disabled={!isStreaming && (isChatLoading || !ollamaClient)}
           mcpTools={mcpTools}
           isLoadingTools={isLoadingMcpTools}
           isStreaming={isStreaming}
