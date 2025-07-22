@@ -2,6 +2,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { ModelResponse, Ollama } from 'ollama/browser';
 import { create } from 'zustand';
 
+import { OllamaLocalStorage } from '@/lib/local-storage';
+
 import { AVAILABLE_MODELS } from './available_models';
 
 interface OllamaState {
@@ -32,7 +34,7 @@ export const useOllamaStore = create<OllamaStore>((set, get) => ({
   downloadProgress: {},
   loadingInstalledModels: false,
   loadingInstalledModelsError: null,
-  selectedModel: '',
+  selectedModel: OllamaLocalStorage.getSelectedModel() || '',
   modelsBeingDownloaded: new Set(),
 
   // Actions
@@ -40,7 +42,6 @@ export const useOllamaStore = create<OllamaStore>((set, get) => ({
     try {
       const port = await invoke<number>('get_ollama_port');
       const client = new Ollama({ host: `http://localhost:${port}` });
-
       set({ ollamaPort: port, ollamaClient: client });
 
       // Fetch models after initialization
@@ -53,17 +54,18 @@ export const useOllamaStore = create<OllamaStore>((set, get) => ({
 
   fetchInstalledModels: async () => {
     const { ollamaClient, selectedModel } = get();
-    if (!ollamaClient) return;
+    if (!ollamaClient) {
+      return;
+    }
 
     try {
       set({ loadingInstalledModels: true, loadingInstalledModelsError: null });
       const { models } = await ollamaClient.list();
-
       set({ installedModels: models });
 
-      // Auto-select first model if none selected
-      if (models.length > 0 && !selectedModel) {
-        set({ selectedModel: models[0].model });
+      const firstInstalledModel = models[0];
+      if (!selectedModel && firstInstalledModel && firstInstalledModel.model) {
+        get().setSelectedModel(firstInstalledModel.model);
       }
     } catch (error) {
       set({ loadingInstalledModelsError: error as Error });
@@ -120,6 +122,7 @@ export const useOllamaStore = create<OllamaStore>((set, get) => ({
   },
 
   setSelectedModel: (model: string) => {
+    OllamaLocalStorage.setSelectedModel(model);
     set({ selectedModel: model });
   },
 }));
