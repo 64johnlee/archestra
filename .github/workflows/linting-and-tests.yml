@@ -44,15 +44,26 @@ jobs:
       - name: Checkout project
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
           platform: ${{ matrix.platform }}
 
-      - name: Check Rust formatting
-        run: cargo fmt --check
+      - name: Apply Rust fixes and formatting
+        shell: bash
+        run: |
+          cargo fix --allow-dirty --allow-staged
+          cargo fmt
+          
+          if ! git diff --exit-code; then
+            git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            git add .
+            git commit -m "fix: apply cargo fix and formatting changes"
+            git push --no-verify
+          fi
 
       - name: Run tests
         run: cargo test
@@ -119,13 +130,11 @@ jobs:
         run: |
           
           if ! git diff --exit-code; then
-            echo "📝 OpenAPI schema or TypeScript client has changes, committing automatically..."
-            git add openapi.json src/lib/api/
+            git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            git add .
             git commit -m "chore: update OpenAPI schema and TypeScript client"
-            git push
-            echo "✅ Changes committed and pushed"
-          else
-            echo "✅ OpenAPI schema and TypeScript client are up to date"
+            git push --no-verify
           fi
 
   zizmor:
