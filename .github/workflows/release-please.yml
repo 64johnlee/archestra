@@ -51,7 +51,7 @@ jobs:
   build-desktop-application-and-create-github-release:
     name: Build desktop application and create GitHub release
     runs-on: ${{ matrix.platform }}
-    if: needs.release-please.outputs.desktop_release_created
+    # if: needs.release-please.outputs.desktop_release_created
     needs:
       - release-please
     strategy:
@@ -77,8 +77,7 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: latest
-          run_install: false
-        
+          run_install: true
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
@@ -86,6 +85,8 @@ jobs:
           platform: ${{ matrix.platform }}
 
       - uses: tauri-apps/tauri-action@564aea5a8075c7a54c167bb0cf5b3255314a7f9d # v0.5.22
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
           projectPath: desktop
