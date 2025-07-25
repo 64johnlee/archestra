@@ -68,14 +68,17 @@ jobs:
             actions: read
 
           direct_prompt: |
-            Firstly, if you make any changes, PLEASE make sure that they are all commited in a single commit.
-
             So I want you to do a few things to help with the current pull request:
-            1. Update the CLAUDE.md file to reflect the changes made in this PR.
-            2. If the pull request description is missing, add one based on the changes.
-            3. Please review this pull request and provide feedback on the below items, be constructive and helpful in your feedback:
+            1. If the pull request description is missing, add one based on the changes.
+            2. Update the CLAUDE.md file to reflect the changes made in this PR.
+            3. Please review this pull request and provide feedback on the below items, be constructive and helpful in
+            your feedback:
               - Code quality and best practices
               - Potential bugs or issues
               - Performance considerations
               - Security concerns
               - Test coverage
+
+            For every step after step 1 above, if you need to make any changes, PLEASE make sure that they are all
+            commited in a single commit and that you push this commit at the very end of your work!
+            This is very important.
