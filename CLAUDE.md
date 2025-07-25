@@ -219,8 +219,9 @@ export const useItemStore = create<StoreState>((set) => ({
 
 ### CI/CD Workflow
 
-The GitHub Actions workflow (`.github/workflows/linting-and-tests.yml`) includes:
+The GitHub Actions CI/CD pipeline consists of several workflows with concurrency controls to optimize resource usage:
 
+#### Main Testing Workflow (`.github/workflows/linting-and-tests.yml`)
 - PR title linting with conventional commits
 - Rust formatting and linting checks
 - Rust tests on Ubuntu, macOS (ARM64 & x86_64), and Windows
@@ -228,6 +229,22 @@ The GitHub Actions workflow (`.github/workflows/linting-and-tests.yml`) includes
 - Frontend build verification
 - OpenAPI schema freshness check (ensures schema and TypeScript client are up-to-date)
 - Zizmor security analysis for GitHub Actions
+
+#### Pull Request Workflow (`.github/workflows/on-pull-requests.yml`)
+- Runs the main testing workflow on all PRs
+- **Automated Claude Code Reviews**: Uses Claude Opus 4 model to provide automated PR reviews with feedback on code quality, security, and best practices
+- **Automated CLAUDE.md Updates**: Uses Claude Sonnet 4 model to automatically update documentation to reflect changes made in PRs
+- Both Claude jobs skip release-please PRs; the review job also skips WIP PRs
+- Concurrency control cancels in-progress runs when new commits are pushed
+- Consolidates functionality from the removed `claude-code-review.yml` workflow
+
+#### Interactive Claude Workflow (`.github/workflows/claude.yml`)
+- Triggers on `@claude` mentions in issues, PR comments, and reviews  
+- Provides comprehensive development environment with Rust and frontend tooling
+- Supports extensive bash commands including testing, building, formatting, code generation, and package management
+- Uses Claude Opus 4 model for complex development tasks
+- Concurrency control prevents multiple Claude runs on the same issue/PR
+- Pre-configured with allowed tools for pnpm, cargo, and project-specific commands
 
 ### Development Notes
 
