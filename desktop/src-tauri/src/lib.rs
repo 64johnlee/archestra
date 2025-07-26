@@ -68,7 +68,7 @@ pub fn run() {
             });
 
             // Start Ollama server automatically on app startup
-            let ollama_service = ollama::Service::new(app.handle().clone());
+            let ollama_service = ollama::server::Service::new(app.handle().clone());
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = ollama_service.start_server_on_startup().await {
                     eprintln!("Failed to start Ollama server: {e}");
@@ -78,8 +78,9 @@ pub fn run() {
             // Start the archestra gateway server
             let user_id = "archestra_user".to_string();
             let db_for_mcp = db.clone();
+            let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = gateway::start_gateway(user_id, db_for_mcp).await {
+                if let Err(e) = gateway::start_gateway(user_id, app_handle, db_for_mcp).await {
                     eprintln!("Failed to start gateway: {e}");
                 }
             });
@@ -138,7 +139,7 @@ pub fn run() {
             // Block on async cleanup
             tauri::async_runtime::block_on(async {
                 // Shutdown Ollama server
-                if let Err(e) = ollama::shutdown().await {
+                if let Err(e) = ollama::server::shutdown().await {
                     eprintln!("Failed to shutdown Ollama: {e}");
                 }
 

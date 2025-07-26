@@ -19,7 +19,7 @@ pnpm install
 # Run the full application in development mode
 pnpm tauri dev
 
-# Build the desktop application  
+# Build the desktop application
 pnpm tauri build
 
 # Run only the frontend (Vite dev server on port 1420)
@@ -128,14 +128,19 @@ This is a **Tauri desktop application** that integrates AI/LLM capabilities with
 
 - `components/`: Reusable UI components
   - `ui/`: Base UI components (shadcn/ui style) - DO NOT MODIFY
+    - `popover.tsx`: Added for UI interactions (installed via shadcn)
   - `kibo/`: AI-specific components (messages, code blocks, reasoning)
+  - `DeleteChatConfirmation.tsx`: Dialog for chat deletion confirmation
+  - `TypewriterText.tsx`: Animated text display component
 - `pages/`: Main application pages
   - `ChatPage/`: AI chat interface with streaming responses
   - `ConnectorCatalogPage/`: MCP server catalog and management
   - `LLMProvidersPage/`: LLM model management
   - `SettingsPage/`: Application settings
 - `stores/`: Zustand stores for state management
+  - `chat-store.ts`: Chat state management with persistence integration
 - `hooks/`: Custom React hooks including MCP client hooks
+  - `use-typewriter.ts`: Hook for typewriter text animation
 - `lib/`: Utility functions and helpers
   - `api/`: Generated TypeScript client from OpenAPI schema (DO NOT EDIT)
   - `api-client.ts`: Configured HTTP client instance
@@ -144,15 +149,18 @@ This is a **Tauri desktop application** that integrates AI/LLM capabilities with
 
 - `src/database/`: Database layer with SeaORM entities and migrations
 - `src/models/`: Business logic and data models
+  - `chat/`: Chat management with CRUD operations and title generation
+  - `message/`: Message persistence and chat history management
   - `mcp_server/`: MCP server models including OAuth support
   - `external_mcp_client/`: External MCP client configurations
   - `mcp_request_log/`: Request logging and analytics
 - `src/gateway/`: HTTP gateway exposing the following APIs:
   - `/api`: REST API for Archestra resources (OpenAPI documented)
+    - `/api/chat`: Chat CRUD operations (create, read, update, delete chats)
   - `/mcp`: Archestra MCP server endpoints
   - `/proxy/:mcp_server`: Proxies requests to MCP servers running in Archestra sandbox
   - `/llm/:provider`: Proxies requests to LLM providers
-- `src/ollama.rs`: Ollama integration for local LLM
+- `src/ollama.rs`: Ollama integration for local LLM and chat title generation
 - `src/openapi.rs`: OpenAPI schema configuration using utoipa
 - `binaries/`: Embedded Ollama binaries for different platforms
 - `sandbox-exec-profiles/`: macOS sandbox profiles for security
@@ -161,14 +169,40 @@ This is a **Tauri desktop application** that integrates AI/LLM capabilities with
 
 1. **MCP Integration**: Supports MCP servers for extending AI capabilities with tools via rmcp library
 2. **Local LLM Support**: Runs Ollama locally for privacy-focused AI interactions
-3. **OAuth Authentication**: Handles OAuth flows for services like Gmail
-4. **Chat Interface**: Full-featured chat UI with streaming responses and tool execution
-5. **Security**: Uses macOS sandbox profiles for MCP server execution
-6. **API Documentation**: Auto-generated OpenAPI schema with TypeScript client
+3. **Chat Persistence**: Full CRUD operations for chat conversations with SQLite database storage
+4. **Intelligent Chat Titles**: Automatic LLM-generated chat titles based on conversation content
+5. **OAuth Authentication**: Handles OAuth flows for services like Gmail
+6. **Chat Interface**: Full-featured chat UI with streaming responses and tool execution
+7. **Security**: Uses macOS sandbox profiles for MCP server execution
+8. **API Documentation**: Auto-generated OpenAPI schema with TypeScript client
+
+### Database Schema
+
+The application uses SQLite with SeaORM for database management. Key tables include:
+
+#### Chat Management Tables
+
+- **chats**: Stores chat sessions with metadata
+
+  - `id` (Primary Key): Auto-incrementing chat identifier
+  - `title`: Chat title (auto-generated or user-defined)
+  - `llm_provider`: LLM provider used (e.g., "ollama")
+  - `llm_model`: Specific model name (e.g., "llama3.2")
+  - `created_at`, `updated_at`: Timestamps
+
+- **messages**: Stores individual messages within chats
+  - `id` (Primary Key): Auto-incrementing message identifier
+  - `chat_id` (Foreign Key): References chats.id with CASCADE delete
+  - `role`: Message role ("user", "assistant", "system")
+  - `content`: Message content as text
+  - `created_at`: Timestamp
+
+The relationship ensures that deleting a chat automatically removes all associated messages.
 
 ### Key Patterns
 
 #### API Endpoint Pattern (Rust)
+
 ```rust
 #[utoipa::path(
     get,
@@ -187,6 +221,7 @@ pub async fn get_resources(
 ```
 
 #### Frontend API Calls
+
 ```typescript
 import { apiClient } from "@/lib/api-client";
 
@@ -198,6 +233,7 @@ if (response.data) {
 ```
 
 #### Zustand Store Pattern
+
 ```typescript
 interface StoreState {
   items: Item[];
@@ -220,6 +256,43 @@ export const useItemStore = create<StoreState>((set) => ({
 }));
 ```
 
+#### Chat API Endpoints
+
+The application provides RESTful endpoints for chat management:
+
+```typescript
+// Get all chats (ordered by updated_at DESC)
+GET /api/chat
+Response: Chat[]
+
+// Get specific chat with messages
+GET /api/chat/{id}
+Response: ChatWithMessages
+
+// Create new chat
+POST /api/chat
+Body: { llm_provider: string, llm_model: string }
+Response: Chat (with auto-generated title "New Chat")
+
+// Delete chat and all messages (CASCADE deletes all messages)
+DELETE /api/chat/{id}
+Response: 204 No Content
+```
+
+**Chat Persistence Workflow**:
+
+1. When a user sends their first message, the frontend automatically creates a new chat if none exists
+2. During conversation streaming through the Ollama proxy (`/llm/ollama/api/chat`), messages are automatically saved to the database
+3. User messages are saved before sending to the LLM
+4. Assistant responses are captured and saved after streaming completes
+
+**Chat Title Generation**:
+
+- Triggers automatically after the 4th message in a chat (2 user + 2 assistant messages)
+- Uses the same LLM model as the chat to generate a concise 5-6 word title
+- Runs asynchronously in the background without blocking the conversation
+- Emits a `chat-title-updated` event that the frontend listens to for real-time UI updates
+
 ### Important Configuration
 
 - **Package Manager**: pnpm v10.13.1 (NEVER use npm or yarn)
@@ -230,11 +303,19 @@ export const useItemStore = create<StoreState>((set) => ({
 - **Pre-commit Hooks**: Prettier formatting via Husky
 - **OpenAPI Generation**: Clean output directory, Prettier formatting
 
+### Key Dependencies Added for Chat Persistence
+
+- **Frontend**:
+  - `@radix-ui/react-popover`: For popover UI component (required by shadcn/ui)
+- **Backend**:
+  - `tokio`: Enhanced with async runtime features for spawning background tasks
+
 ### CI/CD Workflow
 
 The GitHub Actions CI/CD pipeline consists of several workflows with concurrency controls to optimize resource usage:
 
 #### Main Testing Workflow (`.github/workflows/linting-and-tests.yml`)
+
 - PR title linting with conventional commits
 - **Automatic Rust formatting and fixes**: CI automatically applies `cargo fix` and `cargo fmt` changes and commits them back to the PR
 - Rust tests on Ubuntu, macOS (ARM64 & x86_64), and Windows
@@ -244,6 +325,7 @@ The GitHub Actions CI/CD pipeline consists of several workflows with concurrency
 - Zizmor security analysis for GitHub Actions
 
 #### Pull Request Workflow (`.github/workflows/on-pull-requests.yml`)
+
 - Runs the main testing workflow on all PRs
 - **Automated Claude Code Reviews**: Uses Claude Opus 4 model to provide automated PR reviews with feedback on code quality, security, and best practices
 - **Automated CLAUDE.md Updates**: Uses Claude Sonnet 4 model to automatically:
@@ -255,6 +337,7 @@ The GitHub Actions CI/CD pipeline consists of several workflows with concurrency
 - Consolidates functionality from the removed `claude-code-review.yml` workflow
 
 #### Release Please Workflow (`.github/workflows/release-please.yml`)
+
 - Manages automated releases using Google's release-please action
 - Creates and maintains release PRs with changelogs
 - **Triggers**: Runs on pushes to `main` branch
@@ -275,7 +358,8 @@ The GitHub Actions CI/CD pipeline consists of several workflows with concurrency
   - Tags releases with format `app-v__VERSION__`
 
 #### Interactive Claude Workflow (`.github/workflows/claude.yml`)
-- Triggers on `@claude` mentions in issues, PR comments, and reviews  
+
+- Triggers on `@claude` mentions in issues, PR comments, and reviews
 - Provides comprehensive development environment with Rust and frontend tooling
 - Supports extensive bash commands including testing, building, formatting, code generation, and package management
 - Uses Claude Opus 4 model for complex development tasks

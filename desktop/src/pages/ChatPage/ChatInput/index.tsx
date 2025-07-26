@@ -1,12 +1,12 @@
 'use client';
 
 import { FileText } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
+import ToolPill from '@/components/ToolPill';
 import {
   AIInput,
   AIInputButton,
-  AIInputContextPills,
   AIInputModelSelect,
   AIInputModelSelectContent,
   AIInputModelSelectItem,
@@ -16,61 +16,56 @@ import {
   AIInputTextarea,
   AIInputToolbar,
   AIInputTools,
-  ToolContext,
 } from '@/components/kibo/ai-input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useChatStore, useIsStreaming } from '@/stores/chat-store';
+import { cn } from '@/lib/utils/tailwind';
+import { useChatStore } from '@/stores/chat-store';
 import { useDeveloperModeStore } from '@/stores/developer-mode-store';
+import { useMCPServersStore } from '@/stores/mcp-servers-store';
 import { useOllamaStore } from '@/stores/ollama-store';
+import { ChatInteractionStatus } from '@/types';
 
-interface ChatInputProps {
-  selectedTools?: ToolContext[];
-  onToolRemove?: (tool: ToolContext) => void;
-}
+interface ChatInputProps {}
 
-export default function ChatInput({ selectedTools = [], onToolRemove }: ChatInputProps) {
-  const { sendChatMessage, clearChatHistory, cancelStreaming } = useChatStore();
+export default function ChatInput(_props: ChatInputProps) {
+  const { sendChatMessage, cancelStreaming, getStatus, setStatus } = useChatStore();
+  const { selectedTools } = useMCPServersStore();
   const { isDeveloperMode, toggleDeveloperMode } = useDeveloperModeStore();
-  const isStreaming = useIsStreaming();
-
   const { installedModels, loadingInstalledModels, loadingInstalledModelsError, selectedModel, setSelectedModel } =
     useOllamaStore();
 
+  const status = getStatus();
+  const isStreaming = status === ChatInteractionStatus.Streaming;
   const [message, setMessage] = useState('');
-  const [status, setStatus] = useState<'submitted' | 'streaming' | 'ready' | 'error'>('ready');
+  const hasSelectedTools = Object.keys(selectedTools).length > 0;
 
-  useEffect(() => {
-    if (isStreaming) {
-      setStatus('streaming');
-    } else {
-      setStatus('ready');
-    }
-  }, [isStreaming]);
-
-  const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
-    if (e) {
-      e.preventDefault();
-    }
-
-    setStatus('submitted');
-
-    try {
-      let finalMessage = message.trim();
-
-      // Add tool context to the message if tools are selected
-      if (selectedTools.length > 0) {
-        const toolContexts = selectedTools.map((tool) => `Use ${tool.toolName} from ${tool.serverName}`).join(', ');
-        finalMessage = `${toolContexts}. ${finalMessage}`;
+  const handleSubmit = useCallback(
+    async (e?: React.FormEvent<HTMLFormElement>) => {
+      if (e) {
+        e.preventDefault();
       }
 
-      setMessage('');
-      await sendChatMessage(finalMessage, selectedTools);
-      setStatus('ready');
-    } catch (error) {
-      setStatus('error');
-      setTimeout(() => setStatus('ready'), 2000);
-    }
-  };
+      setStatus(ChatInteractionStatus.Submitted);
+
+      try {
+        let finalMessage = message.trim();
+
+        // Add tool context to the message if tools are selected
+        if (hasSelectedTools) {
+          const toolContexts = selectedTools.map(({ name, serverName }) => `Use ${name} from ${serverName}`).join(', ');
+          finalMessage = `${toolContexts}. ${finalMessage}`;
+        }
+
+        setMessage('');
+        await sendChatMessage(finalMessage);
+        setStatus(ChatInteractionStatus.Ready);
+      } catch (error) {
+        setStatus(ChatInteractionStatus.Error);
+        setTimeout(() => setStatus(ChatInteractionStatus.Ready), 2000);
+      }
+    },
+    [hasSelectedTools, message, sendChatMessage, selectedTools]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') {
@@ -94,14 +89,17 @@ export default function ChatInput({ selectedTools = [], onToolRemove }: ChatInpu
 
   const handleModelChange = (modelName: string) => {
     setSelectedModel(modelName);
-    clearChatHistory();
   };
 
   return (
     <TooltipProvider>
       <div className="space-y-2">
         <AIInput onSubmit={handleSubmit} className="bg-inherit">
-          <AIInputContextPills tools={selectedTools} onRemoveTool={onToolRemove || (() => {})} />
+          <div className={cn('flex flex-wrap gap-2 p-3 pb-0')}>
+            {selectedTools.map((tool, index) => (
+              <ToolPill key={`${tool.serverName}-${tool.toolName}-${index}`} tool={tool} />
+            ))}
+          </div>
           <AIInputTextarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -156,7 +154,7 @@ export default function ChatInput({ selectedTools = [], onToolRemove }: ChatInpu
               onClick={cancelStreaming}
               // only disable if there's no message, and we're not streaming
               // if we're streaming, we want to allow the user to cancel the streaming
-              disabled={!message.trim() && status !== 'streaming'}
+              disabled={!message.trim() && !isStreaming}
             />
           </AIInputToolbar>
         </AIInput>
