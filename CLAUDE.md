@@ -257,10 +257,21 @@ The GitHub Actions CI/CD pipeline consists of several workflows with concurrency
 #### Release Please Workflow (`.github/workflows/release-please.yml`)
 - Manages automated releases using Google's release-please action
 - Creates and maintains release PRs with changelogs
+- **Triggers**: Runs on pushes to `main` branch
+- **Authentication**: Uses GitHub App authentication:
+  - Generates a GitHub App installation token using `actions/create-github-app-token@v2`
+  - Token is created from `ARCHESTRA_RELEASER_GITHUB_APP_ID` and `ARCHESTRA_RELEASER_GITHUB_APP_PRIVATE_KEY` secrets
+  - Generated token is used for both fetching existing releases and creating new ones via tauri-action
+- **Version Management**: When a desktop release is created:
+  - Automatically extracts version from release-please tag (format: `app-vX.Y.Z`)
+  - Updates version in three locations:
+    - `desktop/package.json` (using jq)
+    - `desktop/src-tauri/Cargo.toml` (using sed)
+    - `desktop/src-tauri/tauri.conf.json` (using jq)
 - **Multi-platform desktop builds**: When a desktop release is created:
   - Builds Tauri desktop applications for Linux (ubuntu-latest) and Windows (windows-latest)
   - Uses matrix strategy with `fail-fast: false` to ensure all platforms build
-  - Creates draft GitHub releases with platform-specific binaries
+  - Creates draft GitHub releases with platform-specific binaries using the generated GitHub App token
   - Tags releases with format `app-v__VERSION__`
 
 #### Interactive Claude Workflow (`.github/workflows/claude.yml`)
