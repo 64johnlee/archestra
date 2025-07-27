@@ -2,10 +2,10 @@ import { AlertCircle, CheckCircle, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
-import { ToolCallInfo, ToolCallStatus } from '@/types';
+import { ToolCall, ToolCallStatus } from '@/types';
 
 interface ToolCallIndicatorProps {
-  toolCalls: ToolCallInfo[];
+  toolCalls: ToolCall[];
   isExecuting: boolean;
 }
 
@@ -45,7 +45,7 @@ export default function ToolCallIndicator({ toolCalls, isExecuting }: ToolCallIn
           <div className="flex gap-1 ml-auto">
             {pendingCalls.map((call) => (
               <Badge key={call.id} variant="outline" className="text-xs bg-blue-100 dark:bg-blue-900">
-                {call.serverName}.{call.toolName}
+                {call.serverName}.{call.name}
               </Badge>
             ))}
           </div>
