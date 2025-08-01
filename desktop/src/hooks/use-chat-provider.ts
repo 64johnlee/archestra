@@ -1,6 +1,6 @@
 import { useChatStore } from '@/stores/chat-store';
 
-import { useChatGPTChat } from './use-chatgpt-chat';
+import { useAIChat } from './use-ai-chat';
 import { useOllamaChat } from './use-ollama-chat';
 
 interface UseChatProviderOptions {
@@ -10,7 +10,7 @@ interface UseChatProviderOptions {
 }
 
 export function useChatProvider({ model, sessionId, initialMessages = [] }: UseChatProviderOptions) {
-  const { selectedProvider, openaiApiKey } = useChatStore();
+  const { selectedProvider, openaiApiKey, anthropicApiKey } = useChatStore();
 
   const ollamaChat = useOllamaChat({
     model,
@@ -18,16 +18,17 @@ export function useChatProvider({ model, sessionId, initialMessages = [] }: UseC
     initialMessages,
   });
 
-  const chatGPTChat = useChatGPTChat({
-    model: selectedProvider === 'chatgpt' ? 'gpt-4o' : model,
+  const aiChat = useAIChat({
+    provider: selectedProvider === 'chatgpt' ? 'openai' : 'anthropic',
+    model: selectedProvider === 'chatgpt' ? 'gpt-4o' : 'claude-3-5-sonnet-20241022',
     sessionId,
     initialMessages,
-    apiKey: openaiApiKey || undefined,
+    apiKey: selectedProvider === 'chatgpt' ? openaiApiKey || undefined : anthropicApiKey || undefined,
   });
 
   // Return the appropriate chat hook based on selected provider
-  if (selectedProvider === 'chatgpt') {
-    return chatGPTChat;
+  if (selectedProvider === 'chatgpt' || selectedProvider === 'claude') {
+    return aiChat;
   }
 
   return ollamaChat;

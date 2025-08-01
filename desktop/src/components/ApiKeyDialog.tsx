@@ -13,27 +13,36 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useChatStore } from '@/stores/chat-store';
 
-interface OpenAIApiKeyDialogProps {
+interface ApiKeyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function OpenAIApiKeyDialog({ open, onOpenChange }: OpenAIApiKeyDialogProps) {
-  const { openaiApiKey, setOpenAIApiKey } = useChatStore();
-  const [apiKey, setApiKey] = useState(openaiApiKey || '');
+export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
+  const { selectedProvider, openaiApiKey, anthropicApiKey, setOpenAIApiKey, setAnthropicApiKey } = useChatStore();
+  const currentApiKey = selectedProvider === 'chatgpt' ? openaiApiKey : anthropicApiKey;
+  const [apiKey, setApiKey] = useState(currentApiKey || '');
 
   const handleSave = () => {
-    setOpenAIApiKey(apiKey);
+    if (selectedProvider === 'chatgpt') {
+      setOpenAIApiKey(apiKey);
+    } else if (selectedProvider === 'claude') {
+      setAnthropicApiKey(apiKey);
+    }
     onOpenChange(false);
   };
+
+  const providerName = selectedProvider === 'chatgpt' ? 'OpenAI' : 'Anthropic';
+  const placeholder = selectedProvider === 'chatgpt' ? 'sk-...' : 'sk-ant-...';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>OpenAI API Key</DialogTitle>
+          <DialogTitle>{providerName} API Key</DialogTitle>
           <DialogDescription>
-            Enter your OpenAI API key to use ChatGPT. Your key will be stored locally and sent directly to OpenAI.
+            Enter your {providerName} API key to use {selectedProvider === 'chatgpt' ? 'ChatGPT' : 'Claude'}. Your key
+            will be stored locally and sent directly to {providerName}.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -46,7 +55,7 @@ export function OpenAIApiKeyDialog({ open, onOpenChange }: OpenAIApiKeyDialogPro
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
+              placeholder={placeholder}
               className="col-span-3"
             />
           </div>

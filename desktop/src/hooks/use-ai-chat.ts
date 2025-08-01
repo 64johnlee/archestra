@@ -1,3 +1,4 @@
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { useCallback, useRef, useState } from 'react';
@@ -8,14 +9,15 @@ interface Message {
   content: string;
 }
 
-interface UseChatGPTChatOptions {
+interface UseAIChatOptions {
+  provider: 'openai' | 'anthropic';
   model: string;
   sessionId?: string;
   initialMessages?: Message[];
   apiKey?: string;
 }
 
-export function useChatGPTChat({ model, sessionId, initialMessages = [], apiKey }: UseChatGPTChatOptions) {
+export function useAIChat({ provider, model, sessionId, initialMessages = [], apiKey }: UseAIChatOptions) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -32,18 +34,24 @@ export function useChatGPTChat({ model, sessionId, initialMessages = [], apiKey 
       setStatus('submitted');
 
       try {
-        // https://ai-sdk.dev/docs/getting-started/nodejs - example
         if (!apiKey) {
-          throw new Error('OpenAI API key is required. Please set your API key in the settings.');
+          throw new Error(
+            `${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API key is required. Please set your API key in the settings.`
+          );
         }
 
         abortControllerRef.current = new AbortController();
 
-        // Create OpenAI provider with direct API access
-        const openai = createOpenAI({
-          apiKey: apiKey,
-          baseURL: 'https://api.openai.com/v1', // Direct to OpenAI API
-        });
+        // Create AI provider based on selection
+        const aiProvider =
+          provider === 'openai'
+            ? createOpenAI({
+                apiKey: apiKey,
+                baseURL: 'https://api.openai.com/v1',
+              })
+            : createAnthropic({
+                apiKey: apiKey,
+              });
 
         // Context to send to the model
         const allMessages = [...messages, userMessage];
@@ -51,14 +59,14 @@ export function useChatGPTChat({ model, sessionId, initialMessages = [], apiKey 
         // Create streaming response
         setStatus('streaming');
         const result = streamText({
-          model: openai(model || 'gpt-4o'),
+          model:
+            provider === 'openai' ? aiProvider(model || 'gpt-4o') : aiProvider(model || 'claude-3-5-sonnet-20241022'),
           messages: allMessages.map((msg) => ({
             role: msg.role,
             content: msg.content,
           })),
           abortSignal: abortControllerRef.current.signal,
         });
-        console.log(result.toUIMessageStreamResponse());
 
         // Create assistant message placeholder
         const assistantMessageId = `${Date.now()}-assistant`;
@@ -95,7 +103,7 @@ export function useChatGPTChat({ model, sessionId, initialMessages = [], apiKey 
         }
       }
     },
-    [messages, model, sessionId, apiKey]
+    [messages, model, sessionId, apiKey, provider]
   );
 
   const stop = useCallback(() => {

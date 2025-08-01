@@ -5,15 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type LLMProvider, useChatStore } from '@/stores/chat-store';
 
-import { OpenAIApiKeyDialog } from './OpenAIApiKeyDialog';
+import { ApiKeyDialog } from './ApiKeyDialog';
 
 export function ProviderSelector() {
-  const { selectedProvider, setSelectedProvider, openaiApiKey } = useChatStore();
+  const { selectedProvider, setSelectedProvider, openaiApiKey, anthropicApiKey } = useChatStore();
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
 
   const handleProviderChange = (value: LLMProvider) => {
     setSelectedProvider(value);
     if (value === 'chatgpt' && !openaiApiKey) {
+      setShowApiKeyDialog(true);
+    } else if (value === 'claude' && !anthropicApiKey) {
       setShowApiKeyDialog(true);
     }
   };
@@ -29,15 +31,16 @@ export function ProviderSelector() {
           <SelectContent>
             <SelectItem value="ollama">Ollama</SelectItem>
             <SelectItem value="chatgpt">ChatGPT</SelectItem>
+            <SelectItem value="claude">Claude</SelectItem>
           </SelectContent>
         </Select>
-        {selectedProvider === 'chatgpt' && (
+        {(selectedProvider === 'chatgpt' || selectedProvider === 'claude') && (
           <Button variant="ghost" size="icon" onClick={() => setShowApiKeyDialog(true)}>
             <Settings className="h-4 w-4" />
           </Button>
         )}
       </div>
-      <OpenAIApiKeyDialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog} />
+      <ApiKeyDialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog} />
     </>
   );
 }

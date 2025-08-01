@@ -12,7 +12,7 @@ import { initializeChat } from '@/lib/utils/chat';
 import { websocketService } from '@/lib/websocket';
 import { type ChatWithMessages } from '@/types';
 
-export type LLMProvider = 'ollama' | 'chatgpt';
+export type LLMProvider = 'ollama' | 'chatgpt' | 'claude';
 
 interface ChatState {
   chats: ChatWithMessages[];
@@ -20,6 +20,7 @@ interface ChatState {
   isLoadingChats: boolean;
   selectedProvider: LLMProvider;
   openaiApiKey: string | null;
+  anthropicApiKey: string | null;
 }
 
 interface ChatActions {
@@ -35,6 +36,7 @@ interface ChatActions {
   // Provider operations
   setSelectedProvider: (provider: LLMProvider) => void;
   setOpenAIApiKey: (apiKey: string) => void;
+  setAnthropicApiKey: (apiKey: string) => void;
 }
 
 type ChatStore = ChatState & ChatActions;
@@ -58,6 +60,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   isLoadingChats: false,
   selectedProvider: 'ollama',
   openaiApiKey: null,
+  anthropicApiKey: null,
 
   // Actions
   loadChats: async () => {
@@ -82,7 +85,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     try {
       const { selectedProvider } = get();
       const response = await createChat({
-        body: { llm_provider: selectedProvider === 'chatgpt' ? 'openai' : 'ollama' },
+        body: {
+          llm_provider:
+            selectedProvider === 'chatgpt' ? 'openai' : selectedProvider === 'claude' ? 'anthropic' : 'ollama',
+        },
       });
       const initializedChat = initializeChat(response.data as ServerChatWithMessages);
 
@@ -166,6 +172,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setOpenAIApiKey: (apiKey: string) => {
     set({ openaiApiKey: apiKey });
+  },
+
+  setAnthropicApiKey: (apiKey: string) => {
+    set({ anthropicApiKey: apiKey });
   },
 }));
 
