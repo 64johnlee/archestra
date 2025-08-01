@@ -19,77 +19,43 @@ import {
 } from '@/components/kibo/ai-input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils/tailwind';
-import { useChatStore } from '@/stores/chat-store';
 import { useDeveloperModeStore } from '@/stores/developer-mode-store';
 import { useMCPServersStore } from '@/stores/mcp-servers-store';
 import { useOllamaStore } from '@/stores/ollama-store';
-import { ChatMessageStatus } from '@/types';
 
-interface ChatInputProps {}
+interface ChatInputProps {
+  onSendMessage: (message: string) => void;
+  isLoading: boolean;
+  stop: () => void;
+}
 
-export default function ChatInput(_props: ChatInputProps) {
-  const { sendChatMessage, cancelStreaming, getStatus, setStatus } = useChatStore();
+export default function ChatInput({ onSendMessage, isLoading, stop }: ChatInputProps) {
+  const [input, setInput] = useState('');
   const { selectedTools } = useMCPServersStore();
   const { isDeveloperMode, toggleDeveloperMode } = useDeveloperModeStore();
   const { installedModels, loadingInstalledModels, loadingInstalledModelsError, selectedModel, setSelectedModel } =
     useOllamaStore();
 
-  const status = getStatus();
-  const isStreaming = status === ChatMessageStatus.Streaming;
-  const [message, setMessage] = useState('');
-  const hasSelectedTools = Object.keys(selectedTools).length > 0;
-
   const handleSubmit = useCallback(
-    async (e?: React.FormEvent<HTMLFormElement>) => {
-      if (e) {
-        e.preventDefault();
-      }
-
-      setStatus(ChatMessageStatus.Submitted);
-
-      try {
-        let finalMessage = message.trim();
-
-        // Add tool context to the message if tools are selected
-        if (hasSelectedTools) {
-          const toolContexts = selectedTools.map(({ name, serverName }) => `Use ${name} from ${serverName}`).join(', ');
-          finalMessage = `${toolContexts}. ${finalMessage}`;
-        }
-
-        setMessage('');
-        await sendChatMessage(finalMessage);
-        setStatus(ChatMessageStatus.Ready);
-      } catch (error) {
-        setStatus(ChatMessageStatus.Error);
-        setTimeout(() => setStatus(ChatMessageStatus.Ready), 2000);
+    (e?: React.FormEvent) => {
+      e?.preventDefault();
+      if (input.trim()) {
+        onSendMessage(input);
+        setInput('');
       }
     },
-    [hasSelectedTools, message, sendChatMessage, selectedTools]
+    [input, onSendMessage]
   );
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter') {
-      if (e.metaKey || e.ctrlKey) {
-        e.preventDefault();
-        const textarea = e.currentTarget;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const newMessage = message.substring(0, start) + '\n' + message.substring(end);
-        setMessage(newMessage);
-
-        setTimeout(() => {
-          textarea.setSelectionRange(start + 1, start + 1);
-        }, 0);
-      } else {
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSubmit();
       }
-    }
-  };
-
-  const handleModelChange = (modelName: string) => {
-    setSelectedModel(modelName);
-  };
+    },
+    [handleSubmit]
+  );
 
   return (
     <TooltipProvider>
@@ -100,8 +66,8 @@ export default function ChatInput(_props: ChatInputProps) {
           ))}
         </div>
         <AIInputTextarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="What would you like to know?"
           disabled={!selectedModel}
@@ -111,9 +77,8 @@ export default function ChatInput(_props: ChatInputProps) {
         <AIInputToolbar>
           <AIInputTools>
             <AIInputModelSelect
-              defaultValue={selectedModel}
               value={selectedModel}
-              onValueChange={handleModelChange}
+              onValueChange={setSelectedModel}
               disabled={loadingInstalledModels || !!loadingInstalledModelsError}
             >
               <AIInputModelSelectTrigger>
@@ -148,13 +113,7 @@ export default function ChatInput(_props: ChatInputProps) {
               </TooltipContent>
             </Tooltip>
           </AIInputTools>
-          <AIInputSubmit
-            status={status}
-            onClick={cancelStreaming}
-            // only disable if there's no message, and we're not streaming
-            // if we're streaming, we want to allow the user to cancel the streaming
-            disabled={!message.trim() && !isStreaming}
-          />
+          <AIInputSubmit onClick={isLoading ? stop : undefined} disabled={!input.trim() && !isLoading} />
         </AIInputToolbar>
       </AIInput>
     </TooltipProvider>
