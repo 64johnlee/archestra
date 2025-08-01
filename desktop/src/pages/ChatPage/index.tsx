@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { useOllamaChat } from '@/hooks/use-ollama-chat';
+import { ProviderSelector } from '@/components/ProviderSelector';
+import { useChatProvider } from '@/hooks/use-chat-provider';
 import { useChatStore } from '@/stores/chat-store';
 import { useOllamaStore } from '@/stores/ollama-store';
 
@@ -23,7 +24,7 @@ export default function ChatPage(_props: ChatPageProps) {
     }
   }, [currentChat, createNewChat]);
 
-  const { messages, sendMessage, status, stop, isLoading } = useOllamaChat({
+  const { messages, sendMessage, stop, isLoading } = useChatProvider({
     model: selectedModel || 'llama3.2',
     sessionId: currentChat?.session_id,
     initialMessages: currentChat?.messages || [],
@@ -43,6 +44,9 @@ export default function ChatPage(_props: ChatPageProps) {
 
   return (
     <div className="flex flex-col h-full gap-2 max-w-full overflow-hidden">
+      <div className="flex justify-end px-4 py-2">
+        <ProviderSelector />
+      </div>
       <div className="flex-1 min-h-0 overflow-hidden max-w-full">
         <ChatHistory messages={messages as any} />
       </div>

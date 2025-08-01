@@ -12,10 +12,14 @@ import { initializeChat } from '@/lib/utils/chat';
 import { websocketService } from '@/lib/websocket';
 import { type ChatWithMessages } from '@/types';
 
+export type LLMProvider = 'ollama' | 'chatgpt';
+
 interface ChatState {
   chats: ChatWithMessages[];
   currentChatSessionId: string | null;
   isLoadingChats: boolean;
+  selectedProvider: LLMProvider;
+  openaiApiKey: string | null;
 }
 
 interface ChatActions {
@@ -28,6 +32,9 @@ interface ChatActions {
   deleteCurrentChat: () => Promise<void>;
   updateChatTitle: (chatId: number, title: string) => Promise<void>;
   initializeStore: () => Promise<void>;
+  // Provider operations
+  setSelectedProvider: (provider: LLMProvider) => void;
+  setOpenAIApiKey: (apiKey: string) => void;
 }
 
 type ChatStore = ChatState & ChatActions;
@@ -49,6 +56,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   chats: [],
   currentChatSessionId: null,
   isLoadingChats: false,
+  selectedProvider: 'ollama',
+  openaiApiKey: null,
 
   // Actions
   loadChats: async () => {
@@ -71,8 +80,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   createNewChat: async () => {
     try {
+      const { selectedProvider } = get();
       const response = await createChat({
-        body: { llm_provider: 'ollama' },
+        body: { llm_provider: selectedProvider === 'chatgpt' ? 'openai' : 'ollama' },
       });
       const initializedChat = initializeChat(response.data as ServerChatWithMessages);
 
@@ -147,6 +157,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     } catch (error) {
       console.error('Failed to establish WebSocket connection:', error);
     }
+  },
+
+  // Provider operations
+  setSelectedProvider: (provider: LLMProvider) => {
+    set({ selectedProvider: provider });
+  },
+
+  setOpenAIApiKey: (apiKey: string) => {
+    set({ openaiApiKey: apiKey });
   },
 }));
 
