@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { DEFAULT_CHAT_TITLE } from '@/consts';
+import { getDefaultModel } from '@/hooks/use-ai-chat';
 import {
   ChatWithMessages as ServerChatWithMessages,
   createChat,
@@ -63,7 +64,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   selectedProvider: 'ollama',
   openaiApiKey: null,
   anthropicApiKey: null,
-  selectedAIModel: null,
+  selectedAIModel: getDefaultModel('ollama'),
 
   // Actions
   loadChats: async () => {
@@ -170,7 +171,20 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Provider operations
   setSelectedProvider: (provider: LLMProvider) => {
-    set({ selectedProvider: provider });
+    // Map provider to AI provider key
+    const providerMap = {
+      chatgpt: 'openai',
+      claude: 'anthropic',
+      ollama: 'ollama',
+    } as const;
+
+    const aiProviderKey = providerMap[provider];
+    const defaultModel = getDefaultModel(aiProviderKey);
+
+    set({
+      selectedProvider: provider,
+      selectedAIModel: defaultModel,
+    });
   },
 
   setOpenAIApiKey: (apiKey: string) => {

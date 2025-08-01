@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { ProviderSelector } from '@/components/ProviderSelector';
 import { useChatProvider } from '@/hooks/use-chat-provider';
 import { useChatStore } from '@/stores/chat-store';
-import { useOllamaStore } from '@/stores/ollama-store';
 
 import ChatHistory from './ChatHistory';
 import ChatInput from './ChatInput';
@@ -12,8 +11,7 @@ import SystemPrompt from './SystemPrompt';
 interface ChatPageProps {}
 
 export default function ChatPage(_props: ChatPageProps) {
-  const { getCurrentChat, createNewChat, selectedProvider, selectedAIModel } = useChatStore();
-  const { selectedModel } = useOllamaStore();
+  const { getCurrentChat, createNewChat, selectedAIModel } = useChatStore();
   const currentChat = getCurrentChat();
   const [localInput, setLocalInput] = useState('');
 
@@ -24,8 +22,8 @@ export default function ChatPage(_props: ChatPageProps) {
     }
   }, [currentChat, createNewChat]);
 
-  // Use appropriate model based on provider
-  const model = selectedProvider === 'ollama' ? selectedModel || 'llama3.2' : selectedAIModel || '';
+  // Always use selectedAIModel from centralized config
+  const model = selectedAIModel || '';
 
   const { messages, sendMessage, stop, isLoading } = useChatProvider({
     model,

@@ -1,7 +1,6 @@
 import { useChatStore } from '@/stores/chat-store';
 
 import { getDefaultModel, useAIChat } from './use-ai-chat';
-import { useOllamaChat } from './use-ollama-chat';
 
 interface UseChatProviderOptions {
   model: string;
@@ -12,24 +11,31 @@ interface UseChatProviderOptions {
 export function useChatProvider({ model, sessionId, initialMessages = [] }: UseChatProviderOptions) {
   const { selectedProvider, openaiApiKey, anthropicApiKey } = useChatStore();
 
-  const ollamaChat = useOllamaChat({
-    model,
-    sessionId,
-    initialMessages,
-  });
+  // Map the provider names to the AI provider keys
+  const providerMap = {
+    chatgpt: 'openai',
+    claude: 'anthropic',
+    ollama: 'ollama',
+  } as const;
+
+  const aiProviderKey = providerMap[selectedProvider];
+
+  // Get the appropriate API key based on provider
+  let apiKey: string | undefined;
+  if (selectedProvider === 'chatgpt') {
+    apiKey = openaiApiKey || undefined;
+  } else if (selectedProvider === 'claude') {
+    apiKey = anthropicApiKey || undefined;
+  }
+  // ollama doesn't need an API key
 
   const aiChat = useAIChat({
-    provider: selectedProvider === 'chatgpt' ? 'openai' : 'anthropic',
-    model: model || (selectedProvider === 'chatgpt' ? getDefaultModel('openai') : getDefaultModel('anthropic')),
+    provider: aiProviderKey,
+    model: model || getDefaultModel(aiProviderKey),
     sessionId,
     initialMessages,
-    apiKey: selectedProvider === 'chatgpt' ? openaiApiKey || undefined : anthropicApiKey || undefined,
+    apiKey,
   });
 
-  // Return the appropriate chat hook based on selected provider
-  if (selectedProvider === 'chatgpt' || selectedProvider === 'claude') {
-    return aiChat;
-  }
-
-  return ollamaChat;
+  return aiChat;
 }

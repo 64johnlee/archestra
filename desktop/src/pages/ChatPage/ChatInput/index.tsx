@@ -23,7 +23,6 @@ import { cn } from '@/lib/utils/tailwind';
 import { useChatStore } from '@/stores/chat-store';
 import { useDeveloperModeStore } from '@/stores/developer-mode-store';
 import { useMCPServersStore } from '@/stores/mcp-servers-store';
-import { useOllamaStore } from '@/stores/ollama-store';
 
 interface ChatInputProps {
   input: string;
@@ -37,17 +36,20 @@ export default function ChatInput({ input, handleInputChange, handleSubmit, isLo
   const { selectedTools } = useMCPServersStore();
   const { isDeveloperMode, toggleDeveloperMode } = useDeveloperModeStore();
   const { selectedProvider, selectedAIModel, setSelectedAIModel } = useChatStore();
-  const { installedModels, loadingInstalledModels, loadingInstalledModelsError, selectedModel, setSelectedModel } =
-    useOllamaStore();
 
-  // Determine which models to show based on provider
-  const isOllama = selectedProvider === 'ollama';
-  const aiProviderKey = selectedProvider === 'chatgpt' ? 'openai' : selectedProvider === 'claude' ? 'anthropic' : null;
+  // Map provider to AI provider key
+  const providerMap = {
+    chatgpt: 'openai',
+    claude: 'anthropic',
+    ollama: 'ollama',
+  } as const;
+
+  const aiProviderKey = providerMap[selectedProvider];
   const aiProviderModels = aiProviderKey ? Object.entries(AI_PROVIDERS[aiProviderKey].models) : [];
 
-  // Use appropriate model and setter based on provider
-  const currentModel = isOllama ? selectedModel : selectedAIModel || '';
-  const handleModelChange = isOllama ? setSelectedModel : setSelectedAIModel;
+  // Always use the centralized config
+  const currentModel = selectedAIModel || '';
+  const handleModelChange = setSelectedAIModel;
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -72,44 +74,22 @@ export default function ChatInput({ input, handleInputChange, handleSubmit, isLo
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="What would you like to know?"
-          disabled={isOllama ? !selectedModel : false}
+          disabled={false}
           minHeight={48}
           maxHeight={164}
         />
         <AIInputToolbar>
           <AIInputTools>
-            <AIInputModelSelect
-              value={currentModel}
-              onValueChange={handleModelChange}
-              disabled={isOllama && (loadingInstalledModels || !!loadingInstalledModelsError)}
-            >
+            <AIInputModelSelect value={currentModel} onValueChange={handleModelChange} disabled={false}>
               <AIInputModelSelectTrigger>
-                <AIInputModelSelectValue
-                  placeholder={
-                    isOllama
-                      ? loadingInstalledModels
-                        ? 'Loading models...'
-                        : loadingInstalledModelsError
-                          ? 'Error loading models'
-                          : installedModels.length === 0
-                            ? 'No models found'
-                            : 'Select a model'
-                      : 'Select a model'
-                  }
-                />
+                <AIInputModelSelectValue placeholder="Select a model" />
               </AIInputModelSelectTrigger>
               <AIInputModelSelectContent>
-                {isOllama
-                  ? installedModels.map((model) => (
-                      <AIInputModelSelectItem key={model.name} value={model.name}>
-                        {model.name}
-                      </AIInputModelSelectItem>
-                    ))
-                  : aiProviderModels.map(([modelKey, modelConfig]) => (
-                      <AIInputModelSelectItem key={modelKey} value={modelKey}>
-                        {modelConfig.displayName}
-                      </AIInputModelSelectItem>
-                    ))}
+                {aiProviderModels.map(([modelKey, modelConfig]) => (
+                  <AIInputModelSelectItem key={modelKey} value={modelKey}>
+                    {modelConfig.displayName}
+                  </AIInputModelSelectItem>
+                ))}
               </AIInputModelSelectContent>
             </AIInputModelSelect>
             <Tooltip>

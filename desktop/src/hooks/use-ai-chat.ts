@@ -1,6 +1,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText } from 'ai';
+import { createOllama } from 'ollama-ai-provider-v2';
 import { useCallback, useRef, useState } from 'react';
 
 interface Message {
@@ -10,7 +11,7 @@ interface Message {
 }
 
 interface UseAIChatOptions {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'ollama';
   model: string;
   sessionId?: string;
   initialMessages?: Message[];
@@ -29,16 +30,6 @@ interface AIProviderConfig {
 
 // Centralized AI Provider Configuration
 export const AI_PROVIDERS: Record<string, AIProviderConfig> = {
-  ollama: {
-    name: 'ollama',
-    models: {
-      'llama3.1:8b': { displayName: 'GPT-4 Optimized', default: true },
-    },
-    createProvider: () =>
-      createOpenAI({
-        baseURL: 'https://api.openai.com/v1',
-      }),
-  },
   openai: {
     name: 'ChatGPT',
     models: {
@@ -73,6 +64,21 @@ export const AI_PROVIDERS: Record<string, AIProviderConfig> = {
       },
     },
   },
+  ollama: {
+    name: 'Ollama',
+    models: {
+      'llama3.2:8b': { displayName: 'Llama 3.2', default: true },
+      'llama3.1:8b': { displayName: 'Llama 3.1', default: false },
+      mistral: { displayName: 'Mistral', default: false },
+      codellama: { displayName: 'Code Llama', default: false },
+    },
+    apiKeyPlaceholder: '',
+    apiKeyEnvVar: '',
+    createProvider: () =>
+      createOllama({
+        baseURL: 'http://localhost:54587/llm/ollama/api',
+      }),
+  },
 };
 
 export type AIProviderType = keyof typeof AI_PROVIDERS;
@@ -101,7 +107,8 @@ export function useAIChat({ provider, model, sessionId, initialMessages = [], ap
       setStatus('submitted');
 
       try {
-        if (!apiKey) {
+        // Check if API key is required (not required for ollama)
+        if (!apiKey && provider !== 'ollama') {
           throw new Error(
             `${AI_PROVIDERS[provider].name} API key is required. Please set your API key in the settings.`
           );
@@ -111,7 +118,7 @@ export function useAIChat({ provider, model, sessionId, initialMessages = [], ap
 
         // Create AI provider using centralized configuration
         const providerConfig = AI_PROVIDERS[provider];
-        const aiProvider = providerConfig.createProvider(apiKey);
+        const aiProvider = providerConfig.createProvider(apiKey || '');
 
         // Context to send to the model
         const allMessages = [...messages, userMessage];

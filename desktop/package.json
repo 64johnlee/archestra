@@ -50,7 +50,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.532.0",
     "ollama": "^0.5.16",
-    "ollama-ai-provider": "^1.2.0",
+    "ollama-ai-provider-v2": "^0.0.9",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.61.1",
