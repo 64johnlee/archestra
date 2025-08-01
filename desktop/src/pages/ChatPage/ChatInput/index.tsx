@@ -1,7 +1,7 @@
 'use client';
 
 import { FileText } from 'lucide-react';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 
 import ToolPill from '@/components/ToolPill';
 import {
@@ -24,28 +24,18 @@ import { useMCPServersStore } from '@/stores/mcp-servers-store';
 import { useOllamaStore } from '@/stores/ollama-store';
 
 interface ChatInputProps {
-  onSendMessage: (message: string) => void;
+  input: string;
+  handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  handleSubmit: (e?: React.FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
   stop: () => void;
 }
 
-export default function ChatInput({ onSendMessage, isLoading, stop }: ChatInputProps) {
-  const [input, setInput] = useState('');
+export default function ChatInput({ input, handleInputChange, handleSubmit, isLoading, stop }: ChatInputProps) {
   const { selectedTools } = useMCPServersStore();
   const { isDeveloperMode, toggleDeveloperMode } = useDeveloperModeStore();
   const { installedModels, loadingInstalledModels, loadingInstalledModelsError, selectedModel, setSelectedModel } =
     useOllamaStore();
-
-  const handleSubmit = useCallback(
-    (e?: React.FormEvent) => {
-      e?.preventDefault();
-      if (input.trim()) {
-        onSendMessage(input);
-        setInput('');
-      }
-    },
-    [input, onSendMessage]
-  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -67,7 +57,7 @@ export default function ChatInput({ onSendMessage, isLoading, stop }: ChatInputP
         </div>
         <AIInputTextarea
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="What would you like to know?"
           disabled={!selectedModel}
