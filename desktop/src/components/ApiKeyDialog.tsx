@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AI_PROVIDERS } from '@/hooks/use-ai-chat';
 import { useChatStore } from '@/stores/chat-store';
 
 interface ApiKeyDialogProps {
@@ -32,8 +33,10 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
     onOpenChange(false);
   };
 
-  const providerName = selectedProvider === 'chatgpt' ? 'OpenAI' : 'Anthropic';
-  const placeholder = selectedProvider === 'chatgpt' ? 'sk-...' : 'sk-ant-...';
+  const providerKey = selectedProvider === 'chatgpt' ? 'openai' : 'anthropic';
+  const providerConfig = AI_PROVIDERS[providerKey];
+  const providerName = providerConfig.name;
+  const placeholder = providerConfig.apiKeyPlaceholder;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -41,8 +44,8 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
         <DialogHeader>
           <DialogTitle>{providerName} API Key</DialogTitle>
           <DialogDescription>
-            Enter your {providerName} API key to use {selectedProvider === 'chatgpt' ? 'ChatGPT' : 'Claude'}. Your key
-            will be stored locally and sent directly to {providerName}.
+            Enter your {providerName === 'ChatGPT' ? 'OpenAI' : providerName} API key to use {providerName}. Your key
+            will be stored locally and sent directly to {providerName === 'ChatGPT' ? 'OpenAI' : providerName}.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">

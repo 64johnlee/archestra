@@ -3,9 +3,17 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AI_PROVIDERS } from '@/hooks/use-ai-chat';
 import { type LLMProvider, useChatStore } from '@/stores/chat-store';
 
 import { ApiKeyDialog } from './ApiKeyDialog';
+
+// Map of LLMProvider values to AI provider keys
+const PROVIDER_MAPPING: Record<string, keyof typeof AI_PROVIDERS | null> = {
+  ollama: null, // Ollama doesn't use AI_PROVIDERS config
+  chatgpt: 'openai',
+  claude: 'anthropic',
+};
 
 export function ProviderSelector() {
   const { selectedProvider, setSelectedProvider, openaiApiKey, anthropicApiKey } = useChatStore();
@@ -20,6 +28,8 @@ export function ProviderSelector() {
     }
   };
 
+  const requiresApiKey = selectedProvider === 'chatgpt' || selectedProvider === 'claude';
+
   return (
     <>
       <div className="flex items-center gap-2">
@@ -30,11 +40,19 @@ export function ProviderSelector() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ollama">Ollama</SelectItem>
-            <SelectItem value="chatgpt">ChatGPT</SelectItem>
-            <SelectItem value="claude">Claude</SelectItem>
+            {Object.entries(PROVIDER_MAPPING).map(([key, aiProviderKey]) => {
+              if (key !== 'ollama' && aiProviderKey && AI_PROVIDERS[aiProviderKey]) {
+                return (
+                  <SelectItem key={key} value={key}>
+                    {AI_PROVIDERS[aiProviderKey].name}
+                  </SelectItem>
+                );
+              }
+              return null;
+            })}
           </SelectContent>
         </Select>
-        {(selectedProvider === 'chatgpt' || selectedProvider === 'claude') && (
+        {requiresApiKey && (
           <Button variant="ghost" size="icon" onClick={() => setShowApiKeyDialog(true)}>
             <Settings className="h-4 w-4" />
           </Button>

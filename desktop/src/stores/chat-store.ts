@@ -21,6 +21,7 @@ interface ChatState {
   selectedProvider: LLMProvider;
   openaiApiKey: string | null;
   anthropicApiKey: string | null;
+  selectedAIModel: string | null;
 }
 
 interface ChatActions {
@@ -37,6 +38,7 @@ interface ChatActions {
   setSelectedProvider: (provider: LLMProvider) => void;
   setOpenAIApiKey: (apiKey: string) => void;
   setAnthropicApiKey: (apiKey: string) => void;
+  setSelectedAIModel: (model: string) => void;
 }
 
 type ChatStore = ChatState & ChatActions;
@@ -61,6 +63,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   selectedProvider: 'ollama',
   openaiApiKey: null,
   anthropicApiKey: null,
+  selectedAIModel: null,
 
   // Actions
   loadChats: async () => {
@@ -176,6 +179,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setAnthropicApiKey: (apiKey: string) => {
     set({ anthropicApiKey: apiKey });
+  },
+
+  setSelectedAIModel: (model: string) => {
+    set({ selectedAIModel: model });
   },
 }));
 

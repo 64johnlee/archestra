@@ -12,7 +12,7 @@ import SystemPrompt from './SystemPrompt';
 interface ChatPageProps {}
 
 export default function ChatPage(_props: ChatPageProps) {
-  const { getCurrentChat, createNewChat } = useChatStore();
+  const { getCurrentChat, createNewChat, selectedProvider, selectedAIModel } = useChatStore();
   const { selectedModel } = useOllamaStore();
   const currentChat = getCurrentChat();
   const [localInput, setLocalInput] = useState('');
@@ -24,8 +24,11 @@ export default function ChatPage(_props: ChatPageProps) {
     }
   }, [currentChat, createNewChat]);
 
+  // Use appropriate model based on provider
+  const model = selectedProvider === 'ollama' ? selectedModel || 'llama3.2' : selectedAIModel || '';
+
   const { messages, sendMessage, stop, isLoading } = useChatProvider({
-    model: selectedModel || 'llama3.2',
+    model,
     sessionId: currentChat?.session_id,
     initialMessages: currentChat?.messages || [],
   });

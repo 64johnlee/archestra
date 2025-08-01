@@ -1,6 +1,6 @@
 import { useChatStore } from '@/stores/chat-store';
 
-import { useAIChat } from './use-ai-chat';
+import { getDefaultModel, useAIChat } from './use-ai-chat';
 import { useOllamaChat } from './use-ollama-chat';
 
 interface UseChatProviderOptions {
@@ -20,7 +20,7 @@ export function useChatProvider({ model, sessionId, initialMessages = [] }: UseC
 
   const aiChat = useAIChat({
     provider: selectedProvider === 'chatgpt' ? 'openai' : 'anthropic',
-    model: selectedProvider === 'chatgpt' ? 'gpt-4o' : 'claude-3-5-sonnet-20241022',
+    model: model || (selectedProvider === 'chatgpt' ? getDefaultModel('openai') : getDefaultModel('anthropic')),
     sessionId,
     initialMessages,
     apiKey: selectedProvider === 'chatgpt' ? openaiApiKey || undefined : anthropicApiKey || undefined,
