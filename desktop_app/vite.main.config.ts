@@ -17,32 +17,33 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'node',
+    silent: true, // suppress all console logs from the tests
     globals: true,
-    setupFiles: './setup-tests.ts',
-    // projects: [
-    //   'src/*',
-    //   {
-    //     extends: true,
-    //     test: {
-    //       include: ['**/*.{browser}.test.{ts,tsx}'],
-    //       name: {
-    //         label: 'browser',
-    //         color: 'cyan',
-    //       },
-    //       environment: 'jsdom',
-    //     },
-    //   },
-    //   {
-    //     test: {
-    //       include: ['**/*.{node}.test.{ts,tsx}'],
-    //       name: {
-    //         label: 'node',
-    //         color: 'green',
-    //       },
-    //       environment: 'node',
-    //     },
-    //   },
-    // ],
+    projects: [
+      {
+        extends: true,
+        test: {
+          setupFiles: ['./src/ui/setup-tests.ts'],
+          include: ['src/ui/**/*.test.{ts,tsx}'],
+          name: {
+            label: 'browser',
+            color: 'yellow',
+          },
+          environment: 'jsdom',
+        },
+      },
+      {
+        extends: true,
+        test: {
+          setupFiles: ['./src/backend/setup-tests.ts'],
+          include: ['src/backend/**/*test.{ts,tsx}'],
+          name: {
+            label: 'node',
+            color: 'green',
+          },
+          environment: 'node',
+        },
+      },
+    ],
   },
 });
