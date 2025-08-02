@@ -3,7 +3,10 @@ import fastify from 'fastify';
 import { config } from './config/server';
 import { runServerMigrations } from './database';
 import corsPlugin from './plugins/cors';
+import websocketPlugin from './plugins/websocket';
 import chatRoutes from './routes/chat';
+import llmRoutes from './routes/llm';
+import { runServerMigrations } from './database';
 
 /**
  * Main server initialization function
@@ -25,8 +28,14 @@ async function startServer() {
   // Register CORS plugin to allow requests from the Electron renderer
   await app.register(corsPlugin);
 
+  // Register WebSocket plugin for real-time communication
+  await app.register(websocketPlugin);
+
   // Register all chat-related routes under /api/chat
   await app.register(chatRoutes);
+
+  // Register LLM streaming routes
+  await app.register(llmRoutes);
 
   const PORT = config.server.port; // Default: 3456
   const HOST = config.server.host; // Default: 127.0.0.1

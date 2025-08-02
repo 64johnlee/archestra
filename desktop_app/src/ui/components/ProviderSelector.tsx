@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { Button } from '@ui/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/components/ui/select';
-import { AI_PROVIDERS } from '@ui/hooks/use-ai-chat';
+import { AI_PROVIDERS } from '@ui/hooks/use-ai-chat-backend';
 import { type LLMProvider, useChatStore } from '@ui/stores/chat-store';
 
 import { ApiKeyDialog } from './ApiKeyDialog';

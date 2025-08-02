@@ -11,7 +11,7 @@ import {
 } from '@ui/components/ui/dialog';
 import { Input } from '@ui/components/ui/input';
 import { Label } from '@ui/components/ui/label';
-import { AI_PROVIDERS } from '@ui/hooks/use-ai-chat';
+import { AI_PROVIDERS } from '@ui/hooks/use-ai-chat-backend';
 import { useChatStore } from '@ui/stores/chat-store';
 
 interface ApiKeyDialogProps {

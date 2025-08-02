@@ -1,6 +1,6 @@
 import { useChatStore } from '@ui/stores/chat-store';
 
-import { getDefaultModel, useAIChat } from './use-ai-chat';
+import { getDefaultModel, useAIChatBackend } from './use-ai-chat-backend';
 
 interface UseChatProviderOptions {
   model: string;
@@ -29,7 +29,7 @@ export function useChatProvider({ model, sessionId, initialMessages = [] }: UseC
   }
   // ollama doesn't need an API key
 
-  const aiChat = useAIChat({
+  const aiChat = useAIChatBackend({
     provider: aiProviderKey,
     model: model || getDefaultModel(aiProviderKey),
     sessionId,
