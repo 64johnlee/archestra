@@ -1,4 +1,5 @@
-import { eq, desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
+
 import { chatsTable } from '@backend/database/schema/chat';
 // IMPORTANT: Import from server/database, not the main database module
 // The main database module uses Electron APIs which aren't available in the server process
@@ -27,10 +28,10 @@ export interface Chat {
 
 /**
  * Service layer for chat operations
- * 
+ *
  * This service encapsulates all database operations for chats.
  * It's used by the Fastify routes to handle CRUD operations.
- * 
+ *
  * Pattern: Repository/Service pattern to separate business logic from routes
  */
 export class ChatService {
@@ -79,6 +80,7 @@ export class ChatService {
       .insert(chatsTable)
       .values({}) // No required fields, all handled by defaults
       .returning(); // SQLite returns the inserted row
+<<<<<<< HEAD
     
     return {
       id: chat.id,
@@ -89,6 +91,10 @@ export class ChatService {
       llm_provider: request.llm_provider || 'ollama', // Use provided provider or default to ollama
       messages: [] // Empty messages array - these would come from chat_interactions table
     };
+=======
+
+    return chat;
+>>>>>>> main
   }
 
   async updateChat(id: number, request: UpdateChatRequest): Promise<Chat | null> {
@@ -107,6 +113,7 @@ export class ChatService {
       })
       .where(eq(chatsTable.id, id))
       .returning();
+<<<<<<< HEAD
     
     return {
       id: updatedChat.id,
@@ -117,14 +124,16 @@ export class ChatService {
       llm_provider: 'ollama', // Default provider for now
       messages: [] // Empty messages array - these would come from chat_interactions table
     };
+=======
+
+    return updatedChat;
+>>>>>>> main
   }
 
   async deleteChat(id: number): Promise<void> {
     // Note: Related chat_interactions will be cascade deleted
     // when that table is added (foreign key constraint)
-    await db
-      .delete(chatsTable)
-      .where(eq(chatsTable.id, id));
+    await db.delete(chatsTable).where(eq(chatsTable.id, id));
   }
 }
 
