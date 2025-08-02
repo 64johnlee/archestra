@@ -1,0 +1,6 @@
+coverage
+dist
+pnpm-lock.yaml
+CHANGELOG.md
+src/database/migrations
+.claude

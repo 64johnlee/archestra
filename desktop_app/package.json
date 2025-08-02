@@ -8,7 +8,9 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "test": "vitest --config vite.main.config.ts",
+    "prepare": "cd .. && husky desktop_app/.husky",
+    "prettier": "prettier --write ."
   },
   "packageManager": "pnpm@10.13.1",
   "devDependencies": {
@@ -20,20 +22,28 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.8.2",
     "@electron-forge/plugin-fuses": "^7.8.2",
     "@electron-forge/plugin-vite": "^7.8.2",
-    "@electron/fuses": "^1.8.0",
+    "@electron/fuses": "^2.0.0",
     "@tailwindcss/vite": "^4.1.11",
+    "@testing-library/jest-dom": "^6.6.4",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/electron-squirrel-startup": "^1.0.2",
     "@types/node": "^24.1.0",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
-    "@typescript-eslint/eslint-plugin": "^5.62.0",
-    "@typescript-eslint/parser": "^5.62.0",
+    "drizzle-kit": "^0.31.4",
     "electron": "37.2.5",
-    "eslint": "^8.57.1",
-    "eslint-plugin-import": "^2.32.0",
+    "husky": "^9.1.7",
+    "jsdom": "^26.1.0",
+    "lint-staged": "^16.1.2",
+    "prettier": "3.6.2",
     "tailwindcss": "^4.1.11",
-    "typescript": "~4.5.4",
-    "vite": "^5.4.19"
+    "tsx": "^4.20.3",
+    "typescript": "~5.9.2",
+    "vite": "^7.0.6",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.0",
@@ -63,10 +73,12 @@
     "@types/express": "^5.0.3",
     "@vitejs/plugin-react": "^4.7.0",
     "ai": "^5.0.0",
+    "better-sqlite3": "^12.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
+    "drizzle-orm": "^0.44.4",
     "electron-squirrel-startup": "^1.0.1",
     "express": "^5.1.0",
     "index.js": "link:@modelcontextprotocol/sdk/client/index.js",
@@ -89,5 +101,8 @@
     "onlyBuiltDependencies": [
       "electron"
     ]
+  },
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
   }
 }
