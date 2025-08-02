@@ -18,7 +18,7 @@ import {
   AIInputTools,
 } from '@ui/components/kibo/ai-input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/components/ui/tooltip';
-import { AI_PROVIDERS } from '@ui/hooks/use-ai-chat';
+import { AI_PROVIDERS } from '@ui/hooks/use-ai-chat-backend';
 import { cn } from '@ui/lib/utils/tailwind';
 import { useChatStore } from '@ui/stores/chat-store';
 import { useDeveloperModeStore } from '@ui/stores/developer-mode-store';

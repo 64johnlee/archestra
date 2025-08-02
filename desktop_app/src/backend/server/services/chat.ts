@@ -9,7 +9,7 @@ import db from '@backend/server/database';
  * Request/Response types for the chat API
  */
 export interface CreateChatRequest {
-  // Currently no required fields for creating a chat
+  llm_provider?: string;
 }
 
 export interface UpdateChatRequest {
@@ -18,10 +18,12 @@ export interface UpdateChatRequest {
 
 export interface Chat {
   id: number;
-  sessionId: string;
+  session_id: string;
   title: string | null;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
+  llm_provider: string;
+  messages: any[];
 }
 
 /**
@@ -34,15 +36,41 @@ export interface Chat {
  */
 export class ChatService {
   async getAllChats(): Promise<Chat[]> {
-    const chats = await db.select().from(chatsTable).orderBy(desc(chatsTable.createdAt)); // Most recent chats first
-
-    return chats;
+    const chats = await db
+      .select()
+      .from(chatsTable)
+      .orderBy(desc(chatsTable.createdAt)); // Most recent chats first
+    
+    return chats.map(chat => ({
+      id: chat.id,
+      session_id: chat.sessionId,
+      title: chat.title,
+      created_at: chat.createdAt,
+      updated_at: chat.updatedAt,
+      llm_provider: 'ollama', // Default provider for now
+      messages: [] // Empty messages array - these would come from chat_interactions table
+    }));
   }
 
   async getChatById(id: number): Promise<Chat | null> {
-    const results = await db.select().from(chatsTable).where(eq(chatsTable.id, id)).limit(1); // Ensure we only get one result
-
-    return results[0] || null;
+    const results = await db
+      .select()
+      .from(chatsTable)
+      .where(eq(chatsTable.id, id))
+      .limit(1); // Ensure we only get one result
+    
+    const chat = results[0];
+    if (!chat) return null;
+    
+    return {
+      id: chat.id,
+      session_id: chat.sessionId,
+      title: chat.title,
+      created_at: chat.createdAt,
+      updated_at: chat.updatedAt,
+      llm_provider: 'ollama', // Default provider for now
+      messages: [] // Empty messages array - these would come from chat_interactions table
+    };
   }
 
   async createChat(request: CreateChatRequest): Promise<Chat> {
@@ -52,8 +80,21 @@ export class ChatService {
       .insert(chatsTable)
       .values({}) // No required fields, all handled by defaults
       .returning(); // SQLite returns the inserted row
+<<<<<<< HEAD
+    
+    return {
+      id: chat.id,
+      session_id: chat.sessionId,
+      title: chat.title,
+      created_at: chat.createdAt,
+      updated_at: chat.updatedAt,
+      llm_provider: request.llm_provider || 'ollama', // Use provided provider or default to ollama
+      messages: [] // Empty messages array - these would come from chat_interactions table
+    };
+=======
 
     return chat;
+>>>>>>> main
   }
 
   async updateChat(id: number, request: UpdateChatRequest): Promise<Chat | null> {
@@ -72,8 +113,21 @@ export class ChatService {
       })
       .where(eq(chatsTable.id, id))
       .returning();
+<<<<<<< HEAD
+    
+    return {
+      id: updatedChat.id,
+      session_id: updatedChat.sessionId,
+      title: updatedChat.title,
+      created_at: updatedChat.createdAt,
+      updated_at: updatedChat.updatedAt,
+      llm_provider: 'ollama', // Default provider for now
+      messages: [] // Empty messages array - these would come from chat_interactions table
+    };
+=======
 
     return updatedChat;
+>>>>>>> main
   }
 
   async deleteChat(id: number): Promise<void> {
