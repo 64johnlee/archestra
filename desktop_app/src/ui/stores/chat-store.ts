@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 import { DEFAULT_CHAT_TITLE } from '@ui/consts';
-import { getDefaultModel } from '@ui/hooks/use-ai-chat';
+import { getDefaultModel } from '@ui/hooks/use-ai-chat-backend';
 import {
   ChatWithMessages as ServerChatWithMessages,
   createChat,

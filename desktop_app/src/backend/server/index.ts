@@ -4,6 +4,7 @@ import { config } from './config/server';
 import corsPlugin from './plugins/cors';
 import websocketPlugin from './plugins/websocket';
 import chatRoutes from './routes/chat';
+import llmRoutes from './routes/llm';
 import { runServerMigrations } from './database';
 
 /**
@@ -31,6 +32,9 @@ async function startServer() {
 
   // Register all chat-related routes under /api/chat
   await app.register(chatRoutes);
+
+  // Register LLM streaming routes
+  await app.register(llmRoutes);
 
   const PORT = config.server.port; // Default: 3456
   const HOST = config.server.host; // Default: 127.0.0.1
