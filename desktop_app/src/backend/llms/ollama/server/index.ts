@@ -82,6 +82,11 @@ export default class OllamaServer {
 
       // Set up environment variables
       const env = {
+        /**
+         * Ollama needs the HOME environment variable to be set to the user's home directory
+         * so that it can write to the user's .ollama directory
+         */
+        HOME: process.env.HOME,
         OLLAMA_HOST: `127.0.0.1:${this.port}`,
         OLLAMA_ORIGINS: 'http://localhost:54587',
         OLLAMA_DEBUG: '0',

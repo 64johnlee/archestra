@@ -18,8 +18,12 @@ let ollamaServer: OllamaServer | null = null;
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1200,
+    height: 800,
+    resizable: true,
+    movable: true,
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 16, y: 17 },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

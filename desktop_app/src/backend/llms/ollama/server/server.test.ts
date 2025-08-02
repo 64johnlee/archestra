@@ -12,6 +12,9 @@ function waitFor(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+vi.stubEnv('HOME', '/mock/home');
+vi.stubEnv('THIS_SHOULDNT_BE_SENT_TO_OLLAMA', 'this shouldnt be sent to ollama');
+
 // Mock spawn to return a mock process
 const mockProcess = {
   stdout: {
@@ -77,11 +80,12 @@ describe('OllamaServer', () => {
         expect.stringContaining('ollama-v0.9.6'),
         ['serve'],
         expect.objectContaining({
-          env: expect.objectContaining({
+          env: {
+            HOME: '/mock/home',
             OLLAMA_HOST: '127.0.0.1:12345',
             OLLAMA_ORIGINS: 'http://localhost:54587',
             OLLAMA_DEBUG: '0',
-          }),
+          },
         })
       );
     });
@@ -112,11 +116,12 @@ describe('OllamaServer', () => {
         expect.any(String),
         expect.any(Array),
         expect.objectContaining({
-          env: expect.objectContaining({
+          env: {
+            HOME: '/mock/home',
             OLLAMA_HOST: '127.0.0.1:12345',
             OLLAMA_ORIGINS: 'http://localhost:54587',
             OLLAMA_DEBUG: '0',
-          }),
+          },
         })
       );
     });
