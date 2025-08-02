@@ -1,13 +1,13 @@
 import fastify from 'fastify';
 
 import { config } from './config/server';
+import { runServerMigrations } from './database';
 import corsPlugin from './plugins/cors';
 import chatRoutes from './routes/chat';
-import { runServerMigrations } from './database';
 
 /**
  * Main server initialization function
- * 
+ *
  * IMPORTANT: Everything is wrapped in an async function to avoid top-level await.
  * Top-level await is not supported in CommonJS modules, which is what Vite
  * builds for the server target. This caused the server-process.js build to fail.
@@ -15,7 +15,7 @@ import { runServerMigrations } from './database';
 async function startServer() {
   // Run database migrations before starting the server
   await runServerMigrations();
-  
+
   const app = fastify({
     logger: config.logger,
     // Note: prettyPrint was removed from config as it's no longer supported
@@ -51,7 +51,7 @@ async function startServer() {
 
   // Listen for termination signals from the parent process
   process.on('SIGTERM', gracefulShutdown); // Standard termination signal
-  process.on('SIGINT', gracefulShutdown);  // Ctrl+C signal
+  process.on('SIGINT', gracefulShutdown); // Ctrl+C signal
 }
 
 // Start the server and handle any initialization errors
