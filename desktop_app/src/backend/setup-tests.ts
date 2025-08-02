@@ -20,7 +20,7 @@ beforeEach(async () => {
 
   // Run migrations on test database
   await migrate(testDb, { migrationsFolder: path.join(__dirname, './database/migrations') });
-  
+
   // Set the test database in the mock
   const { setMockDb } = await import('@backend/database/__mocks__/index');
   setMockDb(testDb);
