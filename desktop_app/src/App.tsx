@@ -3,17 +3,12 @@ import { TestChat } from './TestChat';
 import { Button } from '../components/ui/button';
 
 export function App() {
-  const [serverPort, setServerPort] = React.useState(0);
-  
-  React.useEffect(() => {
-    window.electronAPI.getServerPort().then(setServerPort);
-  }, []);
-
-  if (!serverPort) return <div>Loading...</div>;
-
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center">
-      <Button>Click me</Button>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center p-4">
+      <div className="mb-8">
+        <Button>Click me</Button>
+      </div>
+      <TestChat serverPort={3456} />
     </div>
   );
 }
