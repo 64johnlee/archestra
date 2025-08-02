@@ -1,7 +1,10 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
-import path from 'node:path';
-import { fork, ChildProcess } from 'node:child_process';
+import { app, BrowserWindow } from 'electron';
 import started from 'electron-squirrel-startup';
+import { ChildProcess, fork } from 'node:child_process';
+import crypto from 'node:crypto';
+import path from 'node:path';
+import { runDatabaseMigrations } from './database';
+import { MCPServer } from './models';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -19,7 +22,7 @@ const createWindow = () => {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
     },
   });
 
@@ -27,7 +30,9 @@ const createWindow = () => {
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
-    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+    mainWindow.loadFile(
+      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)
+    );
   }
 
   // Open the DevTools.
@@ -37,11 +42,11 @@ const createWindow = () => {
 // Function to start the Express server in a child process
 function startExpressServer(): void {
   const serverPath = path.join(__dirname, 'server-process.js');
-  
+
   // Fork the server process
   serverProcess = fork(serverPath, [], {
     env: { ...process.env },
-    silent: false // Allow console output from child process
+    silent: false, // Allow console output from child process
   });
 
   // Handle server process errors
@@ -59,10 +64,21 @@ function startExpressServer(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', () => {
+app.on('ready', async () => {
+  await runDatabaseMigrations();
+
   startExpressServer();
   console.log(`Express server starting on port ${SERVER_PORT}`);
   createWindow();
+
+  MCPServer.create({
+    name: crypto.randomUUID(),
+    serverConfig: {
+      url: 'http://localhost:3000',
+    },
+  });
+
+  console.log(await MCPServer.getAll());
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -82,26 +98,25 @@ app.on('activate', () => {
   }
 });
 
-
 // Gracefully stop server on quit
 app.on('before-quit', async (event) => {
   if (serverProcess) {
     event.preventDefault();
-    
+
     // Kill the server process gracefully
     serverProcess.kill('SIGTERM');
-    
+
     // Wait for process to exit
     await new Promise<void>((resolve) => {
       if (!serverProcess) {
         resolve();
         return;
       }
-      
+
       serverProcess.on('exit', () => {
         resolve();
       });
-      
+
       // Force kill after 5 seconds
       setTimeout(() => {
         if (serverProcess) {
@@ -110,7 +125,7 @@ app.on('before-quit', async (event) => {
         resolve();
       }, 5000);
     });
-    
+
     app.exit();
   }
 });
