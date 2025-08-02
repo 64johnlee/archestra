@@ -15,8 +15,32 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'jsdom',
+    environment: 'node',
     globals: true,
     setupFiles: './setup-tests.ts',
+    // projects: [
+    //   'src/*',
+    //   {
+    //     extends: true,
+    //     test: {
+    //       include: ['**/*.{browser}.test.{ts,tsx}'],
+    //       name: {
+    //         label: 'browser',
+    //         color: 'cyan',
+    //       },
+    //       environment: 'jsdom',
+    //     },
+    //   },
+    //   {
+    //     test: {
+    //       include: ['**/*.{node}.test.{ts,tsx}'],
+    //       name: {
+    //         label: 'node',
+    //         color: 'green',
+    //       },
+    //       environment: 'node',
+    //     },
+    //   },
+    // ],
   },
 });
