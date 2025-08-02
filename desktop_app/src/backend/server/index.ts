@@ -2,6 +2,7 @@ import fastify from 'fastify';
 
 import { config } from './config/server';
 import corsPlugin from './plugins/cors';
+import websocketPlugin from './plugins/websocket';
 import chatRoutes from './routes/chat';
 import { runServerMigrations } from './database';
 
@@ -24,6 +25,9 @@ async function startServer() {
 
   // Register CORS plugin to allow requests from the Electron renderer
   await app.register(corsPlugin);
+
+  // Register WebSocket plugin for real-time communication
+  await app.register(websocketPlugin);
 
   // Register all chat-related routes under /api/chat
   await app.register(chatRoutes);
