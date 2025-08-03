@@ -1,7 +1,6 @@
 import fastify from 'fastify';
 
 import { config } from './config/server';
-import { runDatabaseMigrations } from '@backend/database';
 import corsPlugin from './plugins/cors';
 import websocketPlugin from './plugins/websocket';
 import chatRoutes from './routes/chat';
@@ -16,9 +15,6 @@ import ollamaRoutes from './routes/ollama';
  * builds for the server target. This caused the server-process.js build to fail.
  */
 async function startServer() {
-  // Run database migrations before starting the server
-  await runDatabaseMigrations();
-
   const app = fastify({
     logger: config.logger,
     // Note: prettyPrint was removed from config as it's no longer supported
