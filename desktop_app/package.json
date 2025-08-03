@@ -14,7 +14,7 @@
     "db:studio": "ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/drizzle-kit/bin.cjs studio",
     "db:push": "ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/drizzle-kit/bin.cjs push",
     "db:generate": "ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/drizzle-kit/bin.cjs generate",
-    "db:migrate": "ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/drizzle-kit/bin.cjs migrate"
+    "db:migrate": "ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/drizzle-kit/bin.cjs migrate",
     "codegen:libpod": "openapi-ts --file openapi-ts.libpod.config.ts"
   },
   "packageManager": "pnpm@10.13.1",
