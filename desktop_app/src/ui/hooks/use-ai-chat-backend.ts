@@ -68,7 +68,7 @@ export function useAIChatBackend({
   initialMessages = [],
   apiKey,
 }: UseAIChatBackendOptions) {
-  const { messages, input, handleInputChange, handleSubmit, isLoading, stop, error, append, setMessages } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, stop, error, append, setMessages, sendMessage } = useChat({
     api: 'http://localhost:3456/api/llm/stream',
     initialMessages,
     body: {
@@ -81,17 +81,6 @@ export function useAIChatBackend({
       console.error('Chat error:', error);
     },
   });
-
-  // Custom sendMessage function that matches the original API
-  const sendMessage = useCallback(
-    async (message: string | { role: 'user' | 'assistant'; content: string }) => {
-      const userMessage = typeof message === 'string' ? { role: 'user' as const, content: message } : message;
-
-      // Append the message to the chat
-      await append(userMessage);
-    },
-    [append]
-  );
 
   return {
     messages,
