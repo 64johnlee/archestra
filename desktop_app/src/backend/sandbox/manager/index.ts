@@ -23,8 +23,8 @@ class MCPServerSandboxManager {
 
   constructor() {
     this.podmanRuntime = new PodmanRuntime(
-      this.onPodmanMachineInstallationSuccess,
-      this.onPodmanMachineInstallationError
+      this.onPodmanMachineInstallationSuccess.bind(this),
+      this.onPodmanMachineInstallationError.bind(this)
     );
   }
 
