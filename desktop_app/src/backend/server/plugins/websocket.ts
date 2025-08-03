@@ -1,7 +1,7 @@
 import fastifyWebsocket from '@fastify/websocket';
 import { FastifyPluginAsync } from 'fastify';
 
-import { websocketService } from '@backend/services/websocket-service';
+import WebsocketService from '@backend/websocket';
 
 /**
  * WebSocket plugin for real-time communication
@@ -15,14 +15,14 @@ const websocketPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(fastifyWebsocket);
 
   // Initialize the WebSocket service with the Fastify instance
-  websocketService.initialize(fastify);
+  WebsocketService.initialize(fastify);
 
   // Add WebSocket route
   fastify.get('/ws', { websocket: true }, async (socket, req) => {
     console.log('WebSocket client connected');
 
     // Add this connection to the service
-    websocketService.addConnection(socket);
+    WebsocketService.addConnection(socket);
 
     // Handle incoming messages
     socket.on('message', (message) => {
@@ -45,7 +45,7 @@ const websocketPlugin: FastifyPluginAsync = async (fastify) => {
     // Handle connection close
     socket.on('close', () => {
       console.log('WebSocket client disconnected');
-      websocketService.removeConnection(socket);
+      WebsocketService.removeConnection(socket);
     });
 
     // Handle errors

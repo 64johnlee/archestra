@@ -16,7 +16,7 @@ class WebSocketService {
 
   addConnection(socket: WebSocket) {
     this.connections.add(socket);
-    
+
     socket.on('close', () => {
       this.connections.delete(socket);
     });
@@ -28,7 +28,7 @@ class WebSocketService {
 
   broadcast(message: WebSocketMessage) {
     const messageStr = JSON.stringify(message);
-    
+
     this.connections.forEach((socket) => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(messageStr);
@@ -47,4 +47,4 @@ class WebSocketService {
   }
 }
 
-export const websocketService = new WebSocketService();
+export default new WebSocketService();
