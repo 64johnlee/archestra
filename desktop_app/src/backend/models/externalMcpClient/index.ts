@@ -31,19 +31,10 @@ export class ExternalMcpClient {
   static async saveExternalMcpClient(clientName: ExternalMcpClientName) {
     const now = new Date();
 
-    await db
-      .insert(externalMcpClientsTable)
-      .values({
-        clientName,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: externalMcpClientsTable.clientName,
-        set: {
-          updatedAt: now,
-        },
-      });
+    await db.insert(externalMcpClientsTable).values({
+      clientName,
+      createdAt: now.toISOString(),
+    });
 
     return await db
       .select()

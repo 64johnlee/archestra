@@ -1,7 +1,7 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyPluginAsync } from 'fastify';
 
 import { ExternalMcpClient } from '@backend/models/externalMcpClient';
-import { ExternalMcpClientName } from '@types/externalMcpClient';
+import { ExternalMcpClientName } from '@types';
 
 interface ConnectRequestBody {
   client_name: ExternalMcpClientName;
@@ -11,11 +11,11 @@ interface DisconnectParams {
   client_name: ExternalMcpClientName;
 }
 
-export async function externalMcpClientRoutes(server: FastifyInstance) {
+const externalMcpClientRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * Get all connected external MCP clients
    */
-  server.get('/api/external_mcp_client', async (request, reply) => {
+  fastify.get('/api/external_mcp_client', async (request, reply) => {
     try {
       const clients = await ExternalMcpClient.getConnectedExternalMcpClients();
       return reply.send(clients);
@@ -28,7 +28,7 @@ export async function externalMcpClientRoutes(server: FastifyInstance) {
   /**
    * Get supported external MCP client names
    */
-  server.get('/api/external_mcp_client/supported', async (request, reply) => {
+  fastify.get('/api/external_mcp_client/supported', async (request, reply) => {
     try {
       const supportedClients = ExternalMcpClient.getSupportedExternalMcpClients();
       return reply.send(supportedClients);
@@ -41,10 +41,10 @@ export async function externalMcpClientRoutes(server: FastifyInstance) {
   /**
    * Connect an external MCP client
    */
-  server.post<{ Body: ConnectRequestBody }>('/api/external_mcp_client/connect', async (request, reply) => {
+  fastify.post<{ Body: ConnectRequestBody }>('/api/external_mcp_client/connect', async (request, reply) => {
     try {
       const { client_name } = request.body;
-      
+
       if (!Object.values(ExternalMcpClientName).includes(client_name)) {
         return reply.code(400).send({ error: 'Invalid client name' });
       }
@@ -60,19 +60,24 @@ export async function externalMcpClientRoutes(server: FastifyInstance) {
   /**
    * Disconnect an external MCP client
    */
-  server.delete<{ Params: DisconnectParams }>('/api/external_mcp_client/:client_name/disconnect', async (request, reply) => {
-    try {
-      const { client_name } = request.params;
-      
-      if (!Object.values(ExternalMcpClientName).includes(client_name)) {
-        return reply.code(400).send({ error: 'Invalid client name' });
-      }
+  fastify.delete<{ Params: DisconnectParams }>(
+    '/api/external_mcp_client/:client_name/disconnect',
+    async (request, reply) => {
+      try {
+        const { client_name } = request.params;
 
-      await ExternalMcpClient.disconnectExternalMcpClient(client_name);
-      return reply.code(200).send({ success: true });
-    } catch (error) {
-      console.error('Failed to disconnect external MCP client:', error);
-      return reply.code(500).send({ error: 'Internal server error' });
+        if (!Object.values(ExternalMcpClientName).includes(client_name)) {
+          return reply.code(400).send({ error: 'Invalid client name' });
+        }
+
+        await ExternalMcpClient.disconnectExternalMcpClient(client_name);
+        return reply.code(200).send({ success: true });
+      } catch (error) {
+        console.error('Failed to disconnect external MCP client:', error);
+        return reply.code(500).send({ error: 'Internal server error' });
+      }
     }
-  });
-}
+  );
+};
+
+export default externalMcpClientRoutes;

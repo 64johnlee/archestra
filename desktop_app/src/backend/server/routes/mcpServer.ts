@@ -33,11 +33,7 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.get('/api/mcp_server/catalog', async (request, reply) => {
     try {
-      console.log('GET /api/mcp_server/catalog called');
-      const catalog = MCPServer.getMcpConnectorCatalog();
-      console.log('Catalog length:', catalog.length);
-      console.log('First item:', catalog[0]?.id);
-      return reply.send(catalog);
+      return reply.send(MCPServer.getMcpConnectorCatalog());
     } catch (error) {
       console.error('Failed to get MCP connector catalog:', error);
       return reply.code(500).send({ error: 'Internal server error' });

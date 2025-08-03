@@ -1,15 +1,194 @@
 import { eq } from 'drizzle-orm';
-import { readFile } from 'fs/promises';
-import path from 'path';
 
 import db from '@backend/database';
 import { mcpServersTable } from '@backend/database/schema/mcpServer';
 import type { ConnectorCatalogEntry } from '@types';
 
-export class MCPServer {
-  // Cache for the catalog to avoid reading file multiple times
-  private static catalogCache: ConnectorCatalogEntry[] | null = null;
+const CATALOG: ConnectorCatalogEntry[] = [
+  {
+    id: 'context7',
+    title: 'Context7',
+    description:
+      'Access documentation and code examples for popular libraries and frameworks. Search through comprehensive documentation with AI-powered context understanding.',
+    image: null,
+    category: 'documentation',
+    tags: ['documentation', 'search', 'AI', 'libraries'],
+    author: 'Upstash',
+    version: '1.0.0',
+    homepage: 'https://context7.upstash.com',
+    repository: 'https://github.com/upstash/context7-mcp',
+    server_config: {
+      transport: 'stdio',
+      command: 'npx',
+      args: ['-y', '@upstash/context7-mcp'],
+      env: {},
+    },
+  },
+  {
+    id: 'filesystem',
+    title: 'Filesystem',
+    description:
+      'Access and manipulate files on your local filesystem. Read, write, and search through files and directories with proper security controls.',
+    image: null,
+    category: 'system',
+    tags: ['filesystem', 'files', 'local', 'read', 'write'],
+    author: 'ModelContextProtocol',
+    version: '1.0.0',
+    homepage: 'https://github.com/modelcontextprotocol/servers',
+    repository: 'https://github.com/modelcontextprotocol/servers',
+    server_config: {
+      transport: 'stdio',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-filesystem', './'],
+      env: {},
+    },
+  },
+  {
+    id: 'github',
+    title: 'GitHub',
+    description:
+      'Interact with GitHub repositories, issues, and pull requests. Search code, manage issues, and access repository information.',
+    image: null,
+    category: 'development',
+    tags: ['github', 'git', 'repositories', 'issues', 'code'],
+    author: 'ModelContextProtocol',
+    version: '1.0.0',
+    homepage: 'https://github.com/modelcontextprotocol/servers',
+    repository: 'https://github.com/modelcontextprotocol/servers',
+    server_config: {
+      transport: 'stdio',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-github'],
+      env: {
+        GITHUB_PERSONAL_ACCESS_TOKEN: '',
+      },
+    },
+  },
+  {
+    id: 'brave-search',
+    title: 'Brave Search',
+    description:
+      "Search the web using Brave's privacy-focused search engine. Get real-time web results and information.",
+    image: null,
+    category: 'search',
+    tags: ['search', 'web', 'brave', 'privacy', 'real-time'],
+    author: 'ModelContextProtocol',
+    version: '1.0.0',
+    homepage: 'https://github.com/modelcontextprotocol/servers',
+    repository: 'https://github.com/modelcontextprotocol/servers',
+    server_config: {
+      transport: 'stdio',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-brave-search'],
+      env: {
+        BRAVE_API_KEY: '',
+      },
+    },
+  },
+  {
+    id: 'postgres',
+    title: 'PostgreSQL',
+    description:
+      'Connect to PostgreSQL databases and execute queries. Read schema information and manage database operations.',
+    image: null,
+    category: 'database',
+    tags: ['postgresql', 'database', 'sql', 'queries'],
+    author: 'ModelContextProtocol',
+    version: '1.0.0',
+    homepage: 'https://github.com/modelcontextprotocol/servers',
+    repository: 'https://github.com/modelcontextprotocol/servers',
+    server_config: {
+      transport: 'stdio',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-postgres'],
+      env: {
+        POSTGRES_CONNECTION_STRING: '',
+      },
+    },
+  },
+  {
+    id: 'slack',
+    title: 'Slack',
+    description: 'Interact with Slack workspaces. Send messages, read channels, and manage Slack communications.',
+    image: null,
+    category: 'communication',
+    tags: ['slack', 'messaging', 'communication', 'workspace'],
+    author: 'ModelContextProtocol',
+    version: '1.0.0',
+    homepage: 'https://github.com/modelcontextprotocol/servers',
+    repository: 'https://github.com/modelcontextprotocol/servers',
+    server_config: {
+      transport: 'stdio',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-slack'],
+      env: {
+        SLACK_BOT_TOKEN: '',
+      },
+    },
+  },
+  {
+    id: 'gmail',
+    title: 'Gmail',
+    description: 'Access and manage your Gmail messages with AI. Read, search, and organize your email communications.',
+    image: null,
+    category: 'communication',
+    tags: ['gmail', 'email', 'google', 'messaging', 'oauth'],
+    author: 'gongrzhe',
+    version: '1.0.0',
+    homepage: 'https://github.com/gongrzhe/server-gmail-autoauth-mcp',
+    repository: 'https://github.com/gongrzhe/server-gmail-autoauth-mcp',
+    oauth: {
+      provider: 'gmail',
+      required: true,
+    },
+    server_config: {
+      transport: 'stdio',
+      command: 'npx',
+      args: ['@gongrzhe/server-gmail-autoauth-mcp'],
+      env: {},
+    },
+  },
+  {
+    id: 'fetch',
+    title: 'Fetch',
+    description:
+      'Fetch and retrieve content from web URLs. Download web pages, APIs, and other web resources with customizable headers and request options.',
+    image: null,
+    category: 'web',
+    tags: ['web', 'fetch', 'http', 'api', 'download'],
+    author: 'ModelContextProtocol',
+    version: '1.0.0',
+    homepage: 'https://github.com/modelcontextprotocol/servers',
+    repository: 'https://github.com/modelcontextprotocol/servers',
+    server_config: {
+      transport: 'stdio',
+      command: 'uvx',
+      args: ['mcp-server-fetch'],
+      env: {},
+    },
+  },
+  {
+    id: 'everything',
+    title: 'Everything',
+    description:
+      'This MCP server attempts to exercise all the features of the MCP protocol. It is not intended to be a useful server, but rather a test server for builders of MCP clients. It implements prompts, tools, resources, sampling, and more to showcase MCP capabilities.',
+    image: null,
+    category: 'system',
+    tags: ['files', 'local', 'read', 'write'],
+    author: 'ModelContextProtocol',
+    version: '1.0.0',
+    homepage: 'https://github.com/modelcontextprotocol/servers',
+    repository: 'https://github.com/modelcontextprotocol/servers',
+    server_config: {
+      transport: 'stdio',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-everything'],
+      env: {},
+    },
+  },
+];
 
+export class MCPServer {
   static async create(data: typeof mcpServersTable.$inferInsert) {
     return db.insert(mcpServersTable).values(data).returning();
   }
@@ -31,29 +210,17 @@ export class MCPServer {
 
   /**
    * Get MCP connector catalog
+   *
+   * TODO: update this to fetch from our catalog API
+   * https://www.archestra.ai/mcp-catalog/api-docs#/Search/get_search
    */
-  static async getMcpConnectorCatalog(): Promise<ConnectorCatalogEntry[]> {
-    if (this.catalogCache) {
-      return this.catalogCache;
-    }
-
-    try {
-      const catalogPath = path.join(__dirname, 'catalog.json');
-      const catalogContent = await readFile(catalogPath, 'utf-8');
-      this.catalogCache = JSON.parse(catalogContent);
-      return this.catalogCache!;
-    } catch (error) {
-      console.error('Failed to load MCP connector catalog:', error);
-      return [];
-    }
-  }
+  static getMcpConnectorCatalog = (): ConnectorCatalogEntry[] => CATALOG;
 
   /**
    * Save MCP server from catalog
    */
   static async saveMcpServerFromCatalog(connectorId: string) {
-    const catalog = await this.getMcpConnectorCatalog();
-    const catalogEntry = catalog.find((entry) => entry.id === connectorId);
+    const catalogEntry = CATALOG.find((entry) => entry.id === connectorId);
 
     if (!catalogEntry) {
       throw new Error(`MCP connector ${connectorId} not found in catalog`);
@@ -65,14 +232,12 @@ export class MCPServer {
       .values({
         name: catalogEntry.title,
         serverConfig: catalogEntry.server_config,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: now.toISOString(),
       })
       .onConflictDoUpdate({
         target: mcpServersTable.name,
         set: {
           serverConfig: catalogEntry.server_config,
-          updatedAt: now,
         },
       })
       .returning();
