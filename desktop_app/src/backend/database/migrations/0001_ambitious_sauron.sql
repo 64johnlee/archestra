@@ -4,7 +4,5 @@ CREATE TABLE `messages` (
 	`role` text NOT NULL,
 	`content` text NOT NULL,
 	`created_at` text DEFAULT (current_timestamp) NOT NULL,
-	FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON DELETE CASCADE
+	FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON UPDATE no action ON DELETE cascade
 );
---> statement-breakpoint
-CREATE INDEX `messages_chat_id_idx` ON `messages` (`chat_id`);
