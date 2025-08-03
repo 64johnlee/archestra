@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 
-import { CreateChatRequest, UpdateChatRequest, chatService } from '@backend/services/chat-service';
+import { CreateChatRequest, UpdateChatRequest, chatService } from '@backend/models/chat';
 
 interface ChatParams {
   id: string;
@@ -64,7 +64,6 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(500).send({ error: 'Internal server error' });
     }
   });
-
 };
 
 export default chatRoutes;

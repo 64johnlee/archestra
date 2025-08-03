@@ -1,11 +1,8 @@
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { createOpenAI } from '@ai-sdk/openai';
 import { openai } from '@ai-sdk/openai';
-import { type UIMessage, convertToModelMessages, streamText } from 'ai';
+import { convertToModelMessages, streamText } from 'ai';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { createOllama } from 'ollama-ai-provider';
 
-import { chatService } from '@backend/services/chat-service';
+import { chatService } from '@backend/models/chat';
 
 interface StreamRequestBody {
   provider: 'openai' | 'anthropic' | 'ollama';

@@ -1,4 +1,4 @@
-// import { mcpServersTable } from '@/backend/database/schema/mcpServer';
+// import { mcpServersTable } from '@backend/database/schema/mcpServer';
 import PodmanRuntime from '@backend/sandbox/podman/runtime';
 import SandboxedMCP from '@backend/sandbox/sandboxedMCP';
 
