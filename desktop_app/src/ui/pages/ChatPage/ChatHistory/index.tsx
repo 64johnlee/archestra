@@ -2,19 +2,19 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ScrollArea } from '@ui/components/ui/scroll-area';
 import { cn } from '@ui/lib/utils/tailwind';
-import { ChatMessage } from '@ui/types';
 
 import { AssistantMessage, OtherMessage, ToolMessage, UserMessage } from './Messages';
+import { UIMessage } from 'ai';
 
 const CHAT_SCROLL_AREA_ID = 'chat-scroll-area';
 const CHAT_SCROLL_AREA_SELECTOR = `#${CHAT_SCROLL_AREA_ID} [data-radix-scroll-area-viewport]`;
 
 interface ChatHistoryProps {
-  messages: ChatMessage[];
+  messages: UIMessage[];
 }
 
 interface MessageProps {
-  message: ChatMessage;
+  message: UIMessage;
 }
 
 const Message = ({ message }: MessageProps) => {
@@ -23,26 +23,21 @@ const Message = ({ message }: MessageProps) => {
       return <UserMessage message={message} />;
     case 'assistant':
       return <AssistantMessage message={message} />;
-    case 'tool':
-      return <ToolMessage message={message} />;
+    case 'system':
+      return <OtherMessage message={message} />;
     default:
       return <OtherMessage message={message} />;
   }
 };
 
-const getMessageClassName = (message: ChatMessage) => {
+const getMessageClassName = (message: UIMessage) => {
   switch (message.role) {
     case 'user':
       return 'bg-primary/10 border border-primary/20 ml-8';
     case 'assistant':
       return 'bg-secondary/50 border border-secondary mr-8';
-    // NOTE: we can probably delete this.. this isn't a real role returned by ollama?
-    // case 'error:
-    //   return 'bg-destructive/10 border border-destructive/20 text-destructive';
     case 'system':
       return 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-600';
-    case 'tool':
-      return 'bg-blue-500/10 border border-blue-500/20 text-blue-600';
     default:
       return 'bg-muted border';
   }

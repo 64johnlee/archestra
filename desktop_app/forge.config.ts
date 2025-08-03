@@ -25,7 +25,11 @@ const config: ForgeConfig = {
      */
     extraResource: ['./resources/bin'],
   },
-  rebuildConfig: {},
+  // https://github.com/WiseLibs/better-sqlite3/issues/1171#issuecomment-2186895668
+  rebuildConfig: {
+    extraModules: ['better-sqlite3'],
+    force: true
+  },
   makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
   plugins: [
     new VitePlugin({

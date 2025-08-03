@@ -1,6 +1,7 @@
 import { desc, eq } from 'drizzle-orm';
 
 import { chatsTable } from '@backend/database/schema/chat';
+import { messagesTable } from '@backend/database/schema/messages';
 // IMPORTANT: Import from server/database, not the main database module
 // The main database module uses Electron APIs which aren't available in the server process
 import db from '@backend/server/database';
@@ -38,15 +39,17 @@ export class ChatService {
   async getAllChats(): Promise<Chat[]> {
     const chats = await db.select().from(chatsTable).orderBy(desc(chatsTable.createdAt)); // Most recent chats first
 
-    return chats.map((chat) => ({
-      id: chat.id,
-      session_id: chat.sessionId,
-      title: chat.title,
-      created_at: chat.createdAt,
-      updated_at: chat.updatedAt,
-      llm_provider: 'ollama', // Default provider for now
-      messages: [], // Empty messages array - these would come from chat_interactions table
-    }));
+    return Promise.all(
+      chats.map(async (chat) => ({
+        id: chat.id,
+        session_id: chat.sessionId,
+        title: chat.title,
+        created_at: chat.createdAt,
+        updated_at: chat.updatedAt,
+        llm_provider: 'ollama', // Default provider for now
+        messages: await this.getChatMessages(chat.id),
+      }))
+    );
   }
 
   async getChatById(id: number): Promise<Chat | null> {
@@ -62,7 +65,7 @@ export class ChatService {
       created_at: chat.createdAt,
       updated_at: chat.updatedAt,
       llm_provider: 'ollama', // Default provider for now
-      messages: [], // Empty messages array - these would come from chat_interactions table
+      messages: await this.getChatMessages(chat.id),
     };
   }
 
@@ -117,6 +120,33 @@ export class ChatService {
     // Note: Related chat_interactions will be cascade deleted
     // when that table is added (foreign key constraint)
     await db.delete(chatsTable).where(eq(chatsTable.id, id));
+  }
+
+  async saveMessages(sessionId: string, messages: any[]): Promise<void> {
+    // First, find the chat by session ID
+    const [chat] = await db.select().from(chatsTable).where(eq(chatsTable.sessionId, sessionId)).limit(1);
+    
+    if (!chat) {
+      console.error(`Chat not found for session ID: ${sessionId}`);
+      return;
+    }
+
+    // Clear existing messages for this chat to avoid duplicates
+    await db.delete(messagesTable).where(eq(messagesTable.chatId, chat.id));
+
+    // Save each message
+    for (const message of messages) {
+      await db.insert(messagesTable).values({
+        chatId: chat.id,
+        role: message.role,
+        content: JSON.stringify(message),
+      });
+    }
+  }
+
+  async getChatMessages(chatId: number): Promise<any[]> {
+    const messages = await db.select().from(messagesTable).where(eq(messagesTable.chatId, chatId));
+    return messages.map((msg) => JSON.parse(msg.content));
   }
 }
 
