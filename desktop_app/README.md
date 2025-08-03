@@ -43,10 +43,10 @@ The database is automatically created when you run the application for the first
 
 #### View and Manage Database
 
-Use Drizzle Studio to browse and manage your database:
+Use the database studio command to browse and manage your database:
 
 ```bash
-pnpm exec drizzle-kit studio
+pnpm db:studio
 ```
 
 #### Generate Migrations
@@ -54,7 +54,7 @@ pnpm exec drizzle-kit studio
 After modifying schema files, generate a new migration:
 
 ```bash
-pnpm exec drizzle-kit generate
+pnpm db:generate
 ```
 
 This creates migration files in `src/backend/database/migrations/`.
@@ -64,7 +64,7 @@ This creates migration files in `src/backend/database/migrations/`.
 Migrations are automatically applied when the app starts. To manually apply:
 
 ```bash
-pnpm exec drizzle-kit migrate
+pnpm db:migrate
 ```
 
 #### Push Schema Changes (Development)
@@ -72,7 +72,7 @@ pnpm exec drizzle-kit migrate
 For quick development iterations without generating migrations:
 
 ```bash
-pnpm exec drizzle-kit push
+pnpm db:push
 ```
 
 ⚠️ **Warning**: Only use `push` in development. Always use migrations for production.
