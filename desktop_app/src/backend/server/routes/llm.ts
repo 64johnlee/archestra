@@ -5,6 +5,8 @@ import { type UIMessage, convertToModelMessages, streamText } from 'ai';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { createOllama } from 'ollama-ai-provider';
 
+import { chatService } from '@backend/server/services/chat';
+
 interface StreamRequestBody {
   provider: 'openai' | 'anthropic' | 'ollama';
   model: string;
@@ -17,30 +19,32 @@ export default async function llmRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: StreamRequestBody }>(
     '/api/llm/stream',
     async (request: FastifyRequest<{ Body: StreamRequestBody }>, reply: FastifyReply) => {
-      const { messages } = request.body;
+      const { messages, sessionId } = request.body;
+      console.log(request.body);
+
+      console.log('SESSION', sessionId);
 
       console.log('LLM stream request:', request.body);
       console.log(convertToModelMessages(messages));
-      let messages2 = convertToModelMessages(messages);
-      console.log(messages2[0].content);
       try {
         // Create the stream
         const result = streamText({
           model: openai('gpt-4o'),
-          messages: messages2,
+          messages: convertToModelMessages(messages),
         });
 
-        // Here is how to read the response
-        // const reader = result.textStream.getReader();
-        // while (true) {
-        //   const { done, value } = await reader.read();
-        //   if (done) {
-        //     break;
-        //   }
-        //   console.log(value);
-        // }
-
-        return reply.send(result.toUIMessageStreamResponse());
+        return reply.send(
+          result.toUIMessageStreamResponse({
+            originalMessages: messages,
+            onFinish: ({ messages: finalMessages }) => {
+              console.log('FINAL MESSAGES', finalMessages);
+              console.log('Session', sessionId);
+              if (sessionId) {
+                chatService.saveMessages(sessionId, finalMessages);
+              }
+            },
+          })
+        );
       } catch (error) {
         fastify.log.error('LLM streaming error:', error);
         return reply.code(500).send({

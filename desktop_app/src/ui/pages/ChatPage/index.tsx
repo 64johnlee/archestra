@@ -37,6 +37,9 @@ export default function ChatPage(_props: ChatPageProps) {
     id: currentChat?.session_id, // use the provided chat ID
     transport: new DefaultChatTransport({
       api: '/api/llm/stream',
+      body: {
+        sessionId: currentChat?.session_id,
+      },
     }),
   });
 
