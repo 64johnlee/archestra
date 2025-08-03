@@ -47,7 +47,7 @@ describe('PodmanImage', () => {
     it('should pull image when it does not exist', async () => {
       // Mock image not found
       mockApiClient.inspectImage.mockRejectedValue({ response: { status: 404 } });
-      
+
       // Mock successful pull
       mockApiClient.pullImage.mockResolvedValue({
         stream: 'Successfully pulled image',
@@ -138,8 +138,9 @@ describe('PodmanImage', () => {
 
   describe('edge cases', () => {
     it('should handle very long image names', async () => {
-      const longImageName = 'very-long-registry-name.example.com:8080/deeply/nested/path/to/image:tag-with-very-long-version-string-v1.2.3-alpha-beta-gamma';
-      
+      const longImageName =
+        'very-long-registry-name.example.com:8080/deeply/nested/path/to/image:tag-with-very-long-version-string-v1.2.3-alpha-beta-gamma';
+
       mockApiClient.inspectImage.mockResolvedValue({
         Id: 'sha256:123456',
         RepoTags: [longImageName],
@@ -153,7 +154,7 @@ describe('PodmanImage', () => {
 
     it('should handle image names with special characters', async () => {
       const specialImage = 'registry/my_app-test.v2:1.0.0_rc1';
-      
+
       mockApiClient.inspectImage.mockRejectedValue({ response: { status: 404 } });
       mockApiClient.pullImage.mockResolvedValue({});
 
@@ -165,23 +166,19 @@ describe('PodmanImage', () => {
 
     it('should handle concurrent pull attempts', async () => {
       mockApiClient.inspectImage.mockRejectedValue({ response: { status: 404 } });
-      
+
       let pullCallCount = 0;
       mockApiClient.pullImage.mockImplementation(async () => {
         pullCallCount++;
         // Simulate some delay
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         return { stream: 'Success' };
       });
 
       const image = new PodmanImage('concurrent/image:latest');
-      
+
       // Start multiple pulls concurrently
-      const pulls = Promise.all([
-        image.pullImage(),
-        image.pullImage(),
-        image.pullImage(),
-      ]);
+      const pulls = Promise.all([image.pullImage(), image.pullImage(), image.pullImage()]);
 
       await pulls;
 

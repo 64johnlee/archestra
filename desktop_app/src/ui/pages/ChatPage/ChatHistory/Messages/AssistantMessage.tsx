@@ -1,5 +1,6 @@
-import { AIResponse } from '@ui/components/kibo/ai-response';
 import { UIMessage } from 'ai';
+
+import { AIResponse } from '@ui/components/kibo/ai-response';
 
 interface AssistantMessageProps {
   message: UIMessage;

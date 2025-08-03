@@ -68,19 +68,20 @@ export function useAIChatBackend({
   initialMessages = [],
   apiKey,
 }: UseAIChatBackendOptions) {
-  const { messages, input, handleInputChange, handleSubmit, isLoading, stop, error, append, setMessages, sendMessage } = useChat({
-    api: 'http://localhost:3456/api/llm/stream',
-    initialMessages,
-    body: {
-      provider,
-      model: model || getDefaultModel(provider),
-      apiKey,
-      sessionId,
-    },
-    onError: (error) => {
-      console.error('Chat error:', error);
-    },
-  });
+  const { messages, input, handleInputChange, handleSubmit, isLoading, stop, error, append, setMessages, sendMessage } =
+    useChat({
+      api: 'http://localhost:3456/api/llm/stream',
+      initialMessages,
+      body: {
+        provider,
+        model: model || getDefaultModel(provider),
+        apiKey,
+        sessionId,
+      },
+      onError: (error) => {
+        console.error('Chat error:', error);
+      },
+    });
 
   return {
     messages,

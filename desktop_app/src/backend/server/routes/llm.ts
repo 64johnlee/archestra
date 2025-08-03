@@ -1,6 +1,6 @@
 import { openai } from '@ai-sdk/openai';
 import { convertToModelMessages, streamText } from 'ai';
-import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 
 import { chatService } from '@backend/models/chat';
 
@@ -12,7 +12,7 @@ interface StreamRequestBody {
   sessionId?: string;
 }
 
-export default async function llmRoutes(fastify: FastifyInstance) {
+const llmRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: StreamRequestBody }>(
     '/api/llm/stream',
     async (request: FastifyRequest<{ Body: StreamRequestBody }>, reply: FastifyReply) => {
@@ -51,4 +51,6 @@ export default async function llmRoutes(fastify: FastifyInstance) {
       }
     }
   );
-}
+};
+
+export default llmRoutes;

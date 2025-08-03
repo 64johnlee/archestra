@@ -1,10 +1,10 @@
+import { UIMessage } from 'ai';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ScrollArea } from '@ui/components/ui/scroll-area';
 import { cn } from '@ui/lib/utils/tailwind';
 
 import { AssistantMessage, OtherMessage, ToolMessage, UserMessage } from './Messages';
-import { UIMessage } from 'ai';
 
 const CHAT_SCROLL_AREA_ID = 'chat-scroll-area';
 const CHAT_SCROLL_AREA_SELECTOR = `#${CHAT_SCROLL_AREA_ID} [data-radix-scroll-area-viewport]`;

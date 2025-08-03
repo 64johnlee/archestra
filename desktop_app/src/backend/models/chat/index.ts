@@ -1,8 +1,8 @@
 import { asc, desc, eq } from 'drizzle-orm';
 
+import db from '@backend/database';
 import { chatsTable } from '@backend/database/schema/chat';
 import { messagesTable } from '@backend/database/schema/messages';
-import db from '@backend/database';
 
 /**
  * Request/Response types for the chat API
@@ -123,7 +123,7 @@ export class ChatService {
   async saveMessages(sessionId: string, messages: any[]): Promise<void> {
     // First, find the chat by session ID
     const [chat] = await db.select().from(chatsTable).where(eq(chatsTable.sessionId, sessionId)).limit(1);
-    
+
     if (!chat) {
       console.error(`Chat not found for session ID: ${sessionId}`);
       return;

@@ -1,5 +1,5 @@
-import { Wrench } from 'lucide-react';
 import { UIMessage } from 'ai';
+import { Wrench } from 'lucide-react';
 
 interface ToolMessageProps {
   message: UIMessage;

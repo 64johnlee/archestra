@@ -4,9 +4,9 @@ import { config } from './config/server';
 import corsPlugin from './plugins/cors';
 import websocketPlugin from './plugins/websocket';
 import chatRoutes from './routes/chat';
-import { externalMcpClientRoutes } from './routes/externalMcpClient';
+import externalMcpClientRoutes from './routes/externalMcpClient';
 import llmRoutes from './routes/llm';
-import { mcpServerRoutes } from './routes/mcpServer';
+import mcpServerRoutes from './routes/mcpServer';
 import ollamaRoutes from './routes/ollama';
 
 /**
@@ -37,6 +37,12 @@ async function startServer() {
 
   // Register Ollama proxy routes
   await app.register(ollamaRoutes);
+
+  // Register external MCP client routes
+  await app.register(externalMcpClientRoutes);
+
+  // Register MCP server routes
+  await app.register(mcpServerRoutes);
 
   const PORT = config.server.port; // Default: 3456
   const HOST = config.server.host; // Default: 127.0.0.1

@@ -35,6 +35,7 @@ This project uses Drizzle ORM with SQLite for local data persistence.
 ### Database Setup
 
 The database is automatically created when you run the application for the first time at:
+
 - macOS: `~/Library/Application Support/archestra/archestra.db`
 - Windows: `%APPDATA%\archestra\archestra.db`
 - Linux: `~/.config/archestra/archestra.db`

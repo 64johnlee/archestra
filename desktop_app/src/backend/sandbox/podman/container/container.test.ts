@@ -6,14 +6,14 @@ vi.mock('@backend/lib/utils/podman');
 
 describe('PodmanContainer', () => {
   let mockApiClient: any;
-  
+
   beforeEach(() => {
     mockApiClient = {
       createContainer: vi.fn(),
       inspectContainer: vi.fn(),
       startContainer: vi.fn(),
     };
-    
+
     vi.mocked(PodmanLibpodApiClient).mockReturnValue(mockApiClient);
   });
 
@@ -23,13 +23,9 @@ describe('PodmanContainer', () => {
 
   describe('constructor', () => {
     it('should initialize with provided parameters', () => {
-      const container = new PodmanContainer(
-        'test-container',
-        'test/image:latest',
-        'node',
-        ['server.js'],
-        { NODE_ENV: 'test' }
-      );
+      const container = new PodmanContainer('test-container', 'test/image:latest', 'node', ['server.js'], {
+        NODE_ENV: 'test',
+      });
 
       expect(container).toBeDefined();
       expect(vi.mocked(PodmanLibpodApiClient)).toHaveBeenCalledTimes(1);
@@ -40,7 +36,7 @@ describe('PodmanContainer', () => {
     it('should create and start a new container when none exists', async () => {
       // Mock container not found
       mockApiClient.inspectContainer.mockRejectedValue({ response: { status: 404 } });
-      
+
       // Mock successful container creation
       mockApiClient.createContainer.mockResolvedValue({
         Id: 'container-123',
@@ -70,11 +66,13 @@ describe('PodmanContainer', () => {
         env: {
           PYTHON_ENV: 'production',
         },
-        portmappings: [{
-          host_port: 8080,
-          container_port: 8080,
-          protocol: 'tcp',
-        }],
+        portmappings: [
+          {
+            host_port: 8080,
+            container_port: 8080,
+            protocol: 'tcp',
+          },
+        ],
         start: true,
       });
     });
@@ -89,13 +87,7 @@ describe('PodmanContainer', () => {
 
       mockApiClient.startContainer.mockResolvedValue({});
 
-      const container = new PodmanContainer(
-        'existing-container',
-        'test/image:latest',
-        'node',
-        ['index.js'],
-        {}
-      );
+      const container = new PodmanContainer('existing-container', 'test/image:latest', 'node', ['index.js'], {});
 
       const result = await container.startOrCreateContainer(3000);
 
@@ -116,13 +108,7 @@ describe('PodmanContainer', () => {
         },
       });
 
-      const container = new PodmanContainer(
-        'running-container',
-        'test/image:latest',
-        'deno',
-        ['server.ts'],
-        {}
-      );
+      const container = new PodmanContainer('running-container', 'test/image:latest', 'deno', ['server.ts'], {});
 
       const result = await container.startOrCreateContainer(9000);
 
@@ -139,13 +125,7 @@ describe('PodmanContainer', () => {
       mockApiClient.inspectContainer.mockRejectedValue({ response: { status: 404 } });
       mockApiClient.createContainer.mockRejectedValue(new Error('Image not found'));
 
-      const container = new PodmanContainer(
-        'error-container',
-        'nonexistent/image:latest',
-        'node',
-        ['app.js'],
-        {}
-      );
+      const container = new PodmanContainer('error-container', 'nonexistent/image:latest', 'node', ['app.js'], {});
 
       await expect(container.startOrCreateContainer(8080)).rejects.toThrow('Image not found');
     });
@@ -158,13 +138,7 @@ describe('PodmanContainer', () => {
       });
       mockApiClient.startContainer.mockRejectedValue(new Error('Container corrupted'));
 
-      const container = new PodmanContainer(
-        'corrupt-container',
-        'test/image:latest',
-        'node',
-        ['app.js'],
-        {}
-      );
+      const container = new PodmanContainer('corrupt-container', 'test/image:latest', 'node', ['app.js'], {});
 
       await expect(container.startOrCreateContainer(8080)).rejects.toThrow('Container corrupted');
     });
@@ -193,11 +167,13 @@ describe('PodmanContainer', () => {
         env: {
           RUBY_ENV: 'test',
         },
-        portmappings: [{
-          host_port: 4567,
-          container_port: 4567,
-          protocol: 'tcp',
-        }],
+        portmappings: [
+          {
+            host_port: 4567,
+            container_port: 4567,
+            protocol: 'tcp',
+          },
+        ],
         start: true,
       });
     });
@@ -224,11 +200,13 @@ describe('PodmanContainer', () => {
         image: 'minimal/image:alpine',
         command: ['sh', '-c', 'echo "Hello World"'],
         env: {},
-        portmappings: [{
-          host_port: 8888,
-          container_port: 8888,
-          protocol: 'tcp',
-        }],
+        portmappings: [
+          {
+            host_port: 8888,
+            container_port: 8888,
+            protocol: 'tcp',
+          },
+        ],
         start: true,
       });
     });
@@ -236,13 +214,7 @@ describe('PodmanContainer', () => {
     it('should handle non-404 inspect errors', async () => {
       mockApiClient.inspectContainer.mockRejectedValue(new Error('Network timeout'));
 
-      const container = new PodmanContainer(
-        'timeout-container',
-        'test/image:latest',
-        'node',
-        ['app.js'],
-        {}
-      );
+      const container = new PodmanContainer('timeout-container', 'test/image:latest', 'node', ['app.js'], {});
 
       await expect(container.startOrCreateContainer(8080)).rejects.toThrow('Network timeout');
     });
@@ -256,13 +228,9 @@ describe('PodmanContainer', () => {
         Warnings: [],
       });
 
-      const container = new PodmanContainer(
-        'no-args-container',
-        'test/image:latest',
-        'binary',
-        [],
-        { ENV_VAR: 'value' }
-      );
+      const container = new PodmanContainer('no-args-container', 'test/image:latest', 'binary', [], {
+        ENV_VAR: 'value',
+      });
 
       await container.startOrCreateContainer(7777);
 
@@ -273,11 +241,13 @@ describe('PodmanContainer', () => {
         env: {
           ENV_VAR: 'value',
         },
-        portmappings: [{
-          host_port: 7777,
-          container_port: 7777,
-          protocol: 'tcp',
-        }],
+        portmappings: [
+          {
+            host_port: 7777,
+            container_port: 7777,
+            protocol: 'tcp',
+          },
+        ],
         start: true,
       });
     });

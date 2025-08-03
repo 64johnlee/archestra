@@ -1,5 +1,5 @@
 import FastifyHttpProxy from '@fastify/http-proxy';
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 
 // Default Ollama port - can be overridden by environment variable
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
@@ -23,10 +23,10 @@ export default async function ollamaRoutes(fastify: FastifyInstance) {
           .header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
           .header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
           .code(502)
-          .send({ 
-            error: 'Bad Gateway', 
+          .send({
+            error: 'Bad Gateway',
             message: 'Failed to connect to Ollama server',
-            details: error.message 
+            details: error.message,
           });
       },
     },

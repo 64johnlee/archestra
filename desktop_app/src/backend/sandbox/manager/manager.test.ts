@@ -40,7 +40,7 @@ describe('MCPServerSandboxManager', () => {
     it('should return the same instance when called multiple times', () => {
       const instance1 = MCPServerSandboxManager.getInstance();
       const instance2 = MCPServerSandboxManager.getInstance();
-      
+
       expect(instance1).toBe(instance2);
     });
   });
@@ -67,9 +67,12 @@ describe('MCPServerSandboxManager', () => {
       });
 
       const mockStart = vi.fn().mockResolvedValue({ port: 3000, url: 'http://localhost:3000' });
-      vi.mocked(SandboxedMCP).mockImplementation(() => ({
-        start: mockStart,
-      } as any));
+      vi.mocked(SandboxedMCP).mockImplementation(
+        () =>
+          ({
+            start: mockStart,
+          }) as any
+      );
 
       const manager = MCPServerSandboxManager.getInstance();
       const result = await manager.startAllInstalledMcpServers();
@@ -102,9 +105,12 @@ describe('MCPServerSandboxManager', () => {
       });
 
       const mockStart = vi.fn().mockRejectedValue(new Error('Container start failed'));
-      vi.mocked(SandboxedMCP).mockImplementation(() => ({
-        start: mockStart,
-      } as any));
+      vi.mocked(SandboxedMCP).mockImplementation(
+        () =>
+          ({
+            start: mockStart,
+          }) as any
+      );
 
       const manager = MCPServerSandboxManager.getInstance();
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -112,10 +118,7 @@ describe('MCPServerSandboxManager', () => {
       const result = await manager.startAllInstalledMcpServers();
 
       expect(result).toEqual({});
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to start MCP server failing-server:',
-        expect.any(Error)
-      );
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to start MCP server failing-server:', expect.any(Error));
 
       consoleSpy.mockRestore();
     });
@@ -154,9 +157,12 @@ describe('MCPServerSandboxManager', () => {
         url: `http://localhost:${port}`,
       }));
 
-      vi.mocked(SandboxedMCP).mockImplementation(() => ({
-        start: mockStart,
-      } as any));
+      vi.mocked(SandboxedMCP).mockImplementation(
+        () =>
+          ({
+            start: mockStart,
+          }) as any
+      );
 
       const manager = MCPServerSandboxManager.getInstance();
       const result = await manager.startAllInstalledMcpServers();
@@ -185,13 +191,16 @@ describe('MCPServerSandboxManager', () => {
 
       const mockStart = vi.fn().mockImplementation(async (port) => {
         // Simulate async delay
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         return { port, url: `http://localhost:${port}` };
       });
 
-      vi.mocked(SandboxedMCP).mockImplementation(() => ({
-        start: mockStart,
-      } as any));
+      vi.mocked(SandboxedMCP).mockImplementation(
+        () =>
+          ({
+            start: mockStart,
+          }) as any
+      );
 
       const manager = MCPServerSandboxManager.getInstance();
       const result = await manager.startAllInstalledMcpServers();
@@ -261,10 +270,7 @@ describe('MCPServerSandboxManager', () => {
       const result = await manager.startAllInstalledMcpServers();
 
       expect(result).toEqual({});
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to start MCP server port-fail-server:',
-        expect.any(Error)
-      );
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to start MCP server port-fail-server:', expect.any(Error));
 
       consoleSpy.mockRestore();
     });

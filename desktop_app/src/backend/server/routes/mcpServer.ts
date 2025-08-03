@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyPluginAsync } from 'fastify';
 
 import { MCPServer } from '@backend/models/mcpServer';
 
@@ -14,11 +14,11 @@ interface UninstallParams {
   mcp_server_name: string;
 }
 
-export async function mcpServerRoutes(server: FastifyInstance) {
+const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * Get all installed MCP servers
    */
-  server.get('/api/mcp_server', async (request, reply) => {
+  fastify.get('/api/mcp_server', async (request, reply) => {
     try {
       const servers = await MCPServer.getInstalledMcpServers();
       return reply.send(servers);
@@ -31,9 +31,12 @@ export async function mcpServerRoutes(server: FastifyInstance) {
   /**
    * Get MCP connector catalog
    */
-  server.get('/api/mcp_server/catalog', async (request, reply) => {
+  fastify.get('/api/mcp_server/catalog', async (request, reply) => {
     try {
-      const catalog = await MCPServer.getMcpConnectorCatalog();
+      console.log('GET /api/mcp_server/catalog called');
+      const catalog = MCPServer.getMcpConnectorCatalog();
+      console.log('Catalog length:', catalog.length);
+      console.log('First item:', catalog[0]?.id);
       return reply.send(catalog);
     } catch (error) {
       console.error('Failed to get MCP connector catalog:', error);
@@ -44,10 +47,10 @@ export async function mcpServerRoutes(server: FastifyInstance) {
   /**
    * Install MCP server from catalog
    */
-  server.post<{ Body: InstallRequestBody }>('/api/mcp_server/catalog/install', async (request, reply) => {
+  fastify.post<{ Body: InstallRequestBody }>('/api/mcp_server/catalog/install', async (request, reply) => {
     try {
       const { mcp_connector_id } = request.body;
-      
+
       if (!mcp_connector_id) {
         return reply.code(400).send({ error: 'mcp_connector_id is required' });
       }
@@ -56,11 +59,11 @@ export async function mcpServerRoutes(server: FastifyInstance) {
       return reply.code(200).send({ success: true });
     } catch (error: any) {
       console.error('Failed to install MCP server from catalog:', error);
-      
+
       if (error.message?.includes('not found in catalog')) {
         return reply.code(404).send({ error: error.message });
       }
-      
+
       return reply.code(500).send({ error: 'Internal server error' });
     }
   });
@@ -68,17 +71,17 @@ export async function mcpServerRoutes(server: FastifyInstance) {
   /**
    * Start MCP server OAuth flow
    */
-  server.post<{ Body: StartOAuthRequestBody }>('/api/mcp_server/start_oauth', async (request, reply) => {
+  fastify.post<{ Body: StartOAuthRequestBody }>('/api/mcp_server/start_oauth', async (request, reply) => {
     try {
       const { mcp_connector_id } = request.body;
-      
+
       if (!mcp_connector_id) {
         return reply.code(400).send({ error: 'mcp_connector_id is required' });
       }
 
       // TODO: Implement OAuth flow with the oauth proxy service
       const authUrl = `https://oauth-proxy.archestra.ai/auth/${mcp_connector_id}`;
-      
+
       return reply.send({ auth_url: authUrl });
     } catch (error) {
       console.error('Failed to start MCP server OAuth:', error);
@@ -89,10 +92,10 @@ export async function mcpServerRoutes(server: FastifyInstance) {
   /**
    * Uninstall MCP server
    */
-  server.delete<{ Params: UninstallParams }>('/api/mcp_server/:mcp_server_name', async (request, reply) => {
+  fastify.delete<{ Params: UninstallParams }>('/api/mcp_server/:mcp_server_name', async (request, reply) => {
     try {
       const { mcp_server_name } = request.params;
-      
+
       if (!mcp_server_name) {
         return reply.code(400).send({ error: 'mcp_server_name is required' });
       }
@@ -104,4 +107,6 @@ export async function mcpServerRoutes(server: FastifyInstance) {
       return reply.code(500).send({ error: 'Internal server error' });
     }
   });
-}
+};
+
+export default mcpServerRoutes;

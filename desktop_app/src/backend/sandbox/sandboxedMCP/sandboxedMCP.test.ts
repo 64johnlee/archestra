@@ -24,7 +24,7 @@ describe('SandboxedMCP', () => {
   describe('constructor', () => {
     it('should initialize with provided server name and config', () => {
       const sandboxedMCP = new SandboxedMCP('test-server', mockServerConfig);
-      
+
       expect(sandboxedMCP).toBeDefined();
       expect(vi.mocked(PodmanImage)).toHaveBeenCalledWith(mockServerConfig.image);
       expect(vi.mocked(PodmanContainer)).toHaveBeenCalledWith(
@@ -45,13 +45,19 @@ describe('SandboxedMCP', () => {
         url: 'http://localhost:8080',
       });
 
-      vi.mocked(PodmanImage).mockImplementation(() => ({
-        pullImage: mockPullImage,
-      } as any));
+      vi.mocked(PodmanImage).mockImplementation(
+        () =>
+          ({
+            pullImage: mockPullImage,
+          }) as any
+      );
 
-      vi.mocked(PodmanContainer).mockImplementation(() => ({
-        startOrCreateContainer: mockStartContainer,
-      } as any));
+      vi.mocked(PodmanContainer).mockImplementation(
+        () =>
+          ({
+            startOrCreateContainer: mockStartContainer,
+          }) as any
+      );
 
       const sandboxedMCP = new SandboxedMCP('test-server', mockServerConfig);
       const result = await sandboxedMCP.start(8080);
@@ -68,13 +74,19 @@ describe('SandboxedMCP', () => {
       const mockPullImage = vi.fn().mockRejectedValue(new Error('Failed to pull image'));
       const mockStartContainer = vi.fn();
 
-      vi.mocked(PodmanImage).mockImplementation(() => ({
-        pullImage: mockPullImage,
-      } as any));
+      vi.mocked(PodmanImage).mockImplementation(
+        () =>
+          ({
+            pullImage: mockPullImage,
+          }) as any
+      );
 
-      vi.mocked(PodmanContainer).mockImplementation(() => ({
-        startOrCreateContainer: mockStartContainer,
-      } as any));
+      vi.mocked(PodmanContainer).mockImplementation(
+        () =>
+          ({
+            startOrCreateContainer: mockStartContainer,
+          }) as any
+      );
 
       const sandboxedMCP = new SandboxedMCP('test-server', mockServerConfig);
 
@@ -87,13 +99,19 @@ describe('SandboxedMCP', () => {
       const mockPullImage = vi.fn().mockResolvedValue(undefined);
       const mockStartContainer = vi.fn().mockRejectedValue(new Error('Container start failed'));
 
-      vi.mocked(PodmanImage).mockImplementation(() => ({
-        pullImage: mockPullImage,
-      } as any));
+      vi.mocked(PodmanImage).mockImplementation(
+        () =>
+          ({
+            pullImage: mockPullImage,
+          }) as any
+      );
 
-      vi.mocked(PodmanContainer).mockImplementation(() => ({
-        startOrCreateContainer: mockStartContainer,
-      } as any));
+      vi.mocked(PodmanContainer).mockImplementation(
+        () =>
+          ({
+            startOrCreateContainer: mockStartContainer,
+          }) as any
+      );
 
       const sandboxedMCP = new SandboxedMCP('failing-server', mockServerConfig);
 
@@ -109,13 +127,19 @@ describe('SandboxedMCP', () => {
         url: 'http://localhost:3456',
       });
 
-      vi.mocked(PodmanImage).mockImplementation(() => ({
-        pullImage: mockPullImage,
-      } as any));
+      vi.mocked(PodmanImage).mockImplementation(
+        () =>
+          ({
+            pullImage: mockPullImage,
+          }) as any
+      );
 
-      vi.mocked(PodmanContainer).mockImplementation(() => ({
-        startOrCreateContainer: mockStartContainer,
-      } as any));
+      vi.mocked(PodmanContainer).mockImplementation(
+        () =>
+          ({
+            startOrCreateContainer: mockStartContainer,
+          }) as any
+      );
 
       const sandboxedMCP = new SandboxedMCP('port-test-server', mockServerConfig);
       const result = await sandboxedMCP.start(3456);
@@ -144,9 +168,12 @@ describe('SandboxedMCP', () => {
         } as any;
       });
 
-      vi.mocked(PodmanImage).mockImplementation(() => ({
-        pullImage: vi.fn().mockResolvedValue(undefined),
-      } as any));
+      vi.mocked(PodmanImage).mockImplementation(
+        () =>
+          ({
+            pullImage: vi.fn().mockResolvedValue(undefined),
+          }) as any
+      );
 
       const sandboxedMCP = new SandboxedMCP('minimal-server', minimalConfig);
       await sandboxedMCP.start(8080);
@@ -173,44 +200,48 @@ describe('SandboxedMCP', () => {
         } as any;
       });
 
-      vi.mocked(PodmanImage).mockImplementation(() => ({
-        pullImage: vi.fn().mockResolvedValue(undefined),
-      } as any));
+      vi.mocked(PodmanImage).mockImplementation(
+        () =>
+          ({
+            pullImage: vi.fn().mockResolvedValue(undefined),
+          }) as any
+      );
 
       const sandboxedMCP = new SandboxedMCP('complex-server', configWithPortPlaceholder);
       await sandboxedMCP.start(9999);
 
-      expect(capturedArgs).toEqual([
-        'run',
-        '--allow-net',
-        'server.ts',
-        '--port={{PORT}}',
-        '--host=0.0.0.0',
-      ]);
+      expect(capturedArgs).toEqual(['run', '--allow-net', 'server.ts', '--port={{PORT}}', '--host=0.0.0.0']);
     });
 
     it('should handle multiple sequential starts', async () => {
       const mockPullImage = vi.fn().mockResolvedValue(undefined);
-      const mockStartContainer = vi.fn()
+      const mockStartContainer = vi
+        .fn()
         .mockResolvedValueOnce({ port: 8000, url: 'http://localhost:8000' })
         .mockResolvedValueOnce({ port: 8001, url: 'http://localhost:8001' });
 
-      vi.mocked(PodmanImage).mockImplementation(() => ({
-        pullImage: mockPullImage,
-      } as any));
+      vi.mocked(PodmanImage).mockImplementation(
+        () =>
+          ({
+            pullImage: mockPullImage,
+          }) as any
+      );
 
-      vi.mocked(PodmanContainer).mockImplementation(() => ({
-        startOrCreateContainer: mockStartContainer,
-      } as any));
+      vi.mocked(PodmanContainer).mockImplementation(
+        () =>
+          ({
+            startOrCreateContainer: mockStartContainer,
+          }) as any
+      );
 
       const sandboxedMCP = new SandboxedMCP('multi-start-server', mockServerConfig);
-      
+
       const result1 = await sandboxedMCP.start(8000);
       expect(result1).toEqual({ port: 8000, url: 'http://localhost:8000' });
-      
+
       const result2 = await sandboxedMCP.start(8001);
       expect(result2).toEqual({ port: 8001, url: 'http://localhost:8001' });
-      
+
       expect(mockPullImage).toHaveBeenCalledTimes(2);
       expect(mockStartContainer).toHaveBeenCalledTimes(2);
     });
@@ -236,9 +267,12 @@ describe('SandboxedMCP', () => {
         } as any;
       });
 
-      vi.mocked(PodmanImage).mockImplementation(() => ({
-        pullImage: vi.fn().mockResolvedValue(undefined),
-      } as any));
+      vi.mocked(PodmanImage).mockImplementation(
+        () =>
+          ({
+            pullImage: vi.fn().mockResolvedValue(undefined),
+          }) as any
+      );
 
       const sandboxedMCP = new SandboxedMCP('empty-args-server', configWithEmptyArgs);
       await sandboxedMCP.start(7000);
@@ -248,9 +282,9 @@ describe('SandboxedMCP', () => {
 
     it('should handle special characters in server name', () => {
       const specialName = 'test-server_123!@#';
-      
+
       const sandboxedMCP = new SandboxedMCP(specialName, mockServerConfig);
-      
+
       expect(vi.mocked(PodmanContainer)).toHaveBeenCalledWith(
         specialName,
         mockServerConfig.image,
