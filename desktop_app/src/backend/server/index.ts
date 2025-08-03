@@ -4,7 +4,9 @@ import { config } from './config/server';
 import corsPlugin from './plugins/cors';
 import websocketPlugin from './plugins/websocket';
 import chatRoutes from './routes/chat';
+import { externalMcpClientRoutes } from './routes/externalMcpClient';
 import llmRoutes from './routes/llm';
+import { mcpServerRoutes } from './routes/mcpServer';
 import ollamaRoutes from './routes/ollama';
 
 /**

@@ -3,10 +3,10 @@
   "dialect": "sqlite",
   "entries": [
     {
-      "idx": 1,
+      "idx": 0,
       "version": "6",
-      "when": 1754222133783,
-      "tag": "0001_ambitious_sauron",
+      "when": 1754262275875,
+      "tag": "0000_watery_red_hulk",
       "breakpoints": true
     }
   ]
