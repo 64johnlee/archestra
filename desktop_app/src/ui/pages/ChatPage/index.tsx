@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import { useEffect, useState } from 'react';
 
 import { ProviderSelector } from '@ui/components/ProviderSelector';
 import { useChatProvider } from '@ui/hooks/use-chat-provider';
@@ -27,18 +27,17 @@ export default function ChatPage(_props: ChatPageProps) {
   // Always use selectedAIModel from centralized config
   const model = selectedAIModel || '';
 
-  const {stop, isLoading } = useChatProvider({
+  const { stop, isLoading } = useChatProvider({
     model,
     sessionId: currentChat?.session_id,
     initialMessages: currentChat?.messages || [],
   });
 
   const { sendMessage, messages } = useChat({
-      id: currentChat?.session_id, // use the provided chat ID
-      messages:  currentChat?.messages, // load initial messages
-      transport: new DefaultChatTransport({
-        api: '/llm',
-      }),
+    id: currentChat?.session_id, // use the provided chat ID
+    transport: new DefaultChatTransport({
+      api: '/api/llm/stream',
+    }),
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -48,7 +47,9 @@ export default function ChatPage(_props: ChatPageProps) {
   const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
     if (localInput.trim()) {
-      sendMessage({ parts: [{ type: 'text', text: localInput }],});
+      console.log('Sending message:', localInput);
+      // sendMessage({ parts: [{ type: 'text', text: localInput }] });
+      sendMessage({ text: localInput });
       setLocalInput('');
     }
   };
