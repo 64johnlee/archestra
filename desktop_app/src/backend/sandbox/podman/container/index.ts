@@ -1,56 +1,50 @@
-import { containerCreate, containerStart, containersStatsAllLibpod } from '@backend/lib/clients/libpod/gen/sdk.gen';
+import {
+  containerCreateLibpod,
+  containerStartLibpod,
+  containerWaitLibpod,
+} from '@backend/lib/clients/libpod/gen/sdk.gen';
 
 export default class PodmanContainer {
   private containerName: string;
   private imageName: string;
-  private containerPort: number;
-  private hostPort: number;
-  private envVars: string[];
+  private envVars: Record<string, string>;
 
-  constructor(imageName: string, containerPort: number, hostPort: number, envVars: Record<string, string>) {
+  constructor(imageName: string, envVars: Record<string, string>) {
     this.containerName = `archestra-ai-${imageName.replaceAll('/', '-')}-mcp-server`;
     this.imageName = imageName;
-    this.containerPort = containerPort;
-    this.hostPort = hostPort;
-    this.envVars = Object.entries(envVars).map(([key, value]) => `${key}=${value}`);
+    this.envVars = envVars;
   }
 
-  private async checkContainerStatus(): Promise<{ exists: boolean; isRunning: boolean }> {
+  /**
+   * Wait for container to be healthy
+   * https://docs.podman.io/en/latest/_static/api.html#tag/containers/operation/ContainerWaitLibpod
+   */
+  private async waitContainerToBeHealthy() {
     try {
-      const { response, data } = await containersStatsAllLibpod({
+      return await containerWaitLibpod({
+        path: {
+          name: this.containerName,
+        },
         query: {
-          containers: [this.containerName],
-          stream: false,
+          condition: ['healthy'],
         },
       });
-
-      if (response.status === 404) {
-        console.log(`Container ${this.containerName} does not exist`);
-        return { exists: false, isRunning: false };
-      } else if (response.status !== 200) {
-        console.error(`Error checking if container ${this.containerName} is running`, response);
-        return { exists: true, isRunning: false };
-      } else if (data && data.UpTime !== 0) {
-        console.log(`Container ${this.containerName} is running`);
-        return { exists: true, isRunning: true };
-      } else {
-        console.log(`Container ${this.containerName} is not running`);
-        return { exists: true, isRunning: false };
-      }
     } catch (error) {
-      console.error(`Error checking if container ${this.containerName} is running`, error);
-      return { exists: false, isRunning: false };
+      console.error(`Error waiting for container ${this.containerName} to be healthy`, error);
+      throw error;
     }
   }
 
+  /**
+   * https://docs.podman.io/en/latest/_static/api.html#tag/containers/operation/ContainerStartLibpod
+   */
   private async startContainer() {
     try {
-      const response = await containerStart({
+      return await containerStartLibpod({
         path: {
           name: this.containerName,
         },
       });
-      return response;
     } catch (error) {
       console.error(`Error starting container ${this.containerName}`, error);
       throw error;
@@ -58,37 +52,58 @@ export default class PodmanContainer {
   }
 
   /**
-   * https://docs.podman.io/en/latest/_static/api.html#tag/containers-(compat)/operation/ContainerCreate
+   * https://docs.podman.io/en/latest/_static/api.html#tag/containers/operation/ContainerCreateLibpod
    */
   async startOrCreateContainer() {
-    const { exists, isRunning } = await this.checkContainerStatus();
-    if (exists && isRunning) {
-      console.log(`Container ${this.containerName} is already running`);
-      return;
-    } else if (exists && !isRunning) {
-      console.log(`Container ${this.containerName} exists but is not running, starting it`);
-      await this.startContainer();
-      return;
+    try {
+      const { response } = await this.startContainer();
+
+      if (response.status === 304) {
+        console.log(`Container ${this.containerName} is already running.`);
+        return;
+      } else if (response.status === 204) {
+        console.log(`Container ${this.containerName} started.`);
+        return;
+      }
+    } catch (error) {
+      console.error(`Error starting container ${this.containerName}`, error);
+      throw error;
     }
 
     console.log(
-      `Container ${this.containerName} does not exist, creating it with image ${this.imageName} on port ${this.containerPort}, and starting it`
+      `Container ${this.containerName} does not exist, creating it with image ${this.imageName}, and starting it`
     );
 
     try {
-      const response = await containerCreate({
+      const response = await containerCreateLibpod({
         body: {
-          Name: this.containerName,
-          Image: this.imageName,
-          Env: this.envVars,
-          ExposedPorts: {
-            [this.containerPort]: {
-              HostPort: this.hostPort,
-            },
-          },
+          name: this.containerName,
+          image: this.imageName,
+          env: this.envVars,
+          /**
+           * Keep stdin open for interactive communication with MCP servers
+           */
+          stdin: true,
+          /**
+           * Remove indicates if the container should be removed once it has been started and exits. Optional
+           */
+          remove: true,
+          // MCP servers communicate via stdin/stdout, not HTTP ports
+          // portmappings: [
+          //   {
+          //     container_port: this.containerPort,
+          //     host_port: this.hostPort,
+          //   },
+          // ],
         },
       });
-      return response;
+
+      console.log(`Container ${this.containerName} created, now starting it`);
+      await this.startContainer();
+
+      // MCP servers don't have health checks, they communicate via stdin/stdout
+      // Just verify the container is running
+      console.log(`Container ${this.containerName} started`);
     } catch (error) {
       console.error(`Error creating container ${this.containerName}`, error);
       throw error;

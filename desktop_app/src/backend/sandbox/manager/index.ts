@@ -1,6 +1,4 @@
 // import { mcpServersTable } from '@/backend/database/schema/mcpServer';
-import getPort from 'get-port';
-
 import PodmanRuntime from '@backend/sandbox/podman/runtime';
 import SandboxedMCP from '@backend/sandbox/sandboxedMCP';
 
@@ -10,8 +8,6 @@ type InstalledMcpServer = {
   name: string;
   dockerImage: string;
   envVars: Record<string, string>;
-  // TODO: where will we get the container port from?
-  containerPort: number;
 };
 
 class MCPServerSandboxManager {
@@ -36,8 +32,6 @@ class MCPServerSandboxManager {
         id: 1,
         name: 'Grafana',
         dockerImage: 'mcp/grafana',
-        // TODO: where will we get the container port from?
-        containerPort: 8000,
         envVars: {
           GRAFANA_URL: 'http://localhost:3000',
           GRAFANA_API_KEY: '1234567890',
@@ -47,11 +41,6 @@ class MCPServerSandboxManager {
         id: 2,
         name: 'GitHub',
         dockerImage: 'ghcr.io/github/github-mcp-server',
-        /**
-         * TODO: this isn't right.. this is just a placeholder for now
-         * https://github.com/github/github-mcp-server/tree/main?tab=readme-ov-file#installation
-         */
-        containerPort: 8001,
         envVars: {
           GITHUB_PERSONAL_ACCESS_TOKEN: '1234567890',
         },
@@ -64,13 +53,22 @@ class MCPServerSandboxManager {
 
     const mcpServers = await this.getInstalledMcpServers();
 
-    // TODO: parallelize this and use Promise.allSettled to wait for all servers to start in parallel
-    for (const mcpServer of mcpServers) {
-      await this.startServer(mcpServer);
+    // Start all servers in parallel
+    const startPromises = mcpServers.map((mcpServer) => this.startServer(mcpServer));
+    const results = await Promise.allSettled(startPromises);
+
+    // Check for failures
+    const failures = results.filter((result) => result.status === 'rejected');
+    if (failures.length > 0) {
+      console.error(`Failed to start ${failures.length} MCP server(s):`);
+      failures.forEach((failure, index) => {
+        console.error(`  - ${(failure as PromiseRejectedResult).reason}`);
+      });
+      this.onSandboxStartupError(new Error(`Failed to start ${failures.length} MCP server(s)`));
+      return;
     }
 
     console.log('All MCP server containers started successfully');
-
     this.onSandboxStartupSuccess();
   }
 
@@ -79,13 +77,7 @@ class MCPServerSandboxManager {
   }
 
   async startServer(mcpServer: InstalledMcpServer) {
-    const mcpServerContainerHostPort = await getPort();
-    const sandboxedMCP = new SandboxedMCP(
-      mcpServer.dockerImage,
-      mcpServer.containerPort,
-      mcpServerContainerHostPort,
-      mcpServer.envVars
-    );
+    const sandboxedMCP = new SandboxedMCP(mcpServer.dockerImage, mcpServer.envVars);
 
     this.mcpServerIdToSandboxedMCPMap.set(mcpServer.id, sandboxedMCP);
     await sandboxedMCP.start();

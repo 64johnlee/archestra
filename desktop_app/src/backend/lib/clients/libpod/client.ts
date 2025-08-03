@@ -21,6 +21,21 @@ export const createClientConfig: CreateClientConfig = (config) => ({
    * this is a workaround to get the client to work with the unix socket path (using undici's fetch)
    * https://heyapi.dev/openapi-ts/clients/fetch#custom-fetch
    */
-  fetch: fetch as unknown as (request: Request) => Promise<Response>,
-  baseUrl: 'http://d/v5.0.0/libpod',
+  fetch: async (request: Request) => {
+    // Extract URL and options from the Request object
+    const url = request.url;
+    const options: any = {
+      method: request.method,
+      headers: request.headers,
+      body: request.body,
+    };
+
+    // Add duplex option when body is present (required for streams)
+    if (request.body) {
+      options.duplex = 'half';
+    }
+
+    return fetch(url, options) as unknown as Promise<Response>;
+  },
+  baseUrl: 'http://d/v5.0.0',
 });

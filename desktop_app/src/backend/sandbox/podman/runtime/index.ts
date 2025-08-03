@@ -19,6 +19,9 @@ type RunCommandOptions<T extends object | object[]> = {
   pipes: RunCommandPipes<T>;
 };
 
+/**
+ * https://docs.podman.io/en/latest/markdown/podman-machine.1.html
+ */
 export default class PodmanRuntime {
   private ARCHESTRA_MACHINE_NAME = 'archestra-ai-machine';
 
