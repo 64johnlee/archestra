@@ -28,10 +28,10 @@ OPENAI_API_KEY=your-actual-api-key-here
 pnpm start
 ```
 
-## Database Studio
+## Database
 
 ```bash
-npx drizzle-kit studio
+pnpm exec drizzle-kit studio
 ```
 
 ## Features
