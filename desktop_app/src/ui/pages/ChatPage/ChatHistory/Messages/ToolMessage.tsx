@@ -1,12 +1,17 @@
 import { Wrench } from 'lucide-react';
-
-import { ChatMessage } from '@ui/types';
+import { UIMessage } from 'ai';
 
 interface ToolMessageProps {
-  message: ChatMessage;
+  message: UIMessage;
 }
 
 export default function ToolMessage({ message }: ToolMessageProps) {
+  // Extract text content from parts
+  const textContent = message.parts
+    .filter((part) => part.type === 'text')
+    .map((part) => (part as { text: string }).text)
+    .join('');
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-2">
@@ -14,7 +19,7 @@ export default function ToolMessage({ message }: ToolMessageProps) {
         <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Tool Result</span>
       </div>
       <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <div className="text-sm whitespace-pre-wrap font-mono">{message.content}</div>
+        <div className="text-sm whitespace-pre-wrap font-mono">{textContent}</div>
       </div>
     </div>
   );

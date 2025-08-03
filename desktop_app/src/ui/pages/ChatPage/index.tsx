@@ -60,7 +60,7 @@ export default function ChatPage(_props: ChatPageProps) {
         <ProviderSelector />
       </div>
       <div className="flex-1 min-h-0 overflow-hidden max-w-full">
-        <ChatHistory messages={messages as any} />
+        <ChatHistory messages={messages} />
       </div>
       <SystemPrompt />
       <div className="flex-shrink-0">
