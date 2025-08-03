@@ -1,12 +1,11 @@
 import { BrowserWindow, app } from 'electron';
 import started from 'electron-squirrel-startup';
-import getPort from 'get-port';
 import { ChildProcess, fork } from 'node:child_process';
 import path from 'node:path';
 
 import { runDatabaseMigrations } from '@backend/database';
 import { OllamaServer } from '@backend/llms/ollama';
-import { MCPServerSandboxManager } from '@backend/mcpServerSandbox';
+import { MCPServerSandboxManager } from '@backend/sandbox';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -89,19 +88,24 @@ function startFastifyServer(): void {
 app.on('ready', async () => {
   await runDatabaseMigrations();
 
-  const ollamaPort = await getPort();
-  ollamaServer = new OllamaServer(ollamaPort);
-  await ollamaServer.startProcess();
+  ollamaServer = new OllamaServer();
+  await ollamaServer.startServer();
 
   /**
-   * NOTE: for now the podman mcp server sandbox is still super experimental/WIP so don't
-   * crash the app if it fails to start
+   * NOTE: for now the podman mcp server sandbox is still super experimental/WIP
+   *
+   * NOTE: for now we'll just console out success/error from spinning everything up in the sandbox
+   * In the near-future we should hook this up to our websocket server and send a message to the renderer
+   * to show a notifications/progress-bar to the user in the app UI
    */
-  try {
-    await MCPServerSandboxManager.startAllInstalledMcpServers();
-  } catch (error) {
-    console.error('Error starting MCP servers:', error);
-  }
+  MCPServerSandboxManager.onSandboxStartupSuccess = () => {
+    console.log('Sandbox startup successful 🥳🥳🥳🥳🥳🥳🥳🥳🥳🥳🥳');
+  };
+  MCPServerSandboxManager.onSandboxStartupError = (error) => {
+    console.error('Sandbox startup error 🤮🤮🤮🤮🤮🤮🤮🤮🤮🤮🤮:', error);
+  };
+
+  MCPServerSandboxManager.startAllInstalledMcpServers();
 
   startFastifyServer();
   createWindow();
@@ -132,15 +136,14 @@ app.on('before-quit', async (event) => {
     // Stop Ollama server
     if (ollamaServer) {
       try {
-        await ollamaServer.stopProcess();
+        await ollamaServer.stopServer();
         console.log('Ollama server stopped');
       } catch (error) {
         console.error('Error stopping Ollama server:', error);
       }
     }
 
-    // Stop all installed MCP servers
-    await MCPServerSandboxManager.stopAllInstalledMcpServers();
+    MCPServerSandboxManager.turnOffSandbox();
 
     // Kill the server process gracefully
     if (serverProcess) {
@@ -178,18 +181,10 @@ process.on('exit', async () => {
   }
 
   if (ollamaServer) {
-    await ollamaServer.stopProcess();
+    await ollamaServer.stopServer();
   }
 
-  /**
-   * NOTE: for now the podman mcp server sandbox is still super experimental/WIP so don't
-   * prevent shutting down the app if it fails to stop the podman machine
-   */
-  try {
-    await MCPServerSandboxManager.stopAllInstalledMcpServers();
-  } catch (error) {
-    console.error('Error stopping MCP servers:', error);
-  }
+  MCPServerSandboxManager.turnOffSandbox();
 });
 
 // In this file you can include the rest of your app's specific main process
