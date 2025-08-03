@@ -1,5 +1,5 @@
-import type { AbortableAsyncIterator, ChatRequest, ChatResponse, Config } from 'ollama';
-import { Ollama } from 'ollama';
+import type { AbortableAsyncIterator, ChatRequest, ChatResponse, Config } from 'ollama/browser';
+import { Ollama } from 'ollama/browser';
 
 import { ARCHESTRA_SERVER_OLLAMA_PROXY_URL } from '@ui/consts';
 

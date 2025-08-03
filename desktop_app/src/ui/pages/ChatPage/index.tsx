@@ -1,3 +1,5 @@
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { useEffect, useState } from 'react';
 
 import { ProviderSelector } from '@ui/components/ProviderSelector';
@@ -25,10 +27,20 @@ export default function ChatPage(_props: ChatPageProps) {
   // Always use selectedAIModel from centralized config
   const model = selectedAIModel || '';
 
-  const { messages, sendMessage, stop, isLoading } = useChatProvider({
+  const { stop, isLoading } = useChatProvider({
     model,
     sessionId: currentChat?.session_id,
     initialMessages: currentChat?.messages || [],
+  });
+
+  const { sendMessage, messages } = useChat({
+    id: currentChat?.session_id, // use the provided chat ID
+    transport: new DefaultChatTransport({
+      api: '/api/llm/stream',
+      body: {
+        sessionId: currentChat?.session_id,
+      },
+    }),
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -38,7 +50,9 @@ export default function ChatPage(_props: ChatPageProps) {
   const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
     if (localInput.trim()) {
-      sendMessage(localInput);
+      console.log('Sending message:', localInput);
+      // sendMessage({ parts: [{ type: 'text', text: localInput }] });
+      sendMessage({ text: localInput });
       setLocalInput('');
     }
   };
@@ -49,7 +63,7 @@ export default function ChatPage(_props: ChatPageProps) {
         <ProviderSelector />
       </div>
       <div className="flex-1 min-h-0 overflow-hidden max-w-full">
-        <ChatHistory messages={messages as any} />
+        <ChatHistory messages={messages} />
       </div>
       <SystemPrompt />
       <div className="flex-shrink-0">

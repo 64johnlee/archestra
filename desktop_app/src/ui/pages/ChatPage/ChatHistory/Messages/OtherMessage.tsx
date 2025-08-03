@@ -1,9 +1,15 @@
-import { ChatMessage } from '@ui/types';
+import { UIMessage } from 'ai';
 
 interface OtherMessageProps {
-  message: ChatMessage;
+  message: UIMessage;
 }
 
 export default function OtherMessage({ message }: OtherMessageProps) {
-  return <div className="text-sm whitespace-pre-wrap">{message.content}</div>;
+  // Extract text content from parts
+  const textContent = message.parts
+    .filter((part) => part.type === 'text')
+    .map((part) => (part as { text: string }).text)
+    .join('');
+
+  return <div className="text-sm whitespace-pre-wrap">{textContent}</div>;
 }
