@@ -1,12 +1,11 @@
 import { BrowserWindow, app } from 'electron';
 import started from 'electron-squirrel-startup';
-import getPort from 'get-port';
 import { ChildProcess, fork } from 'node:child_process';
 import path from 'node:path';
 
 import { runDatabaseMigrations } from '@backend/database';
 import { OllamaServer } from '@backend/llms/ollama';
-import { MCPServerSandboxManager } from '@backend/mcpServerSandbox';
+import { MCPServerSandboxManager } from '@backend/sandbox';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -89,11 +88,24 @@ function startFastifyServer(): void {
 app.on('ready', async () => {
   await runDatabaseMigrations();
 
-  const ollamaPort = await getPort();
-  ollamaServer = new OllamaServer(ollamaPort);
-  await ollamaServer.startProcess();
+  ollamaServer = new OllamaServer();
+  await ollamaServer.startServer();
 
-  await MCPServerSandboxManager.startAllInstalledMcpServers();
+  /**
+   * NOTE: for now the podman mcp server sandbox is still super experimental/WIP
+   *
+   * NOTE: for now we'll just console out success/error from spinning everything up in the sandbox
+   * In the near-future we should hook this up to our websocket server and send a message to the renderer
+   * to show a notifications/progress-bar to the user in the app UI
+   */
+  MCPServerSandboxManager.onSandboxStartupSuccess = () => {
+    console.log('Sandbox startup successful 🥳🥳🥳🥳🥳🥳🥳🥳🥳🥳🥳');
+  };
+  MCPServerSandboxManager.onSandboxStartupError = (error) => {
+    console.error('Sandbox startup error 🤮🤮🤮🤮🤮🤮🤮🤮🤮🤮🤮:', error);
+  };
+
+  MCPServerSandboxManager.startAllInstalledMcpServers();
 
   startFastifyServer();
   createWindow();
@@ -124,12 +136,14 @@ app.on('before-quit', async (event) => {
     // Stop Ollama server
     if (ollamaServer) {
       try {
-        await ollamaServer.stopProcess();
+        await ollamaServer.stopServer();
         console.log('Ollama server stopped');
       } catch (error) {
         console.error('Error stopping Ollama server:', error);
       }
     }
+
+    MCPServerSandboxManager.turnOffSandbox();
 
     // Kill the server process gracefully
     if (serverProcess) {
@@ -161,10 +175,16 @@ app.on('before-quit', async (event) => {
 });
 
 // Clean up on unexpected exit
-process.on('exit', () => {
+process.on('exit', async () => {
   if (serverProcess) {
     serverProcess.kill('SIGKILL');
   }
+
+  if (ollamaServer) {
+    await ollamaServer.stopServer();
+  }
+
+  MCPServerSandboxManager.turnOffSandbox();
 });
 
 // In this file you can include the rest of your app's specific main process
