@@ -29,10 +29,7 @@ export default async function llmRoutes(fastify: FastifyInstance) {
           model: openai('gpt-4o'),
           messages: messages2,
         });
-        console.log('LLM stream result:', result);
 
-        console.log(result.textStream);
-        
         // Here is how to read the response
         // const reader = result.textStream.getReader();
         // while (true) {
@@ -43,7 +40,7 @@ export default async function llmRoutes(fastify: FastifyInstance) {
         //   console.log(value);
         // }
 
-        return reply.send(result.textStream);
+        return reply.send(result.toUIMessageStreamResponse());
       } catch (error) {
         fastify.log.error('LLM streaming error:', error);
         return reply.code(500).send({
