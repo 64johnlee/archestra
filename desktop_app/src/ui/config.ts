@@ -20,31 +20,29 @@ export default {
     openaiProxyUrl: `${ARCHESTRA_SERVER_LLM_PROXY_BASE_URL}/openai`,
     websocketUrl: `ws://${ARCHESTRA_SERVER_BASE_URL}/ws`,
   },
-  ui: {
-    chat: {
-      defaultTitle: 'New Chat',
-    },
-    navigation: [
-      {
-        title: 'Chat',
-        icon: MessageCircle,
-        key: NavigationViewKey.Chat,
-      },
-      {
-        title: 'LLM Providers',
-        icon: Download,
-        key: NavigationViewKey.LLMProviders,
-      },
-      {
-        title: 'Connectors',
-        icon: Bot,
-        key: NavigationViewKey.MCP,
-      },
-      {
-        title: 'Settings',
-        icon: Settings,
-        key: NavigationViewKey.Settings,
-      },
-    ] as NavigationItem[],
+  chat: {
+    defaultTitle: 'New Chat',
   },
+  navigation: [
+    {
+      title: 'Chat',
+      icon: MessageCircle,
+      key: NavigationViewKey.Chat,
+    },
+    {
+      title: 'LLM Providers',
+      icon: Download,
+      key: NavigationViewKey.LLMProviders,
+    },
+    {
+      title: 'Connectors',
+      icon: Bot,
+      key: NavigationViewKey.MCP,
+    },
+    {
+      title: 'Settings',
+      icon: Settings,
+      key: NavigationViewKey.Settings,
+    },
+  ] as NavigationItem[],
 };

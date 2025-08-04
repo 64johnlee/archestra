@@ -134,7 +134,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   getCurrentChatTitle: () => {
     const currentChat = get().getCurrentChat();
-    return currentChat?.title || config.ui.chat.defaultTitle;
+    return currentChat?.title || config.chat.defaultTitle;
   },
 
   deleteCurrentChat: async () => {

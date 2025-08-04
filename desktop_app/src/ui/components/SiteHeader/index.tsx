@@ -1,11 +1,11 @@
 import { SidebarIcon } from 'lucide-react';
 
-import config from '@ui/config';
 import { NavigationSubViewKey, NavigationViewKey } from '@types';
 import { ThemeToggler } from '@ui/components/ThemeToggler';
 import { Button } from '@ui/components/ui/button';
 import { Separator } from '@ui/components/ui/separator';
 import { useSidebar } from '@ui/components/ui/sidebar';
+import config from '@ui/config';
 import { useChatStore } from '@ui/stores/chat-store';
 
 import { Breadcrumbs } from './Breadcrumbs';
@@ -25,7 +25,7 @@ export function SiteHeader({ activeView, activeSubView }: SiteHeaderProps) {
   } else if (activeView === NavigationViewKey.LLMProviders) {
     breadcrumbs = ['LLM Providers', activeSubView.charAt(0).toUpperCase() + activeSubView.slice(1)];
   } else {
-    breadcrumbs = [config.ui.navigation.find((item) => item.key === activeView)?.title || ''];
+    breadcrumbs = [config.navigation.find((item) => item.key === activeView)?.title || ''];
   }
 
   return (

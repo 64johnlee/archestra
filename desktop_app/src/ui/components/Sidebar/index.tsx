@@ -1,6 +1,5 @@
 import * as React from 'react';
 
-import config from '@ui/config';
 import { NavigationSubViewKey, NavigationViewKey } from '@types';
 import { SiteHeader } from '@ui/components/SiteHeader';
 import {
@@ -14,6 +13,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from '@ui/components/ui/sidebar';
+import config from '@ui/config';
 import { useNavigationStore } from '@ui/stores/navigation-store';
 
 import ChatSidebarSection from './ChatSidebarSection';
@@ -37,7 +37,7 @@ export default function Sidebar({ children }: SidebarProps) {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {config.ui.navigation.map((item) => (
+                  {config.navigation.map((item) => (
                     <React.Fragment key={item.key}>
                       <SidebarMenuItem>
                         <SidebarMenuButton
