@@ -1,8 +1,6 @@
 import type { AbortableAsyncIterator, ChatRequest, ChatResponse, Config } from 'ollama/browser';
 import { Ollama } from 'ollama/browser';
 
-import config from '@ui/config';
-
 interface ArchestraOllamaRequest extends ChatRequest {
   session_id: string; // The backend ollama proxy expects session_id as part of the request body
 }
@@ -18,11 +16,8 @@ export interface ArchestraOllamaNonStreamingChatRequest extends ArchestraOllamaR
 type ArchestraOllamaChatRequest = ArchestraOllamaStreamingChatRequest | ArchestraOllamaNonStreamingChatRequest;
 
 export class ArchestraOllamaClient extends Ollama {
-  constructor(customConfig?: Partial<Config>) {
-    super({
-      ...(customConfig ?? {}),
-      host: config.archestra.ollamaProxyUrl,
-    });
+  constructor(config?: Partial<Config>) {
+    super(config ?? {});
   }
 
   // Override the chat method to handle session_id

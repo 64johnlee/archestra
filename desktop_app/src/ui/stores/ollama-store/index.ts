@@ -2,12 +2,13 @@ import { AbortableAsyncIterator } from 'ollama';
 import { ChatResponse, ModelResponse, Message as OllamaMessage, Tool as OllamaTool } from 'ollama/browser';
 import { create } from 'zustand';
 
+import { ArchestraOllamaClient } from '@clients/ollama';
+import config from '@ui/config';
 import { OllamaLocalStorage } from '@ui/lib/localStorage';
-import { ArchestraOllamaClient } from '@ui/lib/ollama-client';
 
 import { AVAILABLE_MODELS } from './available_models';
 
-const ollamaClient = new ArchestraOllamaClient();
+const ollamaClient = new ArchestraOllamaClient({ host: config.archestra.ollamaProxyUrl });
 
 interface OllamaState {
   installedModels: ModelResponse[];
