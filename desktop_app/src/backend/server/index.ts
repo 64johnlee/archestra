@@ -1,3 +1,4 @@
+import cors from '@fastify/cors';
 import fastify from 'fastify';
 
 import config from '@backend/config';
@@ -15,6 +16,19 @@ const app = fastify({
   // Use pino-pretty package if pretty logging is needed in development
 });
 
+app.register(cors, {
+  // Allow all origins in development
+  origin: true,
+  credentials: true,
+  // Ensure all methods are allowed
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  // Allow common headers
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  // Expose headers that might be needed
+  exposedHeaders: ['X-Total-Count'],
+  // Cache preflight response for 1 hour
+  maxAge: 3600,
+});
 app.register(websocketPlugin);
 app.register(chatRoutes);
 app.register(llmRoutes);
