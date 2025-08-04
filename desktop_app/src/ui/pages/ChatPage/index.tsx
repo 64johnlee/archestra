@@ -15,14 +15,18 @@ export default function ChatPage(_props: ChatPageProps) {
   const { getCurrentChat, createNewChat, selectedAIModel, isLoadingChats } = useChatStore();
   const currentChat = getCurrentChat();
   const [localInput, setLocalInput] = useState('');
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
 
   // Ensure we have a chat session
   useEffect(() => {
-    // Only create a new chat if we're not loading and there's no current chat
-    if (!isLoadingChats && !currentChat) {
-      createNewChat();
+    // Only create a new chat if we're not loading, there's no current chat, and we're not already creating one
+    if (!isLoadingChats && !currentChat && !isCreatingChat) {
+      setIsCreatingChat(true);
+      createNewChat().finally(() => {
+        setIsCreatingChat(false);
+      });
     }
-  }, [currentChat, createNewChat, isLoadingChats]);
+  }, [currentChat, createNewChat, isLoadingChats, isCreatingChat]);
 
   // Always use selectedAIModel from centralized config
   const model = selectedAIModel || '';
