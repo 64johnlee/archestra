@@ -2,14 +2,14 @@ import { create } from 'zustand';
 
 import {
   ChatWithMessages as ServerChatWithMessages,
-  deleteChatApiChatById,
-  getChatApiChat,
-  getChatApiChatById,
-  patchChatApiChatById,
-  postChatApiChat,
+  createChat,
+  deleteChat,
+  getChatById,
+  getChats,
+  updateChat,
 } from '@clients/archestra/api/gen';
-import config from '@ui/config';
 import { type ChatWithMessages } from '@types';
+import config from '@ui/config';
 import { getDefaultModel } from '@ui/hooks/use-ai-chat-backend';
 import { initializeChat } from '@ui/lib/utils/chat';
 import { websocketService } from '@ui/lib/websocket';
@@ -59,7 +59,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   loadChats: async () => {
     set({ isLoadingChats: true });
     try {
-      const { data } = await getChatApiChat();
+      const { data } = await getChats();
       console.log('Initializing chats...');
       console.log(data);
       if (data) {
@@ -78,7 +78,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   createNewChat: async () => {
     try {
-      const response = await postChatApiChat({
+      const response = await createChat({
         body: {
           llm_provider: 'ollama',
         },
@@ -106,7 +106,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   selectChat: async (chatId: number) => {
     try {
       // Fetch the chat with its messages from the API
-      const { data } = await getChatApiChatById({ path: { id: chatId.toString() } });
+      const { data } = await getChatById({ path: { id: chatId.toString() } });
 
       if (data) {
         const initializedChat = initializeChat(data);
@@ -142,7 +142,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     if (!currentChat) return;
 
     try {
-      await deleteChatApiChatById({ path: { id: currentChat.id.toString() } });
+      await deleteChat({ path: { id: currentChat.id.toString() } });
       set((state) => {
         const newChats = state.chats.filter((chat) => chat.id !== currentChat.id);
         return {
@@ -157,7 +157,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   updateChatTitle: async (chatId: number, title: string) => {
     try {
-      await patchChatApiChatById({
+      await updateChat({
         path: { id: chatId.toString() },
         body: { title },
       });
