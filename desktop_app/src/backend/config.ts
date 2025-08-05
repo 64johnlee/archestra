@@ -21,10 +21,8 @@ export default {
     },
   },
   sandbox: {
-    // TODO: uncomment out the following once we make archestra-public public
-    // baseDockerImage:
-    //   process.env.MCP_BASE_DOCKER_IMAGE ||
-    //   'europe-west1-docker.pkg.dev/friendly-path-465518-r6/archestra-public/mcp-server-base:0.0.1',
-    baseDockerImage: 'joey-test-mcp-server-base-image:latest',
+    baseDockerImage:
+      process.env.MCP_BASE_DOCKER_IMAGE ||
+      'europe-west1-docker.pkg.dev/friendly-path-465518-r6/archestra-public/mcp-server-base:0.0.1',
   },
 };
