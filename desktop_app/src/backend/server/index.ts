@@ -8,6 +8,7 @@ import llmRoutes from '@backend/server/plugins/llm';
 import mcpRequestLogRoutes from '@backend/server/plugins/mcpRequestLog';
 import mcpServerRoutes from '@backend/server/plugins/mcpServer';
 import ollamaRoutes from '@backend/server/plugins/ollama';
+import sandboxRoutes from '@backend/server/plugins/sandbox';
 import websocketPlugin from '@backend/server/plugins/websocket';
 
 const app = fastify({
@@ -40,6 +41,7 @@ app.register(externalMcpClientRoutes);
 app.register(mcpRequestLogRoutes);
 app.register(mcpServerRoutes);
 app.register(ollamaRoutes);
+app.register(sandboxRoutes);
 
 export const startServer = async () => {
   const { port, host } = config.server;

@@ -3,10 +3,12 @@ import { McpServerModel } from '@backend/models';
 import PodmanContainer from '@backend/sandbox/podman/container';
 import PodmanRuntime from '@backend/sandbox/podman/runtime';
 import websocketService from '@backend/websocket';
+import { setSocketPath } from '@clients/libpod/client';
 
 class McpServerSandboxManager {
   private podmanRuntime: InstanceType<typeof PodmanRuntime>;
   private mcpServerNameToPodmanContainerMap: Map<string, PodmanContainer> = new Map();
+  private _isInitialized = false;
 
   onSandboxStartupSuccess: () => void = () => {};
   onSandboxStartupError: (error: Error) => void = () => {};
@@ -21,10 +23,34 @@ class McpServerSandboxManager {
   private async onPodmanMachineInstallationSuccess() {
     console.log('Podman machine installation successful. Starting all installed MCP servers...');
 
+    try {
+      // Get the actual socket path from the running podman machine
+      console.log('Getting podman socket address...');
+      const socketPath = await this.podmanRuntime.getSocketAddress();
+      console.log('Got podman socket address:', socketPath);
+      
+      // Configure the libpod client to use this socket
+      setSocketPath(socketPath);
+      console.log('Socket path has been updated in libpod client');
+      
+      // Now pull the base image with the correct socket configured
+      console.log('Pulling base image...');
+      await this.podmanRuntime.pullBaseImageOnMachineInstallationSuccess();
+      console.log('Base image pulled successfully');
+    } catch (error) {
+      console.error('Failed during podman setup:', error);
+      this.onPodmanMachineInstallationError(error as Error);
+      return;
+    }
+
+    this._isInitialized = true;
+
+    websocketService.broadcast({
+      type: 'sandbox-startup-completed',
+      payload: {},
+    });
+
     const installedMcpServers = await McpServerModel.getAll();
-    const totalServers = installedMcpServers.length;
-    let successfulServers = 0;
-    let failedServers = 0;
 
     // Start all servers in parallel
     const startPromises = installedMcpServers.map(async (mcpServer) => {
@@ -35,13 +61,11 @@ class McpServerSandboxManager {
 
       try {
         await this.startServer(mcpServer);
-        successfulServers++;
         websocketService.broadcast({
           type: 'sandbox-mcp-server-started',
           payload: { serverName: mcpServer.name },
         });
       } catch (error) {
-        failedServers++;
         websocketService.broadcast({
           type: 'sandbox-mcp-server-failed',
           payload: {
@@ -54,12 +78,6 @@ class McpServerSandboxManager {
     });
 
     const results = await Promise.allSettled(startPromises);
-
-    // Broadcast completion
-    websocketService.broadcast({
-      type: 'sandbox-startup-completed',
-      payload: { totalServers, successfulServers, failedServers },
-    });
 
     // Check for failures
     const failures = results.filter((result) => result.status === 'rejected');
@@ -77,7 +95,18 @@ class McpServerSandboxManager {
   }
 
   private onPodmanMachineInstallationError(error: Error) {
-    this.onSandboxStartupError(new Error(`There was an error starting up podman machine: ${error.message}`));
+    const errorMessage = `There was an error starting up podman machine: ${error.message}`;
+
+    this._isInitialized = false;
+
+    websocketService.broadcast({
+      type: 'sandbox-startup-failed',
+      payload: {
+        error: errorMessage,
+      },
+    });
+
+    this.onSandboxStartupError(new Error(errorMessage));
   }
 
   async startServer({ name, serverConfig }: McpServer) {
@@ -105,6 +134,7 @@ class McpServerSandboxManager {
    */
   turnOffSandbox() {
     this.podmanRuntime.stopArchestraMachine();
+    this._isInitialized = false;
   }
 
   proxyRequestToMcpServerContainer(mcpServerName: string, request: any) {
@@ -113,6 +143,14 @@ class McpServerSandboxManager {
       throw new Error(`MCP server with name ${mcpServerName} not found`);
     }
     return podmanContainer.proxyRequestToContainer(request);
+  }
+
+  getSandboxStatus() {
+    return {
+      isInitialized: this._isInitialized,
+      podmanMachineStatus: this.podmanRuntime.machineStatus,
+      // mcpServersStatus: Record<string, object> - TODO: implement later
+    };
   }
 }
 

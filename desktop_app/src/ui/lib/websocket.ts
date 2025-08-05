@@ -3,11 +3,11 @@ import ReconnectingWebSocket from 'reconnecting-websocket';
 import { type WebSocketMessage } from '@archestra/types';
 import config from '@ui/config';
 
-type MessageHandler = (message: WebSocketMessage) => void;
+type MessageHandler<T extends WebSocketMessage = WebSocketMessage> = (message: T) => void;
 
 class WebSocketService {
   private ws: ReconnectingWebSocket | null = null;
-  private handlers: Map<WebSocketMessage['type'], Set<MessageHandler>> = new Map();
+  private handlers: Map<WebSocketMessage['type'], Set<MessageHandler<any>>> = new Map();
   private connectionPromise: Promise<void> | null = null;
 
   async connect(): Promise<void> {
@@ -63,7 +63,10 @@ class WebSocketService {
     }
   }
 
-  subscribe(type: WebSocketMessage['type'], handler: MessageHandler): () => void {
+  subscribe<T extends WebSocketMessage['type']>(
+    type: T,
+    handler: MessageHandler<Extract<WebSocketMessage, { type: T }>>
+  ): () => void {
     if (!this.handlers.has(type)) {
       this.handlers.set(type, new Set());
     }

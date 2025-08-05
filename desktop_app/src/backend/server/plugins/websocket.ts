@@ -21,27 +21,6 @@ const websocketPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.get('/ws', { websocket: true }, async (socket, req) => {
     console.log('WebSocket client connected');
 
-    // Add this connection to the service
-    WebsocketService.addConnection(socket);
-
-    // Handle incoming messages
-    socket.on('message', (message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        console.log('Received WebSocket message:', data);
-
-        // Echo back for now (can be extended to handle different message types)
-        socket.send(
-          JSON.stringify({
-            type: 'echo',
-            payload: data,
-          })
-        );
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-      }
-    });
-
     // Handle connection close
     socket.on('close', () => {
       console.log('WebSocket client disconnected');

@@ -48,10 +48,21 @@ const getArchitecture = (): SupportedArchitecture => {
 const PLATFORM = getPlatform();
 const ARCHITECTURE = getArchitecture();
 
-export const getBinariesDirectory = () =>
-  app.isPackaged
+/**
+ * Get the path to the "binaries" directory
+ *
+ * The first conditional bit is to handle the case where this function is referenced/invoked
+ * in a context where an electron app is not available (e.g. during codegen).
+ */
+export const getBinariesDirectory = () => {
+  if (typeof app === 'undefined' || !app || !app.isPackaged) {
+    return path.join(process.cwd(), 'resources', 'bin', PLATFORM, ARCHITECTURE);
+  }
+
+  return app.isPackaged
     ? path.join(process.resourcesPath, 'bin')
     : path.join(app.getAppPath(), 'resources', 'bin', PLATFORM, ARCHITECTURE);
+};
 
 export const getBinaryExecPath = (binaryName: SupportedBinary) => {
   const binaryPath = path.resolve(

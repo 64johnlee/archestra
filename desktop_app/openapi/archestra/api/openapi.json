@@ -392,6 +392,23 @@
           }
         }
       }
+    },
+    "/api/sandbox/status": {
+      "get": {
+        "operationId": "getSandboxStatus",
+        "tags": ["Sandbox"],
+        "description": "Get the current status of the sandbox environment",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

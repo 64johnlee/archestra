@@ -49,8 +49,16 @@ export default class PodmanImage {
         console.log(`Image ${this.BASE_IMAGE_NAME} pulled successfully`);
         return;
       } else {
-        console.error(`Error pulling image ${this.BASE_IMAGE_NAME}`, response);
-        throw new Error(`Error pulling image ${this.BASE_IMAGE_NAME}`);
+        // Try to read the error body for more details
+        let errorMessage = `Error pulling image ${this.BASE_IMAGE_NAME} - Status: ${response.status}`;
+        try {
+          const errorBody = await response.text();
+          console.error(`Error pulling image ${this.BASE_IMAGE_NAME}`, response.status, errorBody);
+          errorMessage += ` - ${errorBody}`;
+        } catch (e) {
+          console.error(`Error pulling image ${this.BASE_IMAGE_NAME}`, response);
+        }
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error(`Error pulling image ${this.BASE_IMAGE_NAME}`, error);

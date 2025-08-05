@@ -284,6 +284,20 @@ export type StartMcpServerOauthResponses = {
   200: unknown;
 };
 
+export type GetSandboxStatusData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/sandbox/status';
+};
+
+export type GetSandboxStatusResponses = {
+  /**
+   * Default Response
+   */
+  200: unknown;
+};
+
 export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };

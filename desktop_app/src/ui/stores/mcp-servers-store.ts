@@ -3,6 +3,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { CallToolRequest, ClientCapabilities } from '@modelcontextprotocol/sdk/types';
 import { create } from 'zustand';
 
+import { type WebSocketMessage } from '@archestra/types';
 import { getMcpServers, installMcpServer, startMcpServerOauth, uninstallMcpServer } from '@clients/archestra/api/gen';
 import {
   McpServer,
@@ -12,6 +13,7 @@ import {
 import config from '@ui/config';
 import { getToolsGroupedByServer } from '@ui/lib/utils/mcp-server';
 import { formatToolName } from '@ui/lib/utils/tools';
+import { websocketService } from '@ui/lib/websocket';
 import { ConnectedMcpServer, McpServerStatus, McpServerToolsMap, ToolWithMcpServerName } from '@ui/types';
 
 const ARCHESTRA_MCP_SERVER_NAME = 'archestra';
@@ -460,6 +462,69 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
   },
 }));
 
+// WebSocket event subscriptions for MCP server events
+let mcpUnsubscribers: Array<() => void> = [];
+
+const subscribeToMcpWebSocketEvents = () => {
+  // Cleanup any existing subscriptions
+  mcpUnsubscribers.forEach((unsubscribe) => unsubscribe());
+  mcpUnsubscribers = [];
+
+  // MCP server starting
+  mcpUnsubscribers.push(
+    websocketService.subscribe('sandbox-mcp-server-starting', (message) => {
+      const { serverName } = message.payload;
+      
+      useMcpServersStore.setState((state) => ({
+        installedMcpServers: state.installedMcpServers.map((server) =>
+          server.name === serverName
+            ? {
+                ...server,
+                status: McpServerStatus.Connecting,
+                error: null,
+              }
+            : server
+        ),
+      }));
+    })
+  );
+
+  // MCP server started successfully
+  mcpUnsubscribers.push(
+    websocketService.subscribe('sandbox-mcp-server-started', (message) => {
+      const { serverName } = message.payload;
+      
+      // Server started in sandbox, now connect to it
+      const server = useMcpServersStore.getState().installedMcpServers.find((s) => s.name === serverName);
+      if (server) {
+        useMcpServersStore.getState().connectToMcpServer(server.name, server.url);
+      }
+    })
+  );
+
+  // MCP server failed to start
+  mcpUnsubscribers.push(
+    websocketService.subscribe('sandbox-mcp-server-failed', (message) => {
+      const { serverName, error } = message.payload;
+      
+      useMcpServersStore.setState((state) => ({
+        installedMcpServers: state.installedMcpServers.map((server) =>
+          server.name === serverName
+            ? {
+                ...server,
+                status: McpServerStatus.Error,
+                error: error,
+              }
+            : server
+        ),
+      }));
+    })
+  );
+};
+
+// Initialize WebSocket subscriptions when the store is created
+subscribeToMcpWebSocketEvents();
+
 // Initialize connections on store creation
 useMcpServersStore.getState().connectToArchestraMcpServer();
 useMcpServersStore.getState().loadInstalledMcpServers();
@@ -471,5 +536,8 @@ if (typeof window !== 'undefined') {
     const store = useMcpServersStore.getState();
     store.archestraMcpServer?.client?.close();
     store.installedMcpServers.forEach((server) => server.client?.close());
+    
+    // Cleanup WebSocket subscriptions
+    mcpUnsubscribers.forEach((unsubscribe) => unsubscribe());
   });
 }
