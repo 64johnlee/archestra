@@ -34,7 +34,10 @@ if (!fs.existsSync(appDataPath)) {
   fs.mkdirSync(appDataPath, { recursive: true });
 }
 
-const db = drizzle({ connection: DATABASE_PATH });
+const db = drizzle({ 
+  connection: DATABASE_PATH,
+  casing: 'snake_case' 
+});
 
 export async function runDatabaseMigrations() {
   try {
