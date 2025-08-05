@@ -1,3 +1,4 @@
+import { ServerConfig } from '@archestra/types';
 import config from '@backend/config';
 import { containerCreateLibpod, containerStartLibpod, containerWaitLibpod } from '@clients/libpod/gen/sdk.gen';
 
@@ -7,11 +8,11 @@ export default class PodmanContainer {
   private args: string[];
   private envVars: Record<string, string>;
 
-  constructor(mcpServerName: string, command: string, args: string[], envVars: Record<string, string>) {
+  constructor(mcpServerName: string, serverConfig: ServerConfig) {
     this.containerName = `archestra-ai-${mcpServerName}-mcp-server`;
-    this.command = command;
-    this.args = args;
-    this.envVars = envVars;
+    this.command = serverConfig.command;
+    this.args = serverConfig.args;
+    this.envVars = serverConfig.env;
   }
 
   /**
@@ -108,5 +109,14 @@ export default class PodmanContainer {
       console.error(`Error creating container ${this.containerName}`, error);
       throw error;
     }
+  }
+
+  /**
+   * NOTE: this isn't fully implemented/tested yet, just a placeholder for now 😅
+   *
+   * Need to figure out how to properly proxy stdio to the container..
+   */
+  proxyRequestToContainer(request: any) {
+    console.log('Proxying request to MCP server', request);
   }
 }

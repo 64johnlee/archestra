@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 
 import { type ExternalMcpClient } from '@archestra/types';
-
-// Define type for external MCP client since it's not exported
-interface ExternalMcpClient {
-  name: string;
-  [key: string]: any;
-}
+import {
+  connectExternalMcpClient,
+  disconnectExternalMcpClient,
+  getConnectedExternalMcpClients,
+  getSupportedExternalMcpClients,
+} from '@clients/archestra/api/gen';
 
 interface ExternalMCPClientsState {
   supportedExternalMCPClientNames: string[];
@@ -51,7 +51,7 @@ export const useExternalMCPClientsStore = create<ExternalMCPClientsStore>((set) 
         errorLoadingSupportedExternalMCPClientNames: null,
       });
 
-      const response = await getExternalMcpClientApiExternalMcpClientSupported();
+      const response = await getSupportedExternalMcpClients();
       if ('data' in response && response.data) {
         set({ supportedExternalMCPClientNames: response.data as string[] });
       } else if ('error' in response) {
@@ -71,7 +71,7 @@ export const useExternalMCPClientsStore = create<ExternalMCPClientsStore>((set) 
         errorLoadingConnectedExternalMCPClients: null,
       });
 
-      const response = await getExternalMcpClientApiExternalMcpClient();
+      const response = await getConnectedExternalMcpClients();
       if ('data' in response && response.data) {
         set({ connectedExternalMCPClients: response.data as ExternalMcpClient[] });
       } else if ('error' in response) {
@@ -91,7 +91,7 @@ export const useExternalMCPClientsStore = create<ExternalMCPClientsStore>((set) 
         errorConnectingExternalMCPClient: null,
       });
 
-      const response = await postExternalMcpClientApiExternalMcpClientConnect({
+      const response = await connectExternalMcpClient({
         body: { client_name: clientName },
       });
       if ('error' in response) {
@@ -114,7 +114,7 @@ export const useExternalMCPClientsStore = create<ExternalMCPClientsStore>((set) 
         errorDisconnectingExternalMCPClient: null,
       });
 
-      const response = await deleteExternalMcpClientApiExternalMcpClientByClientNameDisconnect({
+      const response = await disconnectExternalMcpClient({
         path: { client_name: clientName },
       });
       if ('error' in response) {

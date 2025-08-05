@@ -1,6 +1,5 @@
 import * as React from 'react';
 
-import { NavigationSubViewKey, NavigationViewKey } from '@archestra/types';
 import { SiteHeader } from '@ui/components/SiteHeader';
 import {
   Sidebar as SidebarBase,
@@ -15,6 +14,7 @@ import {
 } from '@ui/components/ui/sidebar';
 import config from '@ui/config';
 import { useNavigationStore } from '@ui/stores/navigation-store';
+import { NavigationSubViewKey, NavigationViewKey } from '@ui/types';
 
 import ChatSidebarSection from './ChatSidebarSection';
 import LLMProvidersSidebarSection from './LLMProvidersSidebarSection';

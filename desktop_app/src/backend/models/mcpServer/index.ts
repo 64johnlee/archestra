@@ -1,9 +1,15 @@
 import { eq } from 'drizzle-orm';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 
 import db from '@backend/database';
 import { mcpServersTable } from '@backend/database/schema/mcpServer';
+import { ExternalMcpClientModel } from '@backend/models';
 
-export class MCPServer {
+// Database schemas
+export const insertMcpServerSchema = createInsertSchema(mcpServersTable);
+export const selectMcpServerSchema = createSelectSchema(mcpServersTable);
+
+export default class McpServer {
   static async create(data: typeof mcpServersTable.$inferInsert) {
     return db.insert(mcpServersTable).values(data).returning();
   }
@@ -53,8 +59,7 @@ export class MCPServer {
       .returning();
 
     // Sync all connected external MCP clients after installing
-    const { ExternalMcpClient } = await import('@backend/models/externalMcpClient');
-    await ExternalMcpClient.syncAllConnectedExternalMcpClients();
+    await ExternalMcpClientModel.syncAllConnectedExternalMcpClients();
 
     return server;
   }
@@ -66,7 +71,6 @@ export class MCPServer {
     await db.delete(mcpServersTable).where(eq(mcpServersTable.name, name));
 
     // Sync all connected external MCP clients after uninstalling
-    const { ExternalMcpClient } = await import('@backend/models/externalMcpClient');
-    await ExternalMcpClient.syncAllConnectedExternalMcpClients();
+    await ExternalMcpClientModel.syncAllConnectedExternalMcpClients();
   }
 }

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { McpClientInfo, McpRequestLog, McpRequestLogFilters, McpRequestLogStats } from '@archestra/types';
+import { McpRequestLog, McpRequestLogFilters, McpRequestLogStats } from '@archestra/types';
 import {
   clearMcpRequestLogs,
   getMcpRequestLogById,
@@ -35,8 +35,6 @@ interface MCPLogsStore {
   fetchStats: () => Promise<void>;
   clearLogs: (clearAll?: boolean) => Promise<void>;
   refresh: () => Promise<void>;
-  parseClientInfo: (clientInfoJson?: string) => McpClientInfo | null;
-  parseHeaders: (headersJson?: string) => Record<string, string> | null;
   resetFilters: () => void;
 }
 
@@ -99,7 +97,7 @@ export const useMCPLogsStore = create<MCPLogsStore>((set, get) => ({
         query: {
           ...filters,
           page: currentPage,
-          page_size: pageSize,
+          pageSize,
         },
       });
 
@@ -177,24 +175,6 @@ export const useMCPLogsStore = create<MCPLogsStore>((set, get) => ({
 
   refresh: async () => {
     await Promise.all([get().fetchLogs(), get().fetchStats()]);
-  },
-
-  parseClientInfo: (clientInfoJson) => {
-    if (!clientInfoJson) return null;
-    try {
-      return JSON.parse(clientInfoJson) as McpClientInfo;
-    } catch {
-      return null;
-    }
-  },
-
-  parseHeaders: (headersJson) => {
-    if (!headersJson) return null;
-    try {
-      return JSON.parse(headersJson) as Record<string, string>;
-    } catch {
-      return null;
-    }
   },
 
   resetFilters: () => {

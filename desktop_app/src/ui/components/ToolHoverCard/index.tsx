@@ -1,14 +1,14 @@
 import React from 'react';
 
-import type { ToolWithMCPServerName } from '@archestra/types';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@ui/components/ui/hover-card';
 import { formatToolName } from '@ui/lib/utils/tools';
+import type { ToolWithMcpServerName } from '@ui/types';
 
 import { ToolServerIcon } from '../ToolServerIcon';
 import ToolStatusIcon from '../ToolStatusIcon';
 
 interface ToolHoverCardProps extends React.PropsWithChildren {
-  tool: ToolWithMCPServerName;
+  tool: ToolWithMcpServerName;
   side?: 'top' | 'right' | 'bottom' | 'left';
   align?: 'start' | 'center' | 'end';
   showInstructions?: boolean;

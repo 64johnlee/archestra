@@ -6,12 +6,31 @@ CREATE TABLE `chats` (
 	`updated_at` text DEFAULT (current_timestamp) NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `chats_session_id_unique` ON `chats` (`session_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `chats_sessionId_unique` ON `chats` (`session_id`);--> statement-breakpoint
 CREATE TABLE `external_mcp_clients` (
 	`client_name` text PRIMARY KEY NOT NULL,
 	`created_at` text DEFAULT (current_timestamp) NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE `mcp_request_logs` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`request_id` text NOT NULL,
+	`session_id` text,
+	`mcp_session_id` text,
+	`server_name` text NOT NULL,
+	`client_info` text NOT NULL,
+	`method` text,
+	`request_headers` text NOT NULL,
+	`request_body` text,
+	`response_body` text,
+	`response_headers` text NOT NULL,
+	`status_code` integer NOT NULL,
+	`error_message` text,
+	`duration_ms` integer,
+	`timestamp` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `mcp_request_logs_requestId_unique` ON `mcp_request_logs` (`request_id`);--> statement-breakpoint
 CREATE TABLE `mcp_servers` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,

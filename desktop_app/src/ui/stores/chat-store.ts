@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 
-import { type ChatWithMessages } from '@archestra/types';
 import {
   ChatWithMessages as ServerChatWithMessages,
   createChat,
@@ -13,6 +12,7 @@ import config from '@ui/config';
 import { getDefaultModel } from '@ui/hooks/use-ai-chat-backend';
 import { initializeChat } from '@ui/lib/utils/chat';
 import { websocketService } from '@ui/lib/websocket';
+import { type ChatWithMessages } from '@ui/types';
 
 interface ChatState {
   chats: ChatWithMessages[];

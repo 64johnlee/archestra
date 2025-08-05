@@ -1,28 +1,40 @@
 import { FastifyPluginAsync } from 'fastify';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z } from 'zod/v4';
 
-import { MCPServer } from '@archestra/types';
-import { MCPServer as MCPServerModel } from '@backend/models/mcpServer';
+import McpServerModel, { selectMcpServerSchema } from '@backend/models/mcpServer';
 
-// Request/Response types
-interface InstallRequestBody {
-  mcp_connector_id: string;
-}
+// Request schemas
+const installRequestSchema = z.object({
+  mcpConnectorId: z.string(),
+});
 
-interface StartOAuthRequestBody {
-  mcp_connector_id: string;
-}
+const startOAuthRequestSchema = z.object({
+  mcpConnectorId: z.string(),
+});
 
-interface UninstallParams {
-  mcp_server_name: string;
-}
+// Response schemas
+const mcpServerResponseSchema = selectMcpServerSchema;
+const mcpServersListResponseSchema = z.array(mcpServerResponseSchema);
+const successResponseSchema = z.object({ success: z.boolean() });
+const errorResponseSchema = z.object({ error: z.string() });
+const authUrlResponseSchema = z.object({ authUrl: z.string() });
+
+// Request params schemas
+const uninstallParamsSchema = z.object({
+  mcpServerName: z.string(),
+});
+
+// Type exports
+type InstallRequestBody = z.infer<typeof installRequestSchema>;
+type StartOAuthRequestBody = z.infer<typeof startOAuthRequestSchema>;
+type UninstallParams = z.infer<typeof uninstallParamsSchema>;
 
 const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * Get all installed MCP servers
    */
-  fastify.get<{
-    Reply: MCPServer[];
-  }>(
+  fastify.get(
     '/api/mcp_server',
     {
       schema: {
@@ -30,51 +42,13 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
         description: 'Get all installed MCP servers',
         tags: ['MCP Server'],
         response: {
-          200: {
-            description: 'List of installed MCP servers',
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                name: { type: 'string' },
-                config: {
-                  type: 'object',
-                  properties: {
-                    command: { type: 'string' },
-                    args: { type: 'array', items: { type: 'string' } },
-                    env: { type: 'object' },
-                    transport: { type: 'string' },
-                  },
-                  required: ['command'],
-                },
-                tools: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      name: { type: 'string' },
-                      description: { type: 'string' },
-                      inputSchema: { type: 'object' },
-                    },
-                    required: ['name'],
-                  },
-                },
-              },
-              required: ['name', 'config'],
-            },
-          },
-          500: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
+          200: zodToJsonSchema(mcpServersListResponseSchema as any),
         },
       },
     },
     async (request, reply) => {
       try {
-        const servers = await MCPServerModel.getInstalledMcpServers();
+        const servers = await McpServerModel.getInstalledMcpServers();
         return reply.send(servers);
       } catch (error) {
         console.error('Failed to load installed MCP servers:', error);
@@ -88,7 +62,6 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.post<{
     Body: InstallRequestBody;
-    Reply: { success: boolean };
   }>(
     '/api/mcp_server/install',
     {
@@ -96,50 +69,21 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
         operationId: 'installMcpServer',
         description: 'Install MCP server from catalog',
         tags: ['MCP Server'],
-        body: {
-          type: 'object',
-          properties: {
-            mcp_connector_id: { type: 'string' },
-          },
-          required: ['mcp_connector_id'],
-        },
+        body: zodToJsonSchema(installRequestSchema as any),
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-            },
-          },
-          400: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
-          404: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
-          500: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
+          200: zodToJsonSchema(successResponseSchema as any),
         },
       },
     },
     async (request, reply) => {
       try {
-        const { mcp_connector_id } = request.body;
+        const { mcpConnectorId } = request.body;
 
-        if (!mcp_connector_id) {
-          return reply.code(400).send({ error: 'mcp_connector_id is required' });
+        if (!mcpConnectorId) {
+          return reply.code(400).send({ error: 'mcpConnectorId is required' });
         }
 
-        await MCPServerModel.saveMcpServerFromCatalog(mcp_connector_id);
+        await McpServerModel.saveMcpServerFromCatalog(mcpConnectorId);
         return reply.code(200).send({ success: true });
       } catch (error: any) {
         console.error('Failed to install MCP server from catalog:', error);
@@ -158,52 +102,30 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.delete<{
     Params: UninstallParams;
-    Reply: { success: boolean };
   }>(
-    '/api/mcp_server/:mcp_server_name',
+    '/api/mcp_server/:mcpServerName',
     {
       schema: {
         operationId: 'uninstallMcpServer',
         description: 'Uninstall MCP server',
         tags: ['MCP Server'],
-        params: {
-          type: 'object',
-          properties: {
-            mcp_server_name: { type: 'string' },
-          },
-          required: ['mcp_server_name'],
-        },
+        params: zodToJsonSchema(uninstallParamsSchema as any),
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-            },
-          },
-          400: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
-          500: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
+          200: zodToJsonSchema(successResponseSchema as any),
+          400: zodToJsonSchema(errorResponseSchema as any),
+          500: zodToJsonSchema(errorResponseSchema as any),
         },
       },
     },
     async (request, reply) => {
       try {
-        const { mcp_server_name } = request.params;
+        const { mcpServerName } = request.params;
 
-        if (!mcp_server_name) {
-          return reply.code(400).send({ error: 'mcp_server_name is required' });
+        if (!mcpServerName) {
+          return reply.code(400).send({ error: 'mcpServerName is required' });
         }
 
-        await MCPServerModel.uninstallMcpServer(mcp_server_name);
+        await McpServerModel.uninstallMcpServer(mcpServerName);
         return reply.code(200).send({ success: true });
       } catch (error) {
         console.error('Failed to uninstall MCP server:', error);
@@ -217,7 +139,6 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.post<{
     Body: StartOAuthRequestBody;
-    Reply: { auth_url: string };
   }>(
     '/api/mcp_server/start_oauth',
     {
@@ -225,47 +146,24 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
         operationId: 'startMcpServerOauth',
         description: 'Start MCP server OAuth flow',
         tags: ['MCP Server'],
-        body: {
-          type: 'object',
-          properties: {
-            mcp_connector_id: { type: 'string' },
-          },
-          required: ['mcp_connector_id'],
-        },
+        body: zodToJsonSchema(startOAuthRequestSchema as any),
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              auth_url: { type: 'string' },
-            },
-          },
-          400: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
-          500: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
+          200: zodToJsonSchema(authUrlResponseSchema as any),
+          400: zodToJsonSchema(errorResponseSchema as any),
+          500: zodToJsonSchema(errorResponseSchema as any),
         },
       },
     },
     async (request, reply) => {
       try {
-        const { mcp_connector_id } = request.body;
+        const { mcpConnectorId } = request.body;
 
-        if (!mcp_connector_id) {
-          return reply.code(400).send({ error: 'mcp_connector_id is required' });
+        if (!mcpConnectorId) {
+          return reply.code(400).send({ error: 'mcpConnectorId is required' });
         }
 
         // TODO: Implement OAuth flow with the oauth proxy service
-        const authUrl = `https://oauth-proxy.archestra.ai/auth/${mcp_connector_id}`;
-
-        return reply.send({ auth_url: authUrl });
+        return reply.send({ authUrl: `https://oauth-proxy.archestra.ai/auth/${mcpConnectorId}` });
       } catch (error) {
         console.error('Failed to start MCP server OAuth:', error);
         return reply.code(500).send({ error: 'Internal server error' });

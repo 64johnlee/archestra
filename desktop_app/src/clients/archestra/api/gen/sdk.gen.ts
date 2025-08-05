@@ -3,7 +3,6 @@ import type { Client, Options as ClientOptions, TDataShape } from './client';
 import { client as _heyApiClient } from './client.gen';
 import type {
   ClearMcpRequestLogsData,
-  ClearMcpRequestLogsErrors,
   ClearMcpRequestLogsResponses,
   ConnectExternalMcpClientData,
   ConnectExternalMcpClientResponses,
@@ -20,21 +19,16 @@ import type {
   GetConnectedExternalMcpClientsData,
   GetConnectedExternalMcpClientsResponses,
   GetMcpRequestLogByIdData,
-  GetMcpRequestLogByIdErrors,
   GetMcpRequestLogByIdResponses,
   GetMcpRequestLogStatsData,
-  GetMcpRequestLogStatsErrors,
   GetMcpRequestLogStatsResponses,
   GetMcpRequestLogsData,
-  GetMcpRequestLogsErrors,
   GetMcpRequestLogsResponses,
   GetMcpServersData,
-  GetMcpServersErrors,
   GetMcpServersResponses,
   GetSupportedExternalMcpClientsData,
   GetSupportedExternalMcpClientsResponses,
   InstallMcpServerData,
-  InstallMcpServerErrors,
   InstallMcpServerResponses,
   StartMcpServerOauthData,
   StartMcpServerOauthErrors,
@@ -82,6 +76,10 @@ export const createChat = <ThrowOnError extends boolean = false>(options?: Optio
   return (options?.client ?? _heyApiClient).post<CreateChatResponses, unknown, ThrowOnError>({
     url: '/api/chat',
     ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
   });
 };
 
@@ -112,6 +110,10 @@ export const updateChat = <ThrowOnError extends boolean = false>(options: Option
   return (options.client ?? _heyApiClient).patch<UpdateChatResponses, unknown, ThrowOnError>({
     url: '/api/chat/{id}',
     ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 };
 
@@ -181,11 +183,7 @@ export const streamLlmResponse = <ThrowOnError extends boolean = false>(
 export const clearMcpRequestLogs = <ThrowOnError extends boolean = false>(
   options?: Options<ClearMcpRequestLogsData, ThrowOnError>
 ) => {
-  return (options?.client ?? _heyApiClient).delete<
-    ClearMcpRequestLogsResponses,
-    ClearMcpRequestLogsErrors,
-    ThrowOnError
-  >({
+  return (options?.client ?? _heyApiClient).delete<ClearMcpRequestLogsResponses, unknown, ThrowOnError>({
     url: '/api/mcp_request_log',
     ...options,
     headers: {
@@ -201,7 +199,7 @@ export const clearMcpRequestLogs = <ThrowOnError extends boolean = false>(
 export const getMcpRequestLogs = <ThrowOnError extends boolean = false>(
   options?: Options<GetMcpRequestLogsData, ThrowOnError>
 ) => {
-  return (options?.client ?? _heyApiClient).get<GetMcpRequestLogsResponses, GetMcpRequestLogsErrors, ThrowOnError>({
+  return (options?.client ?? _heyApiClient).get<GetMcpRequestLogsResponses, unknown, ThrowOnError>({
     url: '/api/mcp_request_log',
     ...options,
   });
@@ -213,12 +211,10 @@ export const getMcpRequestLogs = <ThrowOnError extends boolean = false>(
 export const getMcpRequestLogById = <ThrowOnError extends boolean = false>(
   options: Options<GetMcpRequestLogByIdData, ThrowOnError>
 ) => {
-  return (options.client ?? _heyApiClient).get<GetMcpRequestLogByIdResponses, GetMcpRequestLogByIdErrors, ThrowOnError>(
-    {
-      url: '/api/mcp_request_log/{id}',
-      ...options,
-    }
-  );
+  return (options.client ?? _heyApiClient).get<GetMcpRequestLogByIdResponses, unknown, ThrowOnError>({
+    url: '/api/mcp_request_log/{id}',
+    ...options,
+  });
 };
 
 /**
@@ -227,11 +223,7 @@ export const getMcpRequestLogById = <ThrowOnError extends boolean = false>(
 export const getMcpRequestLogStats = <ThrowOnError extends boolean = false>(
   options?: Options<GetMcpRequestLogStatsData, ThrowOnError>
 ) => {
-  return (options?.client ?? _heyApiClient).get<
-    GetMcpRequestLogStatsResponses,
-    GetMcpRequestLogStatsErrors,
-    ThrowOnError
-  >({
+  return (options?.client ?? _heyApiClient).get<GetMcpRequestLogStatsResponses, unknown, ThrowOnError>({
     url: '/api/mcp_request_log/stats',
     ...options,
   });
@@ -243,7 +235,7 @@ export const getMcpRequestLogStats = <ThrowOnError extends boolean = false>(
 export const getMcpServers = <ThrowOnError extends boolean = false>(
   options?: Options<GetMcpServersData, ThrowOnError>
 ) => {
-  return (options?.client ?? _heyApiClient).get<GetMcpServersResponses, GetMcpServersErrors, ThrowOnError>({
+  return (options?.client ?? _heyApiClient).get<GetMcpServersResponses, unknown, ThrowOnError>({
     url: '/api/mcp_server',
     ...options,
   });
@@ -253,14 +245,14 @@ export const getMcpServers = <ThrowOnError extends boolean = false>(
  * Install MCP server from catalog
  */
 export const installMcpServer = <ThrowOnError extends boolean = false>(
-  options: Options<InstallMcpServerData, ThrowOnError>
+  options?: Options<InstallMcpServerData, ThrowOnError>
 ) => {
-  return (options.client ?? _heyApiClient).post<InstallMcpServerResponses, InstallMcpServerErrors, ThrowOnError>({
+  return (options?.client ?? _heyApiClient).post<InstallMcpServerResponses, unknown, ThrowOnError>({
     url: '/api/mcp_server/install',
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...options?.headers,
     },
   });
 };
@@ -269,26 +261,30 @@ export const installMcpServer = <ThrowOnError extends boolean = false>(
  * Uninstall MCP server
  */
 export const uninstallMcpServer = <ThrowOnError extends boolean = false>(
-  options: Options<UninstallMcpServerData, ThrowOnError>
+  options?: Options<UninstallMcpServerData, ThrowOnError>
 ) => {
-  return (options.client ?? _heyApiClient).delete<UninstallMcpServerResponses, UninstallMcpServerErrors, ThrowOnError>({
-    url: '/api/mcp_server/{mcp_server_name}',
-    ...options,
-  });
+  return (options?.client ?? _heyApiClient).delete<UninstallMcpServerResponses, UninstallMcpServerErrors, ThrowOnError>(
+    {
+      url: '/api/mcp_server/{mcpServerName}',
+      ...options,
+    }
+  );
 };
 
 /**
  * Start MCP server OAuth flow
  */
 export const startMcpServerOauth = <ThrowOnError extends boolean = false>(
-  options: Options<StartMcpServerOauthData, ThrowOnError>
+  options?: Options<StartMcpServerOauthData, ThrowOnError>
 ) => {
-  return (options.client ?? _heyApiClient).post<StartMcpServerOauthResponses, StartMcpServerOauthErrors, ThrowOnError>({
-    url: '/api/mcp_server/start_oauth',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
+  return (options?.client ?? _heyApiClient).post<StartMcpServerOauthResponses, StartMcpServerOauthErrors, ThrowOnError>(
+    {
+      url: '/api/mcp_server/start_oauth',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    }
+  );
 };

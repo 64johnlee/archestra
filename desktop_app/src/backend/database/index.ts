@@ -36,8 +36,6 @@ if (!fs.existsSync(appDataPath)) {
 
 const db = drizzle({
   connection: DATABASE_PATH,
-  // https://orm.drizzle.team/docs/sql-schema-declaration#camel-and-snake-casing
-  casing: 'snake_case',
   // logger: true,
 });
 

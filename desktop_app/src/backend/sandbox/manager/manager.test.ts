@@ -1,6 +1,6 @@
 import getPort from 'get-port';
 
-import MCPServer from '@backend/models/mcpServer';
+import { McpServerModel } from '@backend/models';
 import PodmanRuntime from '@backend/sandbox/podman/runtime';
 import SandboxedMCP from '@backend/sandbox/sandboxedMCP';
 
@@ -48,7 +48,7 @@ describe('MCPServerSandboxManager', () => {
   describe('startAllInstalledMcpServers', () => {
     it('should successfully start all installed MCP servers', async () => {
       // Create test MCP servers
-      await MCPServer.create({
+      await McpServerModel.create({
         name: 'test-server-1',
         serverConfig: createMockServerConfig({
           image: 'test/image:1',
@@ -56,7 +56,7 @@ describe('MCPServerSandboxManager', () => {
         }),
       });
 
-      await MCPServer.create({
+      await McpServerModel.create({
         name: 'test-server-2',
         serverConfig: createMockServerConfig({
           image: 'test/image:2',
@@ -97,7 +97,7 @@ describe('MCPServerSandboxManager', () => {
 
     it('should handle server start failures gracefully', async () => {
       // Create test MCP server
-      await MCPServer.create({
+      await McpServerModel.create({
         name: 'failing-server',
         serverConfig: createMockServerConfig({
           image: 'test/failing:1',
@@ -139,12 +139,12 @@ describe('MCPServerSandboxManager', () => {
 
     it('should allocate unique ports for each server', async () => {
       // Create multiple test MCP servers
-      await MCPServer.create({
+      await McpServerModel.create({
         name: 'server-1',
         serverConfig: createMockServerConfig({ image: 'test:1' }),
       });
 
-      await MCPServer.create({
+      await McpServerModel.create({
         name: 'server-2',
         serverConfig: createMockServerConfig({ image: 'test:2' }),
       });
@@ -179,7 +179,7 @@ describe('MCPServerSandboxManager', () => {
     it('should handle concurrent server starts', async () => {
       // Create multiple servers
       const serverPromises = Array.from({ length: 3 }, (_, i) =>
-        MCPServer.create({
+        McpServerModel.create({
           name: `concurrent-server-${i}`,
           serverConfig: createMockServerConfig({ image: `test:${i}` }),
         })
@@ -236,7 +236,7 @@ describe('MCPServerSandboxManager', () => {
         env: { CUSTOM_VAR: 'value' },
       };
 
-      await MCPServer.create({
+      await McpServerModel.create({
         name: 'custom-server',
         serverConfig,
       });
@@ -257,7 +257,7 @@ describe('MCPServerSandboxManager', () => {
     });
 
     it('should handle get-port failures', async () => {
-      await MCPServer.create({
+      await McpServerModel.create({
         name: 'port-fail-server',
         serverConfig: createMockServerConfig(),
       });

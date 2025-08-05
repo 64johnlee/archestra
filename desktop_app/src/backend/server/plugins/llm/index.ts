@@ -1,16 +1,8 @@
-import { createOpenAI, openai } from '@ai-sdk/openai';
-import {
-  convertToModelMessages,
-  createUIMessageStream,
-  createUIMessageStreamResponse,
-  generateId,
-  readUIMessageStream,
-  streamText,
-} from 'ai';
+import { convertToModelMessages, generateId, streamText } from 'ai';
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { createOllama } from 'ollama-ai-provider-v2';
 
-import { chatService } from '@backend/models/chat';
+import ChatModel from '@backend/models/chat';
 
 interface StreamRequestBody {
   provider: 'openai' | 'anthropic' | 'ollama';
@@ -94,7 +86,7 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
             ],
           };
           const finalMessages = [...messages, assistantMessage];
-          await chatService.saveMessages(sessionId, finalMessages);
+          await ChatModel.saveMessages(sessionId, finalMessages);
         }
       } catch (error) {
         fastify.log.error('LLM streaming error:', error);
