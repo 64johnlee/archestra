@@ -1,3 +1,4 @@
+export * from './binaries';
 export * from './chat';
 export * from './externalMcpClient';
 export * from './mcpServer';
