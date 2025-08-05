@@ -1,8 +1,8 @@
 import { AlertCircle, CheckCircle, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { ToolCall, ToolCallStatus } from '@archestra/types';
 import { Badge } from '@ui/components/ui/badge';
+import { ToolCall, ToolCallStatus } from '@ui/types';
 
 interface ToolCallIndicatorProps {
   toolCalls: ToolCall[];

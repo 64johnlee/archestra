@@ -1,20 +1,20 @@
 import { AlertCircle, ChevronDown, Loader2, Server } from 'lucide-react';
 
-import { MCPServerStatus } from '@archestra/types';
 import { Button } from '@ui/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui/components/ui/collapsible';
-import { useMCPServersStore } from '@ui/stores/mcp-servers-store';
+import { useMcpServersStore } from '@ui/stores/mcp-servers-store';
+import { McpServerStatus } from '@ui/types';
 
-import MCPServer from './MCPServer';
+import McpServer from './McpServer';
 
-interface MCPServersProps {}
+interface McpServersProps {}
 
-export default function MCPServers(_props: MCPServersProps) {
-  const { installedMCPServers, loadingInstalledMCPServers, errorLoadingInstalledMCPServers } = useMCPServersStore();
+export default function McpServers(_props: McpServersProps) {
+  const { installedMcpServers, loadingInstalledMcpServers, errorLoadingInstalledMcpServers } = useMcpServersStore();
 
-  const totalNumberOfMCPTools = installedMCPServers.reduce((acc, server) => acc + server.tools.length, 0);
-  const hasErrorLoadingInstalledMCPServers = errorLoadingInstalledMCPServers !== null;
+  const totalNumberOfMcpTools = installedMcpServers.reduce((acc, server) => acc + server.tools.length, 0);
+  const hasErrorLoadingInstalledMcpServers = errorLoadingInstalledMcpServers !== null;
 
   return (
     <Collapsible defaultOpen>
@@ -25,7 +25,7 @@ export default function MCPServers(_props: MCPServersProps) {
               <CardTitle className="flex items-center gap-2">
                 <Server className="h-5 w-5" />
                 MCP Servers & Tools
-                {loadingInstalledMCPServers && <Loader2 className="h-4 w-4 animate-spin" />}
+                {loadingInstalledMcpServers && <Loader2 className="h-4 w-4 animate-spin" />}
               </CardTitle>
               <div className="flex items-center gap-2">
                 <ChevronDown className="h-4 w-4" />
@@ -36,41 +36,41 @@ export default function MCPServers(_props: MCPServersProps) {
 
         <CollapsibleContent>
           <CardContent className="space-y-4">
-            {hasErrorLoadingInstalledMCPServers && (
+            {hasErrorLoadingInstalledMcpServers && (
               <div className="text-center py-4 text-muted-foreground">
                 <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>Error loading MCP servers: {errorLoadingInstalledMCPServers}</p>
+                <p>Error loading MCP servers: {errorLoadingInstalledMcpServers}</p>
               </div>
             )}
-            {loadingInstalledMCPServers && (
+            {loadingInstalledMcpServers && (
               <div className="text-center py-4 text-muted-foreground">
                 <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
                 <p>Loading MCP servers...</p>
               </div>
             )}
-            {installedMCPServers.length === 0 && !loadingInstalledMCPServers && !hasErrorLoadingInstalledMCPServers ? (
+            {installedMcpServers.length === 0 && !loadingInstalledMcpServers && !hasErrorLoadingInstalledMcpServers ? (
               <div className="text-center py-4 text-muted-foreground">
                 <Server className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>No MCP servers configured</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {installedMCPServers.map((server) => (
-                  <MCPServer key={server.name} mcpServer={server} />
+                {installedMcpServers.map((server) => (
+                  <McpServer key={server.name} mcpServer={server} />
                 ))}
               </div>
             )}
 
-            {installedMCPServers.length > 0 && (
+            {installedMcpServers.length > 0 && (
               <div className="border-t pt-3 mt-4">
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <span>
-                    Total: {installedMCPServers.length} server
-                    {installedMCPServers.length !== 1 ? 's' : ''}, {totalNumberOfMCPTools} tool
-                    {totalNumberOfMCPTools !== 1 ? 's' : ''}
+                    Total: {installedMcpServers.length} server
+                    {installedMcpServers.length !== 1 ? 's' : ''}, {totalNumberOfMcpTools} tool
+                    {totalNumberOfMcpTools !== 1 ? 's' : ''}
                   </span>
                   <span>
-                    {installedMCPServers.filter((s) => s.status === MCPServerStatus.Connected).length} connected
+                    {installedMcpServers.filter((s) => s.status === McpServerStatus.Connected).length} connected
                   </span>
                 </div>
               </div>

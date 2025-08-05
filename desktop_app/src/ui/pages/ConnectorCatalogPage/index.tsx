@@ -14,20 +14,20 @@ import {
 import { Badge } from '@ui/components/ui/badge';
 import { Button } from '@ui/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/ui/card';
-import { useMCPServersStore } from '@ui/stores/mcp-servers-store';
+import { useMcpServersStore } from '@ui/stores/mcp-servers-store';
 
 interface ConnectorCatalogPageProps {}
 
 export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) {
   const {
     connectorCatalog,
-    installedMCPServers,
+    installedMcpServers,
     loadingConnectorCatalog,
-    installingMCPServerName,
-    uninstallingMCPServerName,
-    installMCPServerFromConnectorCatalog,
-    uninstallMCPServer,
-  } = useMCPServersStore();
+    installingMcpServerName,
+    uninstallingMcpServerName,
+    installMcpServerFromConnectorCatalog,
+    uninstallMcpServer,
+  } = useMcpServersStore();
 
   const getCategoryIcon = (category: string) => {
     switch (category.toLowerCase()) {
@@ -69,8 +69,8 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
               {connectorCatalog.map((mcpServer) => {
                 const { id, title, description, category, server_config, oauth } = mcpServer;
 
-                const isInstalled = installedMCPServers.some((server) => server.name === title);
-                const isInstalling = installingMCPServerName === title;
+                const isInstalled = installedMcpServers.some((server) => server.name === title);
+                const isInstalling = installingMcpServerName === title;
 
                 return (
                   <Card
@@ -116,11 +116,11 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => uninstallMCPServer(title)}
-                              disabled={uninstallingMCPServerName === title}
+                              onClick={() => uninstallMcpServer(title)}
+                              disabled={uninstallingMcpServerName === title}
                               className="flex items-center gap-2"
                             >
-                              {uninstallingMCPServerName === title ? (
+                              {uninstallingMcpServerName === title ? (
                                 <>
                                   <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                                   Uninstalling...
@@ -135,7 +135,7 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
                           ) : (
                             <Button
                               size="sm"
-                              onClick={() => installMCPServerFromConnectorCatalog(mcpServer)}
+                              onClick={() => installMcpServerFromConnectorCatalog(mcpServer)}
                               disabled={isInstalling}
                               className="flex items-center gap-2"
                             >

@@ -1,11 +1,11 @@
-import type { ToolWithMCPServerName } from '@archestra/types';
+import type { ToolWithMcpServerName } from '@ui/types';
 
-import { convertMCPServerToolsToOllamaTools } from './ollama';
+import { convertMcpServerToolsToOllamaTools } from './ollama';
 
 describe('ollama utility functions', () => {
-  describe('convertMCPServerToolsToOllamaTools', () => {
+  describe('convertMcpServerToolsToOllamaTools', () => {
     it('should convert MCP server tools to Ollama tools format', () => {
-      const mockTools: ToolWithMCPServerName[] = [
+      const mockTools: ToolWithMcpServerName[] = [
         {
           name: 'channel_get_history',
           description: 'Get channel history',
@@ -48,7 +48,7 @@ describe('ollama utility functions', () => {
         },
       ];
 
-      const result = convertMCPServerToolsToOllamaTools(mockTools);
+      const result = convertMcpServerToolsToOllamaTools(mockTools);
 
       expect(result).toHaveLength(3);
       expect(result).toEqual([
@@ -99,7 +99,7 @@ describe('ollama utility functions', () => {
     });
 
     it('should handle tools without description', () => {
-      const mockTools: ToolWithMCPServerName[] = [
+      const mockTools: ToolWithMcpServerName[] = [
         {
           name: 'test_tool',
           description: undefined,
@@ -112,7 +112,7 @@ describe('ollama utility functions', () => {
         },
       ];
 
-      const result = convertMCPServerToolsToOllamaTools(mockTools);
+      const result = convertMcpServerToolsToOllamaTools(mockTools);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
@@ -129,9 +129,9 @@ describe('ollama utility functions', () => {
     });
 
     it('should handle empty tools object', () => {
-      const mockTools: ToolWithMCPServerName[] = [];
+      const mockTools: ToolWithMcpServerName[] = [];
 
-      const result = convertMCPServerToolsToOllamaTools(mockTools);
+      const result = convertMcpServerToolsToOllamaTools(mockTools);
 
       expect(result).toHaveLength(0);
       expect(result).toEqual([]);

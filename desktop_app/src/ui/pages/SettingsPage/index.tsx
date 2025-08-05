@@ -1,16 +1,16 @@
 import { Server, Users } from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/components/ui/tabs';
-import { useMCPServersStore } from '@ui/stores/mcp-servers-store';
+import { useMcpServersStore } from '@ui/stores/mcp-servers-store';
 
-import ArchestraMCPServer from './ArchestraMCPServer';
+import ArchestraMcpServer from './ArchestraMcpServer';
 import ExternalClients from './ExternalClients';
-import MCPRequestLogs from './MCPRequestLogs';
-import MCPServers from './MCPServers';
+import McpRequestLogs from './McpRequestLogs';
+import McpServers from './McpServers';
 
 export default function SettingsPage() {
-  const { archestraMCPServer } = useMCPServersStore();
-  const archestraMCPServerIsLoading = archestraMCPServer === null;
+  const { archestraMcpServer } = useMcpServersStore();
+  const archestraMcpServerIsLoading = archestraMcpServer === null;
 
   return (
     <div className="space-y-6">
@@ -34,13 +34,13 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="servers" className="space-y-6">
-          {archestraMCPServerIsLoading ? (
+          {archestraMcpServerIsLoading ? (
             <div>Loading Archestra MCP server...</div>
           ) : (
-            <ArchestraMCPServer archestraMCPServer={archestraMCPServer} />
+            <ArchestraMcpServer archestraMcpServer={archestraMcpServer} />
           )}
-          <MCPServers />
-          <MCPRequestLogs />
+          <McpServers />
+          <McpRequestLogs />
         </TabsContent>
 
         <TabsContent value="clients" className="space-y-6">

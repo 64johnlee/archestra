@@ -1,10 +1,10 @@
 import { Tool as OllamaTool } from 'ollama/browser';
 
-import { ToolWithMCPServerName } from '@archestra/types';
+import { ToolWithMcpServerName } from '@ui/types';
 
 import { convertServerAndToolNameToArchestraToolName } from './tools';
 
-export const convertMCPServerToolsToOllamaTools = (tools: ToolWithMCPServerName[]): OllamaTool[] => {
+export const convertMcpServerToolsToOllamaTools = (tools: ToolWithMcpServerName[]): OllamaTool[] => {
   return tools.map(({ serverName, name, description, inputSchema }) => ({
     type: 'Function',
     function: {

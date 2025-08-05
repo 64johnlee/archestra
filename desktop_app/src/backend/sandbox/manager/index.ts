@@ -4,7 +4,7 @@ import PodmanContainer from '@backend/sandbox/podman/container';
 import PodmanRuntime from '@backend/sandbox/podman/runtime';
 import websocketService from '@backend/websocket';
 
-class MCPServerSandboxManager {
+class McpServerSandboxManager {
   private podmanRuntime: InstanceType<typeof PodmanRuntime>;
   private mcpServerNameToPodmanContainerMap: Map<string, PodmanContainer> = new Map();
 
@@ -116,4 +116,4 @@ class MCPServerSandboxManager {
   }
 }
 
-export default new MCPServerSandboxManager();
+export default new McpServerSandboxManager();

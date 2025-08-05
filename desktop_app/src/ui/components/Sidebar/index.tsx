@@ -18,7 +18,7 @@ import { NavigationSubViewKey, NavigationViewKey } from '@ui/types';
 
 import ChatSidebarSection from './ChatSidebarSection';
 import LLMProvidersSidebarSection from './LLMProvidersSidebarSection';
-import MCPServerWithToolsSidebarSection from './MCPServerWithToolsSidebarSection';
+import McpServerWithToolsSidebarSection from './McpServerWithToolsSidebarSection';
 
 interface SidebarProps extends React.PropsWithChildren {}
 
@@ -67,7 +67,7 @@ export default function Sidebar({ children }: SidebarProps) {
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
-            {activeView === NavigationViewKey.Chat && <MCPServerWithToolsSidebarSection />}
+            {activeView === NavigationViewKey.Chat && <McpServerWithToolsSidebarSection />}
           </SidebarContent>
         </SidebarBase>
         <SidebarInset className="overflow-hidden">

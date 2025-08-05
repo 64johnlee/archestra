@@ -20,13 +20,13 @@ import { Label } from '@ui/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/components/ui/select';
 import { Switch } from '@ui/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/components/ui/table';
-import { useMCPLogsStore } from '@ui/stores/mcp-logs-store';
+import { useMcpLogsStore } from '@ui/stores/mcp-logs-store';
 
 import FilterBar from './FilterBar';
 import LogDetailModal from './LogDetailModal';
 import { formatDuration, formatTimestamp, getStatusColor } from './utils';
 
-export default function MCPRequestLogs() {
+export default function McpRequestLogs() {
   const {
     logs,
     totalPages,
@@ -49,7 +49,7 @@ export default function MCPRequestLogs() {
     clearLogs,
     refresh,
     resetFilters,
-  } = useMCPLogsStore();
+  } = useMcpLogsStore();
 
   const [isOpen, setIsOpen] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);

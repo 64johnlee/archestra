@@ -1,8 +1,8 @@
-import type { MCPServerToolsMap, ToolWithMCPServerName } from '@archestra/types';
+import type { McpServerToolsMap, ToolWithMcpServerName } from '@ui/types';
 
-export const getToolsGroupedByServer = (tools: ToolWithMCPServerName[]) => {
+export const getToolsGroupedByServer = (tools: ToolWithMcpServerName[]) => {
   return tools.reduce((acc, tool) => {
     acc[tool.serverName] = [...(acc[tool.serverName] || []), tool];
     return acc;
-  }, {} as MCPServerToolsMap);
+  }, {} as McpServerToolsMap);
 };

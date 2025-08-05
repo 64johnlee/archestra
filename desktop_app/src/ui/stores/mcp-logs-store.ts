@@ -8,7 +8,7 @@ import {
   getMcpRequestLogs,
 } from '@clients/archestra/api/gen';
 
-interface MCPLogsStore {
+interface McpLogsStore {
   // State
   logs: McpRequestLog[];
   totalPages: number;
@@ -40,7 +40,7 @@ interface MCPLogsStore {
 
 const initialFilters: McpRequestLogFilters = {};
 
-export const useMCPLogsStore = create<MCPLogsStore>((set, get) => ({
+export const useMcpLogsStore = create<McpLogsStore>((set, get) => ({
   // Initial state
   logs: [],
   totalPages: 0,
@@ -187,11 +187,11 @@ export const useMCPLogsStore = create<MCPLogsStore>((set, get) => ({
 let refreshIntervalId: NodeJS.Timeout | null = null;
 
 // Subscribe to auto-refresh changes
-useMCPLogsStore.subscribe((state) => {
+useMcpLogsStore.subscribe((state) => {
   if (state.autoRefresh && !refreshIntervalId) {
     refreshIntervalId = setInterval(() => {
-      if (useMCPLogsStore.getState().autoRefresh) {
-        useMCPLogsStore.getState().refresh();
+      if (useMcpLogsStore.getState().autoRefresh) {
+        useMcpLogsStore.getState().refresh();
       }
     }, state.refreshInterval * 1000);
   } else if (!state.autoRefresh && refreshIntervalId) {

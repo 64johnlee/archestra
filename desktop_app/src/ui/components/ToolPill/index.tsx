@@ -3,7 +3,7 @@ import { XIcon } from 'lucide-react';
 import { ToolHoverCard } from '@ui/components/ToolHoverCard';
 import { Badge } from '@ui/components/ui/badge';
 import { formatToolName } from '@ui/lib/utils/tools';
-import { useMCPServersStore } from '@ui/stores/mcp-servers-store';
+import { useMcpServersStore } from '@ui/stores/mcp-servers-store';
 import type { ToolWithMcpServerName } from '@ui/types';
 
 import { ToolServerIcon } from '../ToolServerIcon';
@@ -15,7 +15,7 @@ interface ToolPillProps {
 
 export default function ToolPill({ tool }: ToolPillProps) {
   const { serverName, name, enabled } = tool;
-  const { removeSelectedTool } = useMCPServersStore();
+  const { removeSelectedTool } = useMcpServersStore();
 
   return (
     <ToolHoverCard

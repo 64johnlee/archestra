@@ -9,7 +9,7 @@ import { mcpRequestLogs } from '@backend/database/schema/mcpRequestLog';
 export const insertMcpRequestLogSchema = createInsertSchema(mcpRequestLogs);
 export const selectMcpRequestLogSchema = createSelectSchema(mcpRequestLogs);
 
-export default class MCPRequestLog {
+export default class McpRequestLog {
   /**
    * Create a new request log entry
    */

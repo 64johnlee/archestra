@@ -4,7 +4,11 @@ import { CallToolRequest, ClientCapabilities } from '@modelcontextprotocol/sdk/t
 import { create } from 'zustand';
 
 import { getMcpServers, installMcpServer, startMcpServerOauth, uninstallMcpServer } from '@clients/archestra/api/gen';
-import { type McpServer as McpServerCatalogEntry, getSearch as searchCatalog } from '@clients/archestra/catalog/gen';
+import {
+  McpServer,
+  type McpServer as McpServerCatalogEntry,
+  getSearch as searchCatalog,
+} from '@clients/archestra/catalog/gen';
 import config from '@ui/config';
 import { getToolsGroupedByServer } from '@ui/lib/utils/mcp-server';
 import { formatToolName } from '@ui/lib/utils/tools';
@@ -12,38 +16,38 @@ import { ConnectedMcpServer, McpServerStatus, McpServerToolsMap, ToolWithMcpServ
 
 const ARCHESTRA_MCP_SERVER_NAME = 'archestra';
 
-interface MCPServersState {
-  archestraMCPServer: ConnectedMcpServer | null;
+interface McpServersState {
+  archestraMcpServer: ConnectedMcpServer | null;
 
-  installedMCPServers: ConnectedMcpServer[];
-  loadingInstalledMCPServers: boolean;
-  errorLoadingInstalledMCPServers: string | null;
+  installedMcpServers: ConnectedMcpServer[];
+  loadingInstalledMcpServers: boolean;
+  errorLoadingInstalledMcpServers: string | null;
 
   connectorCatalog: McpServerCatalogEntry[];
   loadingConnectorCatalog: boolean;
   errorFetchingConnectorCatalog: string | null;
 
-  installingMCPServerName: string | null;
-  errorInstallingMCPServer: string | null;
+  installingMcpServerName: string | null;
+  errorInstallingMcpServer: string | null;
 
-  uninstallingMCPServerName: string | null;
-  errorUninstallingMCPServer: string | null;
+  uninstallingMcpServerName: string | null;
+  errorUninstallingMcpServer: string | null;
 
   selectedTools: ToolWithMcpServerName[];
   toolSearchQuery: string;
 }
 
-interface MCPServersActions {
-  loadInstalledMCPServers: () => Promise<void>;
-  addMCPServerToInstalledMCPServers: (mcpServer: McpServer) => void;
-  removeMCPServerFromInstalledMCPServers: (mcpServerName: string) => void;
+interface McpServersActions {
+  loadInstalledMcpServers: () => Promise<void>;
+  addMcpServerToInstalledMcpServers: (mcpServer: McpServer) => void;
+  removeMcpServerFromInstalledMcpServers: (mcpServerName: string) => void;
 
   loadConnectorCatalog: () => Promise<void>;
-  installMCPServerFromConnectorCatalog: (mcpServer: McpServerCatalogEntry) => Promise<void>;
-  uninstallMCPServer: (mcpServerName: string) => Promise<void>;
+  installMcpServerFromConnectorCatalog: (mcpServer: McpServerCatalogEntry) => Promise<void>;
+  uninstallMcpServer: (mcpServerName: string) => Promise<void>;
 
-  connectToArchestraMCPServer: () => Promise<void>;
-  connectToMCPServer: (serverName: string, url: string) => Promise<Client | null>;
+  connectToArchestraMcpServer: () => Promise<void>;
+  connectToMcpServer: (serverName: string, url: string) => Promise<Client | null>;
 
   executeTool: (serverName: string, request: CallToolRequest['params']) => Promise<any>;
   getAllAvailableTools: () => ToolWithMcpServerName[];
@@ -57,13 +61,13 @@ interface MCPServersActions {
   setToolSearchQuery: (query: string) => void;
 }
 
-type MCPServersStore = MCPServersState & MCPServersActions;
+type McpServersStore = McpServersState & McpServersActions;
 
-export function constructProxiedMCPServerUrl(mcpServerName: string) {
+export function constructProxiedMcpServerUrl(mcpServerName: string) {
   return `${config.archestra.mcpProxyUrl}/${mcpServerName}`;
 }
 
-const configureMCPClient = async (
+const configureMcpClient = async (
   clientName: string,
   clientUrl: string,
   clientCapabilities: ClientCapabilities
@@ -85,7 +89,7 @@ const configureMCPClient = async (
   return client;
 };
 
-const initializeConnectedMCPServerTools = async (
+const initializeConnectedMcpServerTools = async (
   client: Client,
   serverName: string
 ): Promise<ToolWithMcpServerName[]> => {
@@ -97,33 +101,33 @@ const initializeConnectedMCPServerTools = async (
   }));
 };
 
-export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
+export const useMcpServersStore = create<McpServersStore>((set, get) => ({
   // State
-  archestraMCPServer: null,
+  archestraMcpServer: null,
 
-  installedMCPServers: [],
-  loadingInstalledMCPServers: false,
-  errorLoadingInstalledMCPServers: null,
+  installedMcpServers: [],
+  loadingInstalledMcpServers: false,
+  errorLoadingInstalledMcpServers: null,
 
   connectorCatalog: [],
   loadingConnectorCatalog: false,
   errorFetchingConnectorCatalog: null,
 
-  installingMCPServerName: null,
-  errorInstallingMCPServer: null,
+  installingMcpServerName: null,
+  errorInstallingMcpServer: null,
 
-  uninstallingMCPServerName: null,
-  errorUninstallingMCPServer: null,
+  uninstallingMcpServerName: null,
+  errorUninstallingMcpServer: null,
 
   selectedTools: [],
   toolSearchQuery: '',
 
   // Actions
-  loadInstalledMCPServers: async () => {
+  loadInstalledMcpServers: async () => {
     try {
       set({
-        loadingInstalledMCPServers: true,
-        errorLoadingInstalledMCPServers: null,
+        loadingInstalledMcpServers: true,
+        errorLoadingInstalledMcpServers: null,
       });
 
       const response = await getMcpServers();
@@ -131,7 +135,7 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
       if ('data' in response && response.data) {
         // Add servers and connect to them
         for (const server of response.data) {
-          get().addMCPServerToInstalledMCPServers(server);
+          get().addMcpServerToInstalledMcpServers(server);
         }
       } else if ('error' in response) {
         const errorMessage = typeof response.error === 'string' ? response.error : JSON.stringify(response.error);
@@ -139,20 +143,20 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      set({ errorLoadingInstalledMCPServers: errorMessage });
+      set({ errorLoadingInstalledMcpServers: errorMessage });
     } finally {
-      set({ loadingInstalledMCPServers: false });
+      set({ loadingInstalledMcpServers: false });
     }
   },
 
-  addMCPServerToInstalledMCPServers: (mcpServer: McpServer) => {
+  addMcpServerToInstalledMcpServers: (mcpServer: McpServer) => {
     set((state) => ({
-      installedMCPServers: [
-        ...state.installedMCPServers,
+      installedMcpServers: [
+        ...state.installedMcpServers,
         {
           ...mcpServer,
           tools: [],
-          url: constructProxiedMCPServerUrl(mcpServer.name),
+          url: constructProxiedMcpServerUrl(mcpServer.name),
           status: McpServerStatus.Connecting,
           error: null,
           client: null,
@@ -161,21 +165,21 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
     }));
 
     // Connect to the newly added server
-    const newServer = get().installedMCPServers.find((s) => s.name === mcpServer.name);
+    const newServer = get().installedMcpServers.find((s) => s.name === mcpServer.name);
     if (newServer) {
-      get().connectToMCPServer(newServer.name, newServer.url);
+      get().connectToMcpServer(newServer.name, newServer.url);
     }
   },
 
-  removeMCPServerFromInstalledMCPServers: (mcpServerName: string) => {
+  removeMcpServerFromInstalledMcpServers: (mcpServerName: string) => {
     // Close the client connection before removing
-    const server = get().installedMCPServers.find((s) => s.name === mcpServerName);
+    const server = get().installedMcpServers.find((s) => s.name === mcpServerName);
     if (server?.client) {
       server.client.close();
     }
 
     set((state) => ({
-      installedMCPServers: state.installedMCPServers.filter((mcpServer) => mcpServer.name !== mcpServerName),
+      installedMcpServers: state.installedMcpServers.filter((mcpServer) => mcpServer.name !== mcpServerName),
     }));
   },
 
@@ -204,11 +208,11 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
     }
   },
 
-  installMCPServerFromConnectorCatalog: async ({ oauth, name, id }: McpServerCatalogEntry) => {
+  installMcpServerFromConnectorCatalog: async ({ oauth, name, id }: McpServerCatalogEntry) => {
     try {
       set({
-        installingMCPServerName: name,
-        errorInstallingMCPServer: null,
+        installingMcpServerName: name,
+        errorInstallingMcpServer: null,
       });
 
       // Check if OAuth is required
@@ -226,7 +230,7 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
             throw new Error(response.error as string);
           }
         } catch (error) {
-          set({ errorInstallingMCPServer: error as string });
+          set({ errorInstallingMcpServer: error as string });
         }
       } else {
         const response = await installMcpServer({
@@ -238,20 +242,20 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
         }
 
         // Refresh the MCP servers list
-        await useMCPServersStore.getState().loadInstalledMCPServers();
+        await useMcpServersStore.getState().loadInstalledMcpServers();
       }
     } catch (error) {
-      set({ errorInstallingMCPServer: error as string });
+      set({ errorInstallingMcpServer: error as string });
     } finally {
-      set({ installingMCPServerName: null });
+      set({ installingMcpServerName: null });
     }
   },
 
-  uninstallMCPServer: async (mcpServerName: string) => {
+  uninstallMcpServer: async (mcpServerName: string) => {
     try {
       set({
-        uninstallingMCPServerName: mcpServerName,
-        errorUninstallingMCPServer: null,
+        uninstallingMcpServerName: mcpServerName,
+        errorUninstallingMcpServer: null,
       });
 
       const response = await uninstallMcpServer({
@@ -263,15 +267,15 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
       }
 
       // Remove from MCP servers store
-      useMCPServersStore.getState().removeMCPServerFromInstalledMCPServers(mcpServerName);
+      useMcpServersStore.getState().removeMcpServerFromInstalledMcpServers(mcpServerName);
     } catch (error) {
-      set({ errorUninstallingMCPServer: error as string });
+      set({ errorUninstallingMcpServer: error as string });
     } finally {
-      set({ uninstallingMCPServerName: null });
+      set({ uninstallingMcpServerName: null });
     }
   },
 
-  connectToArchestraMCPServer: async () => {
+  connectToArchestraMcpServer: async () => {
     const MAX_RETRIES = 30;
     const RETRY_DELAY_MILLISECONDS = 1000;
     let retries = 0;
@@ -295,7 +299,7 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
 
     // If we've exhausted all retries, set error state
     set({
-      archestraMCPServer: {
+      archestraMcpServer: {
         name: ARCHESTRA_MCP_SERVER_NAME,
         id: 0,
         createdAt: new Date().toISOString(),
@@ -313,10 +317,10 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
     });
   },
 
-  connectToMCPServer: async (serverName: string, url: string) => {
+  connectToMcpServer: async (serverName: string, url: string) => {
     if (!url) {
       set((state) => ({
-        installedMCPServers: state.installedMCPServers.map((server) =>
+        installedMcpServers: state.installedMcpServers.map((server) =>
           server.name === serverName
             ? {
                 ...server,
@@ -331,7 +335,7 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
     }
 
     try {
-      const client = await configureMCPClient(`${serverName}-client`, url, {
+      const client = await configureMcpClient(`${serverName}-client`, url, {
         tools: {},
       });
 
@@ -340,10 +344,10 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
       }
 
       // List available tools
-      const tools = await initializeConnectedMCPServerTools(client, serverName);
+      const tools = await initializeConnectedMcpServerTools(client, serverName);
 
-      set(({ installedMCPServers }) => ({
-        installedMCPServers: installedMCPServers.map((server) =>
+      set(({ installedMcpServers }) => ({
+        installedMcpServers: installedMcpServers.map((server) =>
           server.name === serverName
             ? {
                 ...server,
@@ -367,7 +371,7 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
       }
 
       set((state) => ({
-        installedMCPServers: state.installedMCPServers.map((server) =>
+        installedMcpServers: state.installedMcpServers.map((server) =>
           server.name === serverName
             ? {
                 ...server,
@@ -383,13 +387,13 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
   },
 
   executeTool: async (serverName: string, toolCallRequest: CallToolRequest['params']) => {
-    const { archestraMCPServer, installedMCPServers } = get();
+    const { archestraMcpServer, installedMcpServers } = get();
 
     let client: Client | null = null;
-    if (serverName === ARCHESTRA_MCP_SERVER_NAME && archestraMCPServer) {
-      client = archestraMCPServer.client;
+    if (serverName === ARCHESTRA_MCP_SERVER_NAME && archestraMcpServer) {
+      client = archestraMcpServer.client;
     } else {
-      const server = installedMCPServers.find((s) => s.name === serverName);
+      const server = installedMcpServers.find((s) => s.name === serverName);
       client = server?.client || null;
     }
 
@@ -406,8 +410,8 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
   },
 
   getAllAvailableTools: () => {
-    const { installedMCPServers } = get();
-    return installedMCPServers.flatMap((server) => server.tools);
+    const { installedMcpServers } = get();
+    return installedMcpServers.flatMap((server) => server.tools);
   },
 
   getFilteredTools: () => {
@@ -457,15 +461,15 @@ export const useMCPServersStore = create<MCPServersStore>((set, get) => ({
 }));
 
 // Initialize connections on store creation
-useMCPServersStore.getState().connectToArchestraMCPServer();
-useMCPServersStore.getState().loadInstalledMCPServers();
-useMCPServersStore.getState().loadConnectorCatalog();
+useMcpServersStore.getState().connectToArchestraMcpServer();
+useMcpServersStore.getState().loadInstalledMcpServers();
+useMcpServersStore.getState().loadConnectorCatalog();
 
 // Cleanup on window unload
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
-    const store = useMCPServersStore.getState();
-    store.archestraMCPServer?.client?.close();
-    store.installedMCPServers.forEach((server) => server.client?.close());
+    const store = useMcpServersStore.getState();
+    store.archestraMcpServer?.client?.close();
+    store.installedMcpServers.forEach((server) => server.client?.close());
   });
 }

@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { runDatabaseMigrations } from '@backend/database';
 import { OllamaServer } from '@backend/llms/ollama';
-import { MCPServerSandboxManager } from '@backend/sandbox';
+import { McpServerSandboxManager } from '@backend/sandbox';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -108,14 +108,14 @@ app.on('ready', async () => {
    * In the near-future we should hook this up to our websocket server and send a message to the renderer
    * to show a notifications/progress-bar to the user in the app UI
    */
-  MCPServerSandboxManager.onSandboxStartupSuccess = () => {
+  McpServerSandboxManager.onSandboxStartupSuccess = () => {
     console.log('Sandbox startup successful 🥳');
   };
-  MCPServerSandboxManager.onSandboxStartupError = (error) => {
+  McpServerSandboxManager.onSandboxStartupError = (error) => {
     console.error('Sandbox startup error 🥲:', error);
   };
 
-  MCPServerSandboxManager.startAllInstalledMcpServers();
+  McpServerSandboxManager.startAllInstalledMcpServers();
 
   // Start Fastify server with Ollama port
   const ollamaPort = ollamaServer.getPort();
@@ -164,7 +164,7 @@ app.on('before-quit', async (event) => {
       }
     }
 
-    MCPServerSandboxManager.turnOffSandbox();
+    McpServerSandboxManager.turnOffSandbox();
 
     // Kill the server process gracefully
     if (serverProcess) {
@@ -205,7 +205,7 @@ process.on('exit', async () => {
     await ollamaServer.stopServer();
   }
 
-  MCPServerSandboxManager.turnOffSandbox();
+  McpServerSandboxManager.turnOffSandbox();
 });
 
 // In this file you can include the rest of your app's specific main process

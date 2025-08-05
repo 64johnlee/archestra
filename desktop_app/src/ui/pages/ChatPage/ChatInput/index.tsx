@@ -22,7 +22,7 @@ import { AI_PROVIDERS } from '@ui/hooks/use-ai-chat-backend';
 import { cn } from '@ui/lib/utils/tailwind';
 import { useChatStore } from '@ui/stores/chat-store';
 import { useDeveloperModeStore } from '@ui/stores/developer-mode-store';
-import { useMCPServersStore } from '@ui/stores/mcp-servers-store';
+import { useMcpServersStore } from '@ui/stores/mcp-servers-store';
 
 interface ChatInputProps {
   input: string;
@@ -33,7 +33,7 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({ input, handleInputChange, handleSubmit, isLoading, stop }: ChatInputProps) {
-  const { selectedTools } = useMCPServersStore();
+  const { selectedTools } = useMcpServersStore();
   const { isDeveloperMode, toggleDeveloperMode } = useDeveloperModeStore();
   const { selectedAIModel, setSelectedAIModel } = useChatStore();
 
