@@ -1,6 +1,7 @@
 // import { mcpServersTable } from '@backend/database/schema/mcpServer';
 import PodmanRuntime from '@backend/sandbox/podman/runtime';
 import SandboxedMCP from '@backend/sandbox/sandboxedMCP';
+import websocketService from '@backend/websocket';
 
 // TODO: this should use the MCPServer model schema once we agree w/ Matvey what the catalog schema will look like
 type InstalledMcpServer = {
@@ -52,10 +53,44 @@ class MCPServerSandboxManager {
     console.log('Podman machine installation successful. Starting all installed MCP servers...');
 
     const mcpServers = await this.getInstalledMcpServers();
+    const totalServers = mcpServers.length;
+    let successfulServers = 0;
+    let failedServers = 0;
 
     // Start all servers in parallel
-    const startPromises = mcpServers.map((mcpServer) => this.startServer(mcpServer));
+    const startPromises = mcpServers.map(async (mcpServer) => {
+      websocketService.broadcast({
+        type: 'sandbox-mcp-server-starting',
+        payload: { serverName: mcpServer.name },
+      });
+
+      try {
+        await this.startServer(mcpServer);
+        successfulServers++;
+        websocketService.broadcast({
+          type: 'sandbox-mcp-server-started',
+          payload: { serverName: mcpServer.name },
+        });
+      } catch (error) {
+        failedServers++;
+        websocketService.broadcast({
+          type: 'sandbox-mcp-server-failed',
+          payload: { 
+            serverName: mcpServer.name, 
+            error: error instanceof Error ? error.message : String(error) 
+          },
+        });
+        throw error;
+      }
+    });
+
     const results = await Promise.allSettled(startPromises);
+
+    // Broadcast completion
+    websocketService.broadcast({
+      type: 'sandbox-startup-completed',
+      payload: { totalServers, successfulServers, failedServers },
+    });
 
     // Check for failures
     const failures = results.filter((result) => result.status === 'rejected');
@@ -87,6 +122,10 @@ class MCPServerSandboxManager {
    * Start the archestra podman machine and all installed MCP server containers
    */
   startAllInstalledMcpServers() {
+    websocketService.broadcast({
+      type: 'sandbox-startup-started',
+      payload: {},
+    });
     this.podmanRuntime.ensureArchestraMachineIsRunning();
   }
 

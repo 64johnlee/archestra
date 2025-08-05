@@ -1,10 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { WebSocket } from 'ws';
 
-export interface WebSocketMessage {
-  type: 'chat-title-updated' | 'echo';
-  payload: any;
-}
+import { WebSocketMessage } from '@types';
 
 class WebSocketService {
   private fastify: FastifyInstance | null = null;
@@ -33,16 +30,6 @@ class WebSocketService {
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(messageStr);
       }
-    });
-  }
-
-  broadcastChatTitleUpdate(chatId: number, title: string) {
-    this.broadcast({
-      type: 'chat-title-updated',
-      payload: {
-        chat_id: chatId,
-        title,
-      },
     });
   }
 }

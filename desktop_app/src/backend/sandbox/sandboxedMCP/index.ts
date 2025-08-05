@@ -1,21 +1,22 @@
-import { PodmanContainer, PodmanImage } from '@backend/sandbox/podman';
+import { PodmanContainer } from '@backend/sandbox/podman';
 
 export default class SandboxedMCP {
-  private imageName: string;
+  private mcpServerName: string;
+  private command: string;
+  private args: string[];
   private envVars: Record<string, string>;
 
-  constructor(imageName: string, envVars: Record<string, string>) {
-    this.imageName = imageName;
+  constructor(mcpServerName: string, command: string, args: string[], envVars: Record<string, string>) {
+    this.mcpServerName = mcpServerName;
+    this.command = command;
+    this.args = args;
     this.envVars = envVars;
   }
 
   async start() {
-    console.log(`Starting MCP server ${this.imageName}`);
+    console.log(`Starting MCP server ${this.mcpServerName} with command: ${this.command} ${this.args.join(' ')}`);
 
-    const image = new PodmanImage(this.imageName);
-    await image.pullImage();
-
-    const container = new PodmanContainer(this.imageName, this.envVars);
+    const container = new PodmanContainer(this.mcpServerName, this.command, this.args, this.envVars);
     await container.startOrCreateContainer();
   }
 

@@ -1,13 +1,16 @@
+import config from '@backend/config';
 import { containerCreateLibpod, containerStartLibpod, containerWaitLibpod } from '@clients/libpod/gen/sdk.gen';
 
 export default class PodmanContainer {
   private containerName: string;
-  private imageName: string;
+  private command: string;
+  private args: string[];
   private envVars: Record<string, string>;
 
-  constructor(imageName: string, envVars: Record<string, string>) {
-    this.containerName = `archestra-ai-${imageName.replaceAll('/', '-')}-mcp-server`;
-    this.imageName = imageName;
+  constructor(mcpServerName: string, command: string, args: string[], envVars: Record<string, string>) {
+    this.containerName = `archestra-ai-${mcpServerName}-mcp-server`;
+    this.command = command;
+    this.args = args;
     this.envVars = envVars;
   }
 
@@ -67,14 +70,15 @@ export default class PodmanContainer {
     }
 
     console.log(
-      `Container ${this.containerName} does not exist, creating it with image ${this.imageName}, and starting it`
+      `Container ${this.containerName} does not exist, creating it with base image and command: ${this.command} ${this.args.join(' ')}`
     );
 
     try {
       const response = await containerCreateLibpod({
         body: {
           name: this.containerName,
-          image: this.imageName,
+          image: config.sandbox.baseDockerImage,
+          command: [this.command, ...this.args],
           env: this.envVars,
           /**
            * Keep stdin open for interactive communication with MCP servers
