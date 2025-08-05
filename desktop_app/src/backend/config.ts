@@ -9,7 +9,6 @@ export default {
   server: {
     port: ARCHESTRA_API_SERVER_PORT,
     host: ARCHESTRA_API_SERVER_HOST,
-
   },
   ai: {
     defaultProvider: process.env.DEFAULT_AI_PROVIDER || 'openai',
@@ -20,5 +19,12 @@ export default {
     server: {
       host: process.env.OLLAMA_HOST || 'http://localhost:11434',
     },
+  },
+  sandbox: {
+    // TODO: uncomment out the following once we make archestra-public public
+    // baseDockerImage:
+    //   process.env.MCP_BASE_DOCKER_IMAGE ||
+    //   'europe-west1-docker.pkg.dev/friendly-path-465518-r6/archestra-public/mcp-server-base:0.0.1',
+    baseDockerImage: 'joey-test-mcp-server-base-image:latest',
   },
 };
