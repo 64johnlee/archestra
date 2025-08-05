@@ -13,7 +13,6 @@ import {
   Star,
   Users,
 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
 
 import { Badge } from '@ui/components/ui/badge';
 import { Button } from '@ui/components/ui/button';
@@ -35,8 +34,8 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
     catalogTotalCount,
     installedMcpServers,
     loadingConnectorCatalog,
-    installingMcpServerName,
-    uninstallingMcpServerName,
+    installingMcpServerSlug,
+    uninstallingMcpServerSlug,
     installMcpServerFromConnectorCatalog,
     uninstallMcpServer,
     setCatalogSearchQuery,
@@ -156,135 +155,135 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {connectorCatalog.map((mcpServer) => {
-            const isInstalled = installedMcpServers.some((server) => server.name === mcpServer.name);
-            const isInstalling = installingMcpServerName === mcpServer.name;
-            const isUninstalling = uninstallingMcpServerName === mcpServer.name;
+              const isInstalled = installedMcpServers.some((server) => server.slug === mcpServer.slug);
+              const isInstalling = installingMcpServerSlug === mcpServer.slug;
+              const isUninstalling = uninstallingMcpServerSlug === mcpServer.slug;
 
-            return (
-              <Card
-                key={mcpServer.slug}
-                className={`transition-all duration-200 hover:shadow-lg ${
-                  isInstalled ? 'ring-2 ring-green-500/20' : ''
-                }`}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        {getCategoryIcon(mcpServer.category)}
-                        <h3 className="font-semibold text-lg">{mcpServer.name}</h3>
+              return (
+                <Card
+                  key={mcpServer.slug}
+                  className={`transition-all duration-200 hover:shadow-lg ${
+                    isInstalled ? 'ring-2 ring-green-500/20' : ''
+                  }`}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          {getCategoryIcon(mcpServer.category)}
+                          <h3 className="font-semibold text-lg">{mcpServer.name}</h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{mcpServer.description}</p>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{mcpServer.description}</p>
+                      {isInstalled && <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 ml-2" />}
                     </div>
-                    {isInstalled && <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 ml-2" />}
-                  </div>
-                </CardHeader>
+                  </CardHeader>
 
-                <CardContent className="space-y-4">
-                  {/* Metadata */}
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {mcpServer.gh_stars !== undefined && mcpServer.gh_stars > 0 && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Star className="h-3 w-3" />
-                        <span>{mcpServer.gh_stars.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {mcpServer.gh_contributors !== undefined && mcpServer.gh_contributors > 0 && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Users className="h-3 w-3" />
-                        <span>{mcpServer.gh_contributors}</span>
-                      </div>
-                    )}
-                    {mcpServer.gitHubOrg && mcpServer.gitHubRepo && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <GitFork className="h-3 w-3" />
-                        <span>
-                          {mcpServer.gitHubOrg}/{mcpServer.gitHubRepo}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  <CardContent className="space-y-4">
+                    {/* Metadata */}
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {mcpServer.gh_stars !== undefined && mcpServer.gh_stars > 0 && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Star className="h-3 w-3" />
+                          <span>{mcpServer.gh_stars.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {mcpServer.gh_contributors !== undefined && mcpServer.gh_contributors > 0 && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Users className="h-3 w-3" />
+                          <span>{mcpServer.gh_contributors}</span>
+                        </div>
+                      )}
+                      {mcpServer.gitHubOrg && mcpServer.gitHubRepo && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <GitFork className="h-3 w-3" />
+                          <span>
+                            {mcpServer.gitHubOrg}/{mcpServer.gitHubRepo}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {mcpServer.category && (
-                      <Badge variant="secondary" className="text-xs">
-                        {mcpServer.category}
-                      </Badge>
-                    )}
-                    {mcpServer.programmingLanguage && (
-                      <Badge variant="outline" className="text-xs">
-                        {mcpServer.programmingLanguage}
-                      </Badge>
-                    )}
-                    {mcpServer.configForArchestra?.transport && (
-                      <Badge variant="outline" className="text-xs">
-                        {mcpServer.configForArchestra.transport}
-                      </Badge>
-                    )}
-                    {mcpServer.configForArchestra?.oauth?.required && (
-                      <Badge variant="outline" className="text-xs">
-                        OAuth
-                      </Badge>
-                    )}
-                    {getQualityBadge(mcpServer.qualityScore)}
-                  </div>
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {mcpServer.category && (
+                        <Badge variant="secondary" className="text-xs">
+                          {mcpServer.category}
+                        </Badge>
+                      )}
+                      {mcpServer.programmingLanguage && (
+                        <Badge variant="outline" className="text-xs">
+                          {mcpServer.programmingLanguage}
+                        </Badge>
+                      )}
+                      {mcpServer.configForArchestra?.transport && (
+                        <Badge variant="outline" className="text-xs">
+                          {mcpServer.configForArchestra.transport}
+                        </Badge>
+                      )}
+                      {mcpServer.configForArchestra?.oauth?.required && (
+                        <Badge variant="outline" className="text-xs">
+                          OAuth
+                        </Badge>
+                      )}
+                      {getQualityBadge(mcpServer.qualityScore)}
+                    </div>
 
-                  <Separator />
+                    <Separator />
 
-                  {/* Actions */}
-                  <div className="flex justify-end">
-                    {isInstalled ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => uninstallMcpServer(mcpServer.name)}
-                        disabled={isUninstalling}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        {isUninstalling ? (
-                          <>
-                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-                            Uninstalling...
-                          </>
-                        ) : (
-                          'Uninstall'
-                        )}
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => installMcpServerFromConnectorCatalog(mcpServer)}
-                        disabled={isInstalling}
-                      >
-                        {isInstalling ? (
-                          <>
-                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
-                            Installing...
-                          </>
-                        ) : mcpServer.configForArchestra?.oauth?.required ? (
-                          <>
-                            <Settings className="h-4 w-4 mr-2" />
-                            Setup & Install
-                          </>
-                        ) : (
-                          'Install'
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                    {/* Actions */}
+                    <div className="flex justify-end">
+                      {isInstalled ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => uninstallMcpServer(mcpServer.name)}
+                          disabled={isUninstalling}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          {isUninstalling ? (
+                            <>
+                              <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                              Uninstalling...
+                            </>
+                          ) : (
+                            'Uninstall'
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => installMcpServerFromConnectorCatalog(mcpServer)}
+                          disabled={isInstalling}
+                        >
+                          {isInstalling ? (
+                            <>
+                              <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
+                              Installing...
+                            </>
+                          ) : mcpServer.configForArchestra?.oauth?.required ? (
+                            <>
+                              <Settings className="h-4 w-4 mr-2" />
+                              Setup & Install
+                            </>
+                          ) : (
+                            'Install'
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-          
+
           {/* Infinite scroll loader */}
           {catalogHasMore && (
-            <div 
+            <div
               ref={(node) => {
                 if (!node) return;
-                
+
                 const observer = new IntersectionObserver(
                   (entries) => {
                     if (entries[0].isIntersecting && !loadingConnectorCatalog) {
@@ -293,7 +292,7 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
                   },
                   { threshold: 0.1 }
                 );
-                
+
                 observer.observe(node);
                 return () => observer.disconnect();
               }}

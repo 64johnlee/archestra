@@ -8,8 +8,8 @@ export default class PodmanContainer {
   private args: string[];
   private envVars: Record<string, string>;
 
-  constructor(mcpServerName: string, serverConfig: ServerConfig) {
-    this.containerName = `archestra-ai-${mcpServerName}-mcp-server`;
+  constructor(mcpServerSlug: string, serverConfig: ServerConfig) {
+    this.containerName = `archestra-ai-${mcpServerSlug}-mcp-server`;
     this.command = serverConfig.command;
     this.args = serverConfig.args;
     this.envVars = serverConfig.env;

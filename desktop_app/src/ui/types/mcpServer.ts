@@ -29,8 +29,11 @@ export interface ToolCall extends BaseToolCall {
   endTime: Date | null;
 }
 
-export interface ToolWithMcpServerName extends BaseTool {
-  serverName: string;
+export interface ToolWithMcpServerInfo extends BaseTool {
+  server: {
+    slug: string;
+    name: string;
+  };
   enabled: boolean;
 }
 
@@ -40,12 +43,15 @@ export enum McpServerStatus {
   Error = 'error',
 }
 
-export type McpServerToolsMap = Record<string, ToolWithMcpServerName[]>;
+/**
+ * map of an mcp server slug to its tools
+ */
+export type McpServerToolsMap = Record<string, ToolWithMcpServerInfo[]>;
 
 export interface ConnectedMcpServer extends McpServer {
   url: string;
   client: Client | null;
-  tools: ToolWithMcpServerName[];
+  tools: ToolWithMcpServerInfo[];
   status: McpServerStatus;
   error: string | null;
 }

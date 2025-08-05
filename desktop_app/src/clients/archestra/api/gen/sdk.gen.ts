@@ -30,7 +30,11 @@ import type {
   GetSandboxStatusResponses,
   GetSupportedExternalMcpClientsData,
   GetSupportedExternalMcpClientsResponses,
+  InstallCustomMcpServerData,
+  InstallCustomMcpServerErrors,
+  InstallCustomMcpServerResponses,
   InstallMcpServerData,
+  InstallMcpServerErrors,
   InstallMcpServerResponses,
   StartMcpServerOauthData,
   StartMcpServerOauthErrors,
@@ -249,8 +253,28 @@ export const getMcpServers = <ThrowOnError extends boolean = false>(
 export const installMcpServer = <ThrowOnError extends boolean = false>(
   options?: Options<InstallMcpServerData, ThrowOnError>
 ) => {
-  return (options?.client ?? _heyApiClient).post<InstallMcpServerResponses, unknown, ThrowOnError>({
+  return (options?.client ?? _heyApiClient).post<InstallMcpServerResponses, InstallMcpServerErrors, ThrowOnError>({
     url: '/api/mcp_server/install',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+};
+
+/**
+ * Install custom MCP server
+ */
+export const installCustomMcpServer = <ThrowOnError extends boolean = false>(
+  options?: Options<InstallCustomMcpServerData, ThrowOnError>
+) => {
+  return (options?.client ?? _heyApiClient).post<
+    InstallCustomMcpServerResponses,
+    InstallCustomMcpServerErrors,
+    ThrowOnError
+  >({
+    url: '/api/mcp_server/install_custom',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -267,7 +291,7 @@ export const uninstallMcpServer = <ThrowOnError extends boolean = false>(
 ) => {
   return (options?.client ?? _heyApiClient).delete<UninstallMcpServerResponses, UninstallMcpServerErrors, ThrowOnError>(
     {
-      url: '/api/mcp_server/{mcpServerName}',
+      url: '/api/mcp_server/{slug}',
       ...options,
     }
   );

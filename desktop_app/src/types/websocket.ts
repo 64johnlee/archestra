@@ -2,8 +2,12 @@ export interface GenericErrorPayload {
   error: string;
 }
 
+export interface GenericSandboxMcpServerPayload {
+  serverSlug: string;
+}
+
 export interface ChatTitleUpdatedPayload {
-  chat_id: number;
+  chatId: number;
   title: string;
 }
 
@@ -12,17 +16,9 @@ export interface SandboxPodmanRuntimeProgressPayload {
   message?: string;
 }
 
-export interface SandboxMcpServerStartingPayload {
-  serverName: string;
-}
-
-export interface SandboxMcpServerStartedPayload {
-  serverName: string;
-}
-
-export interface SandboxMcpServerFailedPayload extends GenericErrorPayload {
-  serverName: string;
-}
+export type SandboxMcpServerStartingPayload = GenericSandboxMcpServerPayload;
+export type SandboxMcpServerStartedPayload = GenericSandboxMcpServerPayload;
+export type SandboxMcpServerFailedPayload = GenericSandboxMcpServerPayload & GenericErrorPayload;
 
 // WebSocket message types with discriminated union
 export type WebSocketMessage =

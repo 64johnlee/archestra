@@ -41,9 +41,9 @@ type ChatStore = ChatState & ChatActions;
  */
 const listenForChatTitleUpdates = () => {
   return websocketService.subscribe('chat-title-updated', (message) => {
-    const { chat_id, title } = message.payload;
+    const { chatId, title } = message.payload;
     useChatStore.setState((state) => ({
-      chats: state.chats.map((chat) => (chat.id === chat_id ? { ...chat, title } : chat)),
+      chats: state.chats.map((chat) => (chat.id === chatId ? { ...chat, title } : chat)),
     }));
   });
 };

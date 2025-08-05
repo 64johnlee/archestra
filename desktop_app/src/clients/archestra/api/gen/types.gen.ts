@@ -227,7 +227,47 @@ export type InstallMcpServerData = {
   url: '/api/mcp_server/install';
 };
 
+export type InstallMcpServerErrors = {
+  /**
+   * Default Response
+   */
+  400: unknown;
+  /**
+   * Default Response
+   */
+  404: unknown;
+  /**
+   * Default Response
+   */
+  500: unknown;
+};
+
 export type InstallMcpServerResponses = {
+  /**
+   * Default Response
+   */
+  200: unknown;
+};
+
+export type InstallCustomMcpServerData = {
+  body?: unknown;
+  path?: never;
+  query?: never;
+  url: '/api/mcp_server/install_custom';
+};
+
+export type InstallCustomMcpServerErrors = {
+  /**
+   * Default Response
+   */
+  400: unknown;
+  /**
+   * Default Response
+   */
+  500: unknown;
+};
+
+export type InstallCustomMcpServerResponses = {
   /**
    * Default Response
    */
@@ -238,7 +278,7 @@ export type UninstallMcpServerData = {
   body?: never;
   path?: never;
   query?: never;
-  url: '/api/mcp_server/{mcpServerName}';
+  url: '/api/mcp_server/{slug}';
 };
 
 export type UninstallMcpServerErrors = {

@@ -33,12 +33,13 @@ CREATE TABLE `mcp_request_logs` (
 CREATE UNIQUE INDEX `mcp_request_logs_requestId_unique` ON `mcp_request_logs` (`request_id`);--> statement-breakpoint
 CREATE TABLE `mcp_servers` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`name` text NOT NULL,
+	`slug` text NOT NULL,
+	`name` text,
 	`server_config` text NOT NULL,
 	`created_at` text DEFAULT (current_timestamp) NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `mcp_servers_name_unique` ON `mcp_servers` (`name`);--> statement-breakpoint
+CREATE UNIQUE INDEX `mcp_servers_slug_unique` ON `mcp_servers` (`slug`);--> statement-breakpoint
 CREATE TABLE `messages` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`chat_id` integer NOT NULL,

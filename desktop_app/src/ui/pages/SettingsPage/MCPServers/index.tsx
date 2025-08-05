@@ -1,4 +1,5 @@
-import { AlertCircle, ChevronDown, Loader2, Server } from 'lucide-react';
+import { AlertCircle, ChevronDown, Loader2, Server, Settings } from 'lucide-react';
+import { useState } from 'react';
 
 import { Button } from '@ui/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/ui/card';
@@ -7,11 +8,13 @@ import { useMcpServersStore } from '@ui/stores/mcp-servers-store';
 import { McpServerStatus } from '@ui/types';
 
 import McpServer from './McpServer';
+import SettingsDialog from './SettingsDialog';
 
 interface McpServersProps {}
 
 export default function McpServers(_props: McpServersProps) {
   const { installedMcpServers, loadingInstalledMcpServers, errorLoadingInstalledMcpServers } = useMcpServersStore();
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
   const totalNumberOfMcpTools = installedMcpServers.reduce((acc, server) => acc + server.tools.length, 0);
   const hasErrorLoadingInstalledMcpServers = errorLoadingInstalledMcpServers !== null;
@@ -19,19 +22,25 @@ export default function McpServers(_props: McpServersProps) {
   return (
     <Collapsible defaultOpen>
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between p-6">
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="w-full flex items-center justify-between p-0 h-auto">
+            <Button variant="ghost" className="flex-1 justify-between p-0 h-auto">
               <CardTitle className="flex items-center gap-2">
                 <Server className="h-5 w-5" />
                 MCP Servers & Tools
                 {loadingInstalledMcpServers && <Loader2 className="h-4 w-4 animate-spin" />}
               </CardTitle>
-              <div className="flex items-center gap-2">
-                <ChevronDown className="h-4 w-4" />
-              </div>
+              <ChevronDown className="h-4 w-4" />
             </Button>
           </CollapsibleTrigger>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 ml-2 cursor-pointer"
+            onClick={() => setSettingsDialogOpen(true)}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
         </CardHeader>
 
         <CollapsibleContent>
@@ -78,6 +87,8 @@ export default function McpServers(_props: McpServersProps) {
           </CardContent>
         </CollapsibleContent>
       </Card>
+
+      <SettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} />
     </Collapsible>
   );
 }

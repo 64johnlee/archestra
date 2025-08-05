@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b900bb87-db06-482a-baaa-e7e3069d7220",
+  "id": "4c2b37e5-6c54-4498-b7ad-3c068c06d5b5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "chats": {
@@ -218,11 +218,18 @@
           "notNull": true,
           "autoincrement": true
         },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "name": {
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "server_config": {
@@ -242,10 +249,10 @@
         }
       },
       "indexes": {
-        "mcp_servers_name_unique": {
-          "name": "mcp_servers_name_unique",
+        "mcp_servers_slug_unique": {
+          "name": "mcp_servers_slug_unique",
           "columns": [
-            "name"
+            "slug"
           ],
           "isUnique": true
         }

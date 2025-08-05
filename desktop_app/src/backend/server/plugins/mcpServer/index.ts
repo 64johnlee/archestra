@@ -5,12 +5,21 @@ import { z } from 'zod/v4';
 import McpServerModel, { selectMcpServerSchema } from '@backend/models/mcpServer';
 
 // Request schemas
-const installRequestSchema = z.object({
-  mcpConnectorId: z.string(),
+const installFromCatalogRequestSchema = z.object({
+  catalogSlug: z.string(),
+});
+
+const installCustomRequestSchema = z.object({
+  name: z.string(),
+  serverConfig: z.object({
+    command: z.string(),
+    args: z.array(z.string()),
+    env: z.record(z.string(), z.string()),
+  }),
 });
 
 const startOAuthRequestSchema = z.object({
-  mcpConnectorId: z.string(),
+  catalogSlug: z.string(),
 });
 
 // Response schemas
@@ -22,11 +31,12 @@ const authUrlResponseSchema = z.object({ authUrl: z.string() });
 
 // Request params schemas
 const uninstallParamsSchema = z.object({
-  mcpServerName: z.string(),
+  slug: z.string(),
 });
 
 // Type exports
-type InstallRequestBody = z.infer<typeof installRequestSchema>;
+type InstallFromCatalogRequestBody = z.infer<typeof installFromCatalogRequestSchema>;
+type InstallCustomRequestBody = z.infer<typeof installCustomRequestSchema>;
 type StartOAuthRequestBody = z.infer<typeof startOAuthRequestSchema>;
 type UninstallParams = z.infer<typeof uninstallParamsSchema>;
 
@@ -58,10 +68,10 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   /**
-   * Install MCP server (from catalog)
+   * Install MCP server from catalog
    */
   fastify.post<{
-    Body: InstallRequestBody;
+    Body: InstallFromCatalogRequestBody;
   }>(
     '/api/mcp_server/install',
     {
@@ -69,28 +79,73 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
         operationId: 'installMcpServer',
         description: 'Install MCP server from catalog',
         tags: ['MCP Server'],
-        body: zodToJsonSchema(installRequestSchema as any),
+        body: zodToJsonSchema(installFromCatalogRequestSchema as any),
         response: {
-          200: zodToJsonSchema(successResponseSchema as any),
+          200: zodToJsonSchema(mcpServerResponseSchema as any),
+          400: zodToJsonSchema(errorResponseSchema as any),
+          404: zodToJsonSchema(errorResponseSchema as any),
+          500: zodToJsonSchema(errorResponseSchema as any),
         },
       },
     },
     async (request, reply) => {
       try {
-        const { mcpConnectorId } = request.body;
+        const { catalogSlug } = request.body;
 
-        if (!mcpConnectorId) {
-          return reply.code(400).send({ error: 'mcpConnectorId is required' });
+        if (!catalogSlug) {
+          return reply.code(400).send({ error: 'catalogSlug is required' });
         }
 
-        await McpServerModel.saveMcpServerFromCatalog(mcpConnectorId);
-        return reply.code(200).send({ success: true });
+        const server = await McpServerModel.saveMcpServerFromCatalog(catalogSlug);
+        return reply.code(200).send(server);
       } catch (error: any) {
         console.error('Failed to install MCP server from catalog:', error);
 
         if (error.message?.includes('not found in catalog')) {
           return reply.code(404).send({ error: error.message });
         }
+
+        if (error.message?.includes('already installed')) {
+          return reply.code(400).send({ error: error.message });
+        }
+
+        return reply.code(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  /**
+   * Install custom MCP server
+   */
+  fastify.post<{
+    Body: InstallCustomRequestBody;
+  }>(
+    '/api/mcp_server/install_custom',
+    {
+      schema: {
+        operationId: 'installCustomMcpServer',
+        description: 'Install custom MCP server',
+        tags: ['MCP Server'],
+        body: zodToJsonSchema(installCustomRequestSchema as any),
+        response: {
+          200: zodToJsonSchema(mcpServerResponseSchema as any),
+          400: zodToJsonSchema(errorResponseSchema as any),
+          500: zodToJsonSchema(errorResponseSchema as any),
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { name, serverConfig } = request.body;
+
+        if (!name || !serverConfig) {
+          return reply.code(400).send({ error: 'name and serverConfig are required' });
+        }
+
+        const server = await McpServerModel.saveCustomMcpServer(name, serverConfig);
+        return reply.code(200).send(server);
+      } catch (error: any) {
+        console.error('Failed to install custom MCP server:', error);
 
         return reply.code(500).send({ error: 'Internal server error' });
       }
@@ -103,7 +158,7 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete<{
     Params: UninstallParams;
   }>(
-    '/api/mcp_server/:mcpServerName',
+    '/api/mcp_server/:slug',
     {
       schema: {
         operationId: 'uninstallMcpServer',
@@ -119,13 +174,13 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       try {
-        const { mcpServerName } = request.params;
+        const { slug } = request.params;
 
-        if (!mcpServerName) {
-          return reply.code(400).send({ error: 'mcpServerName is required' });
+        if (!slug) {
+          return reply.code(400).send({ error: 'slug is required' });
         }
 
-        await McpServerModel.uninstallMcpServer(mcpServerName);
+        await McpServerModel.uninstallMcpServer(slug);
         return reply.code(200).send({ success: true });
       } catch (error) {
         console.error('Failed to uninstall MCP server:', error);
@@ -156,14 +211,14 @@ const mcpServerRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       try {
-        const { mcpConnectorId } = request.body;
+        const { catalogSlug } = request.body;
 
-        if (!mcpConnectorId) {
-          return reply.code(400).send({ error: 'mcpConnectorId is required' });
+        if (!catalogSlug) {
+          return reply.code(400).send({ error: 'catalogSlug is required' });
         }
 
         // TODO: Implement OAuth flow with the oauth proxy service
-        return reply.send({ authUrl: `https://oauth-proxy.archestra.ai/auth/${mcpConnectorId}` });
+        return reply.send({ authUrl: `https://oauth-proxy.archestra.ai/auth/${catalogSlug}` });
       } catch (error) {
         console.error('Failed to start MCP server OAuth:', error);
         return reply.code(500).send({ error: 'Internal server error' });
