@@ -3,7 +3,6 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { CallToolRequest, ClientCapabilities } from '@modelcontextprotocol/sdk/types';
 import { create } from 'zustand';
 
-import { type WebSocketMessage } from '@archestra/types';
 import { getMcpServers, installMcpServer, startMcpServerOauth, uninstallMcpServer } from '@clients/archestra/api/gen';
 import {
   McpServer,
@@ -196,9 +195,9 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
 
       if ('data' in response && response.data) {
         // Type assertion since the API doesn't return proper types yet
-        const entries = response.data as McpServerCatalogEntry[];
+        const entries = response.data;
         set({
-          connectorCatalog: entries,
+          connectorCatalog: entries.servers || [],
         });
       } else if ('error' in response) {
         throw new Error(response.error as string);
@@ -474,7 +473,7 @@ const subscribeToMcpWebSocketEvents = () => {
   mcpUnsubscribers.push(
     websocketService.subscribe('sandbox-mcp-server-starting', (message) => {
       const { serverName } = message.payload;
-      
+
       useMcpServersStore.setState((state) => ({
         installedMcpServers: state.installedMcpServers.map((server) =>
           server.name === serverName
@@ -493,7 +492,7 @@ const subscribeToMcpWebSocketEvents = () => {
   mcpUnsubscribers.push(
     websocketService.subscribe('sandbox-mcp-server-started', (message) => {
       const { serverName } = message.payload;
-      
+
       // Server started in sandbox, now connect to it
       const server = useMcpServersStore.getState().installedMcpServers.find((s) => s.name === serverName);
       if (server) {
@@ -506,7 +505,7 @@ const subscribeToMcpWebSocketEvents = () => {
   mcpUnsubscribers.push(
     websocketService.subscribe('sandbox-mcp-server-failed', (message) => {
       const { serverName, error } = message.payload;
-      
+
       useMcpServersStore.setState((state) => ({
         installedMcpServers: state.installedMcpServers.map((server) =>
           server.name === serverName
@@ -536,7 +535,7 @@ if (typeof window !== 'undefined') {
     const store = useMcpServersStore.getState();
     store.archestraMcpServer?.client?.close();
     store.installedMcpServers.forEach((server) => server.client?.close());
-    
+
     // Cleanup WebSocket subscriptions
     mcpUnsubscribers.forEach((unsubscribe) => unsubscribe());
   });
