@@ -10,6 +10,7 @@
     "publish": "electron-forge publish",
     "test": "vitest --config vite.main.config.ts",
     "prepare": "cd .. && husky desktop_app/.husky",
+    "typecheck": "tsc --noEmit",
     "db:studio": "ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/drizzle-kit/bin.cjs studio",
     "db:push": "ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/drizzle-kit/bin.cjs push",
     "db:generate": "ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/drizzle-kit/bin.cjs generate",
