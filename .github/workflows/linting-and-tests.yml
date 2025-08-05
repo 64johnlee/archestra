@@ -72,6 +72,33 @@ jobs:
             git push --no-verify
           fi
 
+  verify-no-pending-database-migrations:
+    name: Verify no pending database migrations
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./desktop_app
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: true
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Verify no pending database migrations
+        run: pnpm db:generate
+
+      - name: Check for changes and commit if needed
+        run: |
+          # Check both unstaged and staged changes
+          if ! git diff --exit-code || ! git diff --cached --exit-code; then
+            git add .
+            git commit -m "chore: update database migrations"
+            git push --no-verify
+          fi
+
   zizmor:
     name: Zizmor GitHub Actions static analysis
     runs-on: ubuntu-latest
