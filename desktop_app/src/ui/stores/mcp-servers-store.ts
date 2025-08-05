@@ -28,6 +28,16 @@ interface McpServersState {
   loadingConnectorCatalog: boolean;
   errorFetchingConnectorCatalog: string | null;
 
+  connectorCatalogCategories: { value: string; label: string }[];
+  loadingConnectorCatalogCategories: boolean;
+  errorFetchingConnectorCatalogCategories: string | null;
+
+  catalogSearchQuery: string;
+  catalogSelectedCategory: string;
+  catalogHasMore: boolean;
+  catalogTotalCount: number;
+  catalogOffset: number;
+
   installingMcpServerName: string | null;
   errorInstallingMcpServer: string | null;
 
@@ -43,7 +53,11 @@ interface McpServersActions {
   addMcpServerToInstalledMcpServers: (mcpServer: McpServer) => void;
   removeMcpServerFromInstalledMcpServers: (mcpServerName: string) => void;
 
-  loadConnectorCatalog: () => Promise<void>;
+  loadConnectorCatalog: (append?: boolean) => Promise<void>;
+  loadMoreCatalogServers: () => Promise<void>;
+  setCatalogSearchQuery: (query: string) => void;
+  setCatalogSelectedCategory: (category: string) => void;
+  resetCatalogSearch: () => void;
   installMcpServerFromConnectorCatalog: (mcpServer: McpServerCatalogEntry) => Promise<void>;
   uninstallMcpServer: (mcpServerName: string) => Promise<void>;
 
@@ -102,6 +116,8 @@ const initializeConnectedMcpServerTools = async (
   }));
 };
 
+const CATALOG_PAGE_SIZE = 20;
+
 export const useMcpServersStore = create<McpServersStore>((set, get) => ({
   // State
   archestraMcpServer: null,
@@ -113,6 +129,54 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
   connectorCatalog: [],
   loadingConnectorCatalog: false,
   errorFetchingConnectorCatalog: null,
+  catalogSearchQuery: '',
+  catalogSelectedCategory: 'all',
+  catalogHasMore: true,
+  catalogTotalCount: 0,
+  catalogOffset: 0,
+
+  /**
+   * TODO: these shouldn't be hardcoded here, instead we should expose an endpoint on the catalog server that
+   * returns all options
+   *
+   * (somewhere around here https://github.com/archestra-ai/website/blob/5dc8864287bd147c6d3548ae447d4404936e595b/app/app/mcp-catalog/api/search)
+   */
+  connectorCatalogCategories: [
+    { value: 'all', label: 'All Categories' },
+    { value: 'Aggregators', label: 'Aggregators' },
+    { value: 'AI Tools', label: 'AI Tools' },
+    { value: 'Art & Culture', label: 'Art & Culture' },
+    { value: 'Audio', label: 'Audio' },
+    { value: 'Browser Automation', label: 'Browser Automation' },
+    { value: 'CLI Tools', label: 'CLI Tools' },
+    { value: 'Cloud', label: 'Cloud' },
+    { value: 'Communication', label: 'Communication' },
+    { value: 'Data', label: 'Data' },
+    { value: 'Data Science', label: 'Data Science' },
+    { value: 'Development', label: 'Development' },
+    { value: 'File Management', label: 'File Management' },
+    { value: 'Finance', label: 'Finance' },
+    { value: 'Gaming', label: 'Gaming' },
+    { value: 'Healthcare', label: 'Healthcare' },
+    { value: 'IoT', label: 'IoT' },
+    { value: 'Knowledge', label: 'Knowledge' },
+    { value: 'Location', label: 'Location' },
+    { value: 'Logistics', label: 'Logistics' },
+    { value: 'Marketing', label: 'Marketing' },
+    { value: 'Media', label: 'Media' },
+    { value: 'Monitoring', label: 'Monitoring' },
+    { value: 'Productivity', label: 'Productivity' },
+    { value: 'Search', label: 'Search' },
+    { value: 'Security', label: 'Security' },
+    { value: 'Social Media', label: 'Social Media' },
+    { value: 'Sports', label: 'Sports' },
+    { value: 'Support', label: 'Support' },
+    { value: 'Translation', label: 'Translation' },
+    { value: 'Travel', label: 'Travel' },
+    { value: 'Utilities', label: 'Utilities' },
+  ],
+  loadingConnectorCatalogCategories: false,
+  errorFetchingConnectorCatalogCategories: null,
 
   installingMcpServerName: null,
   errorInstallingMcpServer: null,
@@ -184,20 +248,43 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
     }));
   },
 
-  loadConnectorCatalog: async () => {
+  loadConnectorCatalog: async (append = false) => {
+    const { catalogSearchQuery, catalogSelectedCategory, catalogOffset } = get();
+    
     try {
       set({
         loadingConnectorCatalog: true,
         errorFetchingConnectorCatalog: null,
       });
 
-      const response = await searchCatalog();
+      const params: any = {
+        limit: CATALOG_PAGE_SIZE,
+        offset: append ? catalogOffset : 0,
+      };
+
+      if (catalogSearchQuery) {
+        params.q = catalogSearchQuery;
+      }
+
+      if (catalogSelectedCategory && catalogSelectedCategory !== 'all') {
+        params.category = catalogSelectedCategory;
+      }
+
+      const response = await searchCatalog({
+        query: params,
+      });
 
       if ('data' in response && response.data) {
-        // Type assertion since the API doesn't return proper types yet
-        const entries = response.data;
+        const data = response.data;
         set({
-          connectorCatalog: entries.servers || [],
+          connectorCatalog: append 
+            ? [...get().connectorCatalog, ...(data.servers || [])]
+            : data.servers || [],
+          catalogHasMore: data.hasMore || false,
+          catalogTotalCount: data.totalCount || 0,
+          catalogOffset: append 
+            ? get().catalogOffset + CATALOG_PAGE_SIZE 
+            : CATALOG_PAGE_SIZE,
         });
       } else if ('error' in response) {
         throw new Error(response.error as string);
@@ -209,7 +296,40 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
     }
   },
 
-  installMcpServerFromConnectorCatalog: async ({ oauth, name, id }: McpServerCatalogEntry) => {
+  loadMoreCatalogServers: async () => {
+    const { catalogHasMore, loadingConnectorCatalog } = get();
+    if (!catalogHasMore || loadingConnectorCatalog) return;
+    
+    await get().loadConnectorCatalog(true);
+  },
+
+  setCatalogSearchQuery: (query: string) => {
+    set({ 
+      catalogSearchQuery: query,
+      catalogOffset: 0,
+    });
+    get().loadConnectorCatalog();
+  },
+
+  setCatalogSelectedCategory: (category: string) => {
+    set({ 
+      catalogSelectedCategory: category,
+      catalogOffset: 0,
+    });
+    get().loadConnectorCatalog();
+  },
+
+  resetCatalogSearch: () => {
+    set({
+      catalogSearchQuery: '',
+      catalogSelectedCategory: 'all',
+      catalogOffset: 0,
+      catalogHasMore: true,
+    });
+    get().loadConnectorCatalog();
+  },
+
+  installMcpServerFromConnectorCatalog: async ({ configForArchestra, name, slug }: McpServerCatalogEntry) => {
     try {
       set({
         installingMcpServerName: name,

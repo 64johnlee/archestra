@@ -13,7 +13,7 @@ import {
   Star,
   Users,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { Badge } from '@ui/components/ui/badge';
 import { Button } from '@ui/components/ui/button';
@@ -25,61 +25,48 @@ import { useMcpServersStore } from '@ui/stores/mcp-servers-store';
 
 interface ConnectorCatalogPageProps {}
 
-const categories = [
-  { value: 'all', label: 'All Categories' },
-  { value: 'documentation', label: 'Documentation' },
-  { value: 'database', label: 'Database' },
-  { value: 'web', label: 'Web' },
-  { value: 'search', label: 'Search' },
-  { value: 'communication', label: 'Communication' },
-  { value: 'developer-tools', label: 'Developer Tools' },
-];
-
 export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) {
   const {
     connectorCatalog,
+    connectorCatalogCategories,
+    catalogSearchQuery,
+    catalogSelectedCategory,
+    catalogHasMore,
+    catalogTotalCount,
     installedMcpServers,
     loadingConnectorCatalog,
     installingMcpServerName,
     uninstallingMcpServerName,
     installMcpServerFromConnectorCatalog,
     uninstallMcpServer,
+    setCatalogSearchQuery,
+    setCatalogSelectedCategory,
+    loadMoreCatalogServers,
   } = useMcpServersStore();
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-
-  const filteredCatalog = useMemo(() => {
-    console.log('connectorCatalog', connectorCatalog, 'YOOO');
-
-    return connectorCatalog.filter((server) => {
-      const matchesSearch =
-        !searchQuery ||
-        server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        server.description.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesCategory = selectedCategory === 'all' || server.category?.toLowerCase() === selectedCategory;
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [connectorCatalog, searchQuery, selectedCategory]);
 
   const getCategoryIcon = (category?: string | null) => {
     if (!category) return <Package className="h-4 w-4" />;
 
-    switch (category.toLowerCase()) {
-      case 'documentation':
-        return <FileText className="h-4 w-4" />;
-      case 'database':
-        return <Database className="h-4 w-4" />;
-      case 'web':
-        return <Globe className="h-4 w-4" />;
-      case 'search':
-        return <Search className="h-4 w-4" />;
-      case 'communication':
-        return <MessageSquare className="h-4 w-4" />;
-      case 'developer-tools':
+    switch (category) {
+      case 'Development':
+      case 'CLI Tools':
+      case 'Developer Tools':
         return <Code className="h-4 w-4" />;
+      case 'Data':
+      case 'Data Science':
+      case 'Database':
+        return <Database className="h-4 w-4" />;
+      case 'File Management':
+      case 'Knowledge':
+        return <FileText className="h-4 w-4" />;
+      case 'Browser Automation':
+      case 'Web':
+        return <Globe className="h-4 w-4" />;
+      case 'Search':
+        return <Search className="h-4 w-4" />;
+      case 'Communication':
+      case 'Social Media':
+        return <MessageSquare className="h-4 w-4" />;
       default:
         return <Package className="h-4 w-4" />;
     }
@@ -114,18 +101,18 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
             <Input
               type="search"
               placeholder="Search servers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={catalogSearchQuery}
+              onChange={(e) => setCatalogSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <Select value={catalogSelectedCategory} onValueChange={setCatalogSelectedCategory}>
             <SelectTrigger className="w-full sm:w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
             <SelectContent>
-              {categories.map((category) => (
+              {connectorCatalogCategories.map((category) => (
                 <SelectItem key={category.value} value={category.value}>
                   {category.label}
                 </SelectItem>
@@ -136,30 +123,39 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
 
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {filteredCatalog.length} {filteredCatalog.length === 1 ? 'server' : 'servers'} found
+            {catalogTotalCount > 0 ? (
+              <>
+                {connectorCatalog.length} of {catalogTotalCount} servers
+              </>
+            ) : (
+              <>
+                {connectorCatalog.length} {connectorCatalog.length === 1 ? 'server' : 'servers'}
+              </>
+            )}
           </p>
           <p className="text-sm text-muted-foreground">{installedMcpServers.length} installed</p>
         </div>
       </div>
 
       {/* Catalog Grid */}
-      {loadingConnectorCatalog && (
+      {loadingConnectorCatalog && connectorCatalog.length === 0 && (
         <div className="text-center py-16">
           <Package className="h-12 w-12 mx-auto mb-4 opacity-50 animate-pulse" />
           <p className="text-muted-foreground">Loading server catalog...</p>
         </div>
       )}
 
-      {!loadingConnectorCatalog && filteredCatalog.length === 0 && (
+      {!loadingConnectorCatalog && connectorCatalog.length === 0 && (
         <div className="text-center py-16">
           <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p className="text-muted-foreground">No servers found matching your criteria</p>
         </div>
       )}
 
-      {!loadingConnectorCatalog && filteredCatalog.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredCatalog.map((mcpServer) => {
+      {connectorCatalog.length > 0 && (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {connectorCatalog.map((mcpServer) => {
             const isInstalled = installedMcpServers.some((server) => server.name === mcpServer.name);
             const isInstalling = installingMcpServerName === mcpServer.name;
             const isUninstalling = uninstallingMcpServerName === mcpServer.name;
@@ -213,7 +209,7 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
                   <div className="flex flex-wrap gap-1.5">
                     {mcpServer.category && (
                       <Badge variant="secondary" className="text-xs">
-                        {mcpServer.category.replace(/-/g, ' ')}
+                        {mcpServer.category}
                       </Badge>
                     )}
                     {mcpServer.programmingLanguage && (
@@ -281,7 +277,39 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
               </Card>
             );
           })}
-        </div>
+          </div>
+          
+          {/* Infinite scroll loader */}
+          {catalogHasMore && (
+            <div 
+              ref={(node) => {
+                if (!node) return;
+                
+                const observer = new IntersectionObserver(
+                  (entries) => {
+                    if (entries[0].isIntersecting && !loadingConnectorCatalog) {
+                      loadMoreCatalogServers();
+                    }
+                  },
+                  { threshold: 0.1 }
+                );
+                
+                observer.observe(node);
+                return () => observer.disconnect();
+              }}
+              className="flex justify-center py-8"
+            >
+              {loadingConnectorCatalog ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  <span>Loading more servers...</span>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Scroll to load more</p>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
