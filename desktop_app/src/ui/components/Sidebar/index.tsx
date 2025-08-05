@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { NavigationSubViewKey, NavigationViewKey } from '@types';
+import { NavigationSubViewKey, NavigationViewKey } from '@archestra/types';
 import { SiteHeader } from '@ui/components/SiteHeader';
 import {
   Sidebar as SidebarBase,

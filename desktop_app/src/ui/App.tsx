@@ -1,4 +1,4 @@
-import { NavigationViewKey } from '@types';
+import { NavigationViewKey } from '@archestra/types';
 import Sidebar from '@ui/components/Sidebar';
 import { SidebarInset } from '@ui/components/ui/sidebar';
 import ChatPage from '@ui/pages/ChatPage';

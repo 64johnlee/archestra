@@ -3,9 +3,15 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { CallToolRequest, ClientCapabilities } from '@modelcontextprotocol/sdk/types';
 import { create } from 'zustand';
 
+import {
+  ConnectedMCPServer,
+  MCPServer,
+  MCPServerStatus,
+  MCPServerToolsMap,
+  ToolWithMCPServerName,
+} from '@archestra/types';
 import { getMcpServers, installMcpServer, startMcpServerOauth, uninstallMcpServer } from '@clients/archestra/api/gen';
 import { type McpServer as McpServerCatalogEntry, getSearch as searchCatalog } from '@clients/archestra/catalog/gen';
-import { ConnectedMCPServer, MCPServer, MCPServerStatus, MCPServerToolsMap, ToolWithMCPServerName } from '@types';
 import config from '@ui/config';
 import { getToolsGroupedByServer } from '@ui/lib/utils/mcp-server';
 import { formatToolName } from '@ui/lib/utils/tools';

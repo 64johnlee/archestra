@@ -1,6 +1,6 @@
 import { Tool as OllamaTool } from 'ollama/browser';
 
-import { ToolWithMCPServerName } from '@types';
+import { ToolWithMCPServerName } from '@archestra/types';
 
 import { convertServerAndToolNameToArchestraToolName } from './tools';
 

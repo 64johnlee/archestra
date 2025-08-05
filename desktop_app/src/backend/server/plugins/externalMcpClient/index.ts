@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 
+import { ExternalMcpClientName } from '@archestra/types';
 import { ExternalMcpClient } from '@backend/models/externalMcpClient';
-import { ExternalMcpClientName } from '@types';
 
 interface ConnectRequestBody {
   client_name: ExternalMcpClientName;

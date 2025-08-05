@@ -1,4 +1,4 @@
-import { NavigationSubViewKey } from '@types';
+import { NavigationSubViewKey } from '@archestra/types';
 import { SidebarMenuButton, SidebarMenuItem } from '@ui/components/ui/sidebar';
 import { useNavigationStore } from '@ui/stores/navigation-store';
 

@@ -4,7 +4,7 @@ import { Loader2Icon, SendIcon, SquareIcon, XIcon } from 'lucide-react';
 import type { ComponentProps, HTMLAttributes, KeyboardEventHandler } from 'react';
 import React, { Children, useCallback, useEffect, useRef } from 'react';
 
-import { ChatMessageStatus } from '@types';
+import { ChatMessageStatus } from '@archestra/types';
 import { Button } from '@ui/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/components/ui/select';
 import { Textarea } from '@ui/components/ui/textarea';

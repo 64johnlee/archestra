@@ -75,9 +75,9 @@ class MCPServerSandboxManager {
         failedServers++;
         websocketService.broadcast({
           type: 'sandbox-mcp-server-failed',
-          payload: { 
-            serverName: mcpServer.name, 
-            error: error instanceof Error ? error.message : String(error) 
+          payload: {
+            serverName: mcpServer.name,
+            error: error instanceof Error ? error.message : String(error),
           },
         });
         throw error;

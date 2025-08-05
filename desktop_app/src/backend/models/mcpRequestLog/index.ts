@@ -1,8 +1,8 @@
 import { and, desc, eq, gte, lte } from 'drizzle-orm';
 
+import { CreateMcpRequestLogData, McpRequestLog, McpRequestLogFilters, McpRequestLogStats } from '@archestra/types';
 import db from '@backend/database';
 import { mcpRequestLogs } from '@backend/database/schema/mcpRequestLog';
-import { CreateMcpRequestLogData, McpRequestLog, McpRequestLogFilters, McpRequestLogStats } from '@types';
 
 export class MCPRequestLog {
   /**

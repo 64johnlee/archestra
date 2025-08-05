@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Clock, Wrench } from 'lucide-react';
 import { useState } from 'react';
 
-import { ToolCall, ToolCallStatus } from '@types';
+import { ToolCall, ToolCallStatus } from '@archestra/types';
 import { Badge } from '@ui/components/ui/badge';
 import { Button } from '@ui/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui/components/ui/collapsible';

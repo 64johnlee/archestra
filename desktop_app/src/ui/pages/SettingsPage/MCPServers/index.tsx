@@ -1,6 +1,6 @@
 import { AlertCircle, ChevronDown, Loader2, Server } from 'lucide-react';
 
-import { MCPServerStatus } from '@types';
+import { MCPServerStatus } from '@archestra/types';
 import { Button } from '@ui/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui/components/ui/collapsible';

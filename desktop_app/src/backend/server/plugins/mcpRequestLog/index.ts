@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 
+import { McpRequestLogStats, McpRequestLog as McpRequestLogType } from '@archestra/types';
 import { MCPRequestLog as MCPRequestLogModel } from '@backend/models/mcpRequestLog';
-import { McpRequestLogStats, McpRequestLog as McpRequestLogType } from '@types';
 
 interface LogQueryParams {
   // Filters

@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { WebSocket } from 'ws';
 
-import { WebSocketMessage } from '@types';
+import { WebSocketMessage } from '@archestra/types';
 
 class WebSocketService {
   private fastify: FastifyInstance | null = null;

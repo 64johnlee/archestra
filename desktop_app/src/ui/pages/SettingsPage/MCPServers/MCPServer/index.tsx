@@ -1,6 +1,6 @@
 import { AlertCircle, CheckCircle, Loader2, Wrench } from 'lucide-react';
 
-import { ConnectedMCPServer, MCPServerStatus } from '@types';
+import { ConnectedMCPServer, MCPServerStatus } from '@archestra/types';
 import { Badge } from '@ui/components/ui/badge';
 import { Card, CardContent } from '@ui/components/ui/card';
 

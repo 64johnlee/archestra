@@ -1,4 +1,4 @@
-import { ServerConfig } from '@types';
+import { ServerConfig } from '@archestra/types';
 
 import MCPServer from './';
 

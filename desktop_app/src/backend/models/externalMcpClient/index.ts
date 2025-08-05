@@ -2,9 +2,9 @@ import { eq } from 'drizzle-orm';
 import fs from 'fs/promises';
 import path from 'path';
 
+import { ExternalMcpClientName } from '@archestra/types';
 import db from '@backend/database';
 import { externalMcpClientsTable } from '@backend/database/schema/externalMcpClient';
-import { ExternalMcpClientName } from '@types';
 
 export class ExternalMcpClient {
   static ARCHESTRA_MCP_SERVER_KEY = 'archestra.ai';

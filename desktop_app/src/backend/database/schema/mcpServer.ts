@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { int, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
-import { ServerConfig } from '@types';
+import { ServerConfig } from '@archestra/types';
 
 export const mcpServersTable = sqliteTable('mcp_servers', {
   id: int().primaryKey({ autoIncrement: true }),

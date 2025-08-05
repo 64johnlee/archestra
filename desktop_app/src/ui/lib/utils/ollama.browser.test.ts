@@ -1,4 +1,4 @@
-import type { ToolWithMCPServerName } from '@types';
+import type { ToolWithMCPServerName } from '@archestra/types';
 
 import { convertMCPServerToolsToOllamaTools } from './ollama';
 

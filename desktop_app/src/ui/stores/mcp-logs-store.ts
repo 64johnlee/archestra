@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 
+import type { McpClientInfo, McpRequestLog, McpRequestLogFilters, McpRequestLogStats } from '@archestra/types';
 import {
   clearMcpRequestLogs,
   getMcpRequestLogById,
   getMcpRequestLogStats,
   getMcpRequestLogs,
 } from '@clients/archestra/api/gen';
-import type { McpClientInfo, McpRequestLog, McpRequestLogFilters, McpRequestLogStats } from '@types';
 
 interface MCPLogsStore {
   // State

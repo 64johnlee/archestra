@@ -1,6 +1,6 @@
 import { Server, Zap } from 'lucide-react';
 
-import { ConnectedMCPServer, MCPServerStatus } from '@types';
+import { ConnectedMCPServer, MCPServerStatus } from '@archestra/types';
 import { Badge } from '@ui/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/components/ui/card';
 import { Input } from '@ui/components/ui/input';

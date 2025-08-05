@@ -1,6 +1,6 @@
 import { XIcon } from 'lucide-react';
 
-import type { ToolWithMCPServerName } from '@types';
+import type { ToolWithMCPServerName } from '@archestra/types';
 import { ToolHoverCard } from '@ui/components/ToolHoverCard';
 import { Badge } from '@ui/components/ui/badge';
 import { formatToolName } from '@ui/lib/utils/tools';

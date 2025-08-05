@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 
+import { MCPServer } from '@archestra/types';
 import { MCPServer as MCPServerModel } from '@backend/models/mcpServer';
-import { MCPServer } from '@types';
 
 // Request/Response types
 interface InstallRequestBody {

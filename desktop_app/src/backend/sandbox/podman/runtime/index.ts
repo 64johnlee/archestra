@@ -235,14 +235,16 @@ export default class PodmanRuntime {
         onStdout: {
           callback: (data) => {
             const output = typeof data === 'string' ? data : JSON.stringify(data);
-            
+
             // Parse extraction progress
-            const extractionMatch = output.match(/Extracting compressed file:.*\[([=\s>]+)\]\s*(\d+\.?\d*)MiB\s*\/\s*(\d+\.?\d*)MiB/);
+            const extractionMatch = output.match(
+              /Extracting compressed file:.*\[([=\s>]+)\]\s*(\d+\.?\d*)MiB\s*\/\s*(\d+\.?\d*)MiB/
+            );
             if (extractionMatch) {
               const current = parseFloat(extractionMatch[2]);
               const total = parseFloat(extractionMatch[3]);
               const percentage = Math.round((current / total) * 100);
-              
+
               websocketService.broadcast({
                 type: 'sandbox-podman-runtime-progress',
                 payload: {

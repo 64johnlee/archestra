@@ -1,7 +1,7 @@
 import { ChevronRight, Plus } from 'lucide-react';
 import * as React from 'react';
 
-import { NavigationViewKey } from '@types';
+import { NavigationViewKey } from '@archestra/types';
 import { ToolHoverCard } from '@ui/components/ToolHoverCard';
 import { ToolServerIcon } from '@ui/components/ToolServerIcon';
 import { Input } from '@ui/components/ui/input';

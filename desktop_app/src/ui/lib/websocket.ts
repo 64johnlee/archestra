@@ -3,7 +3,7 @@ import ReconnectingWebSocket from 'reconnecting-websocket';
 import config from '@ui/config';
 
 // TODO: Remove this once the WebSocketMessage type is defined in the backend
-// import { WebSocketMessage } from '@types';
+// import { WebSocketMessage } from '@archestra/types';
 type WebSocketMessage = any;
 
 type MessageHandler = (message: WebSocketMessage) => void;

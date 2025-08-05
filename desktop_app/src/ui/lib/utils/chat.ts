@@ -1,8 +1,8 @@
+import { type ChatWithMessages, type ToolCall, ToolCallStatus } from '@archestra/types';
 import type {
   ChatWithMessages as ServerChatWithMessages,
   ToolCall as ServerToolCall,
 } from '@clients/archestra/api/gen';
-import { type ChatMessage, type ChatWithMessages, type ToolCall, ToolCallStatus } from '@types';
 
 import { convertArchestraToolNameToServerAndToolName } from './tools';
 

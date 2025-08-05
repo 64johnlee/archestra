@@ -1,6 +1,6 @@
 import { Bot, Download, MessageCircle, Settings } from 'lucide-react';
 
-import { NavigationItem, NavigationViewKey } from '@types';
+import { NavigationItem, NavigationViewKey } from '@archestra/types';
 
 // Frontend configuration using Vite's environment variables
 // These values can be overridden by VITE_* prefixed environment variables

@@ -1,6 +1,6 @@
 import { SidebarIcon } from 'lucide-react';
 
-import { NavigationSubViewKey, NavigationViewKey } from '@types';
+import { NavigationSubViewKey, NavigationViewKey } from '@archestra/types';
 import { ThemeToggler } from '@ui/components/ThemeToggler';
 import { Button } from '@ui/components/ui/button';
 import { Separator } from '@ui/components/ui/separator';

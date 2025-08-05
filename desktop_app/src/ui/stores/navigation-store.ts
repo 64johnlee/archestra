@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { NavigationSubViewKey, NavigationViewKey } from '@types';
+import { NavigationSubViewKey, NavigationViewKey } from '@archestra/types';
 
 interface NavigationState {
   activeView: NavigationViewKey;
