@@ -18,13 +18,4 @@ export default defineConfig({
       '@ui': path.resolve(__dirname, './src/ui'),
     },
   },
-  server: {
-    // NOTE: do we actually need this? Things seem to be working without it
-    // proxy: {
-    //   '/api': {
-    //     target: 'http://127.0.0.1:3456',
-    //     changeOrigin: true,
-    //   },
-    // },
-  },
 });

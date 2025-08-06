@@ -1,10 +1,12 @@
 import cors from '@fastify/cors';
 import fastify from 'fastify';
+import { streamableHttp } from 'fastify-mcp';
 
 import config from '@backend/config';
 import chatRoutes from '@backend/server/plugins/chat';
 import externalMcpClientRoutes from '@backend/server/plugins/externalMcpClient';
 import llmRoutes from '@backend/server/plugins/llm';
+import { createArchestraMcpServer } from '@backend/server/plugins/mcp';
 import mcpRequestLogRoutes from '@backend/server/plugins/mcpRequestLog';
 import mcpServerRoutes from '@backend/server/plugins/mcpServer';
 import ollamaRoutes from '@backend/server/plugins/ollama';
@@ -40,6 +42,14 @@ app.register(mcpRequestLogRoutes);
 app.register(mcpServerRoutes);
 app.register(ollamaRoutes);
 app.register(sandboxRoutes);
+
+app.register(streamableHttp, {
+  // Set to `true` if you want a stateful server
+  stateful: false,
+  mcpEndpoint: '/mcp',
+  // sessions: new Sessions<StreamableHTTPServerTransport>()
+  createServer: createArchestraMcpServer,
+});
 
 export const startServer = async () => {
   const { http } = config.server;

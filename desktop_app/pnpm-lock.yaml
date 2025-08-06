@@ -125,6 +125,9 @@ importers:
       fastify:
         specifier: ^5.4.0
         version: 5.4.0
+      fastify-mcp:
+        specifier: ^2.0.3
+        version: 2.0.3
       get-port:
         specifier: ^7.1.0
         version: 7.1.0
@@ -2882,6 +2885,9 @@ packages:
 
   fast-uri@3.0.6:
     resolution: {integrity: sha512-Atfo14OibSv5wAp4VWNsFYE1AchQRTv9cBGWET4pZWHzYshFSS9NQI6I57rdKn9croWVMbYFbLhJ+yJvmZIIHw==}
+
+  fastify-mcp@2.0.3:
+    resolution: {integrity: sha512-n7RIkajHco/jshdjPQ8fXce8WxFAvDgCzscHWYuFZHTBTWCCNhi78eyTj2Q/hOI8jVOrw7CQQqupcE2zkZ2eFA==}
 
   fastify-plugin@5.0.1:
     resolution: {integrity: sha512-HCxs+YnRaWzCl+cWRYFnHmeRFyR5GVnJTAaCJQiYzQSDwK9MgJdyAsuL3nh0EWRCYMgQ5MeziymvmAhUHYHDUQ==}
@@ -8015,6 +8021,13 @@ snapshots:
   fast-safe-stringify@2.1.1: {}
 
   fast-uri@3.0.6: {}
+
+  fastify-mcp@2.0.3:
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.17.1
+      fastify: 5.4.0
+    transitivePeerDependencies:
+      - supports-color
 
   fastify-plugin@5.0.1: {}
 

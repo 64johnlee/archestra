@@ -20,8 +20,8 @@ export default class McpServer {
     return db.select().from(mcpServersTable);
   }
 
-  static async getById(id: (typeof mcpServersTable.$inferSelect)['id']) {
-    return db.select().from(mcpServersTable).where(eq(mcpServersTable.id, id));
+  static async getBySlug(slug: (typeof mcpServersTable.$inferSelect)['slug']) {
+    return db.select().from(mcpServersTable).where(eq(mcpServersTable.slug, slug));
   }
 
   /**
@@ -37,7 +37,7 @@ export default class McpServer {
   static async saveMcpServerFromCatalog(catalogSlug: string) {
     // Fetch the catalog entry using the generated client
     const response = await getServerBySlug({ path: { slug: catalogSlug } });
-    
+
     if ('error' in response) {
       throw new Error(`Failed to fetch catalog entry: ${response.error}`);
     }
@@ -48,10 +48,7 @@ export default class McpServer {
     }
 
     // Check if already installed
-    const existing = await db
-      .select()
-      .from(mcpServersTable)
-      .where(eq(mcpServersTable.slug, catalogSlug));
+    const existing = await db.select().from(mcpServersTable).where(eq(mcpServersTable.slug, catalogSlug));
 
     if (existing.length > 0) {
       throw new Error(`MCP server ${catalogEntry.name} is already installed`);
@@ -81,7 +78,7 @@ export default class McpServer {
   /**
    * Save custom MCP server
    */
-  static async saveCustomMcpServer(name: string, serverConfig: typeof mcpServersTable.$inferInsert['serverConfig']) {
+  static async saveCustomMcpServer(name: string, serverConfig: (typeof mcpServersTable.$inferInsert)['serverConfig']) {
     // Generate a UUID for custom servers
     const customSlug = uuidv4();
 

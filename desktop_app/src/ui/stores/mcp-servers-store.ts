@@ -395,11 +395,58 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
   connectToArchestraMcpServer: async () => {
     const MAX_RETRIES = 30;
     const RETRY_DELAY_MILLISECONDS = 1000;
+
+    /**
+     * id, slug, name, createdAt, and serverConfig aren't needed for the Archestra MCP server, they're simply added
+     * here to appease typing 😛
+     */
+    const archestraMcpServer: ConnectedMcpServer = {
+      id: 0,
+      slug: ARCHESTRA_MCP_SERVER_NAME,
+      name: ARCHESTRA_MCP_SERVER_NAME,
+      createdAt: new Date().toISOString(),
+      serverConfig: {
+        command: '',
+        args: [],
+        env: {},
+      },
+      url: config.archestra.mcpUrl,
+      client: null,
+      tools: [],
+      status: McpServerStatus.Connecting,
+      error: null,
+    };
+
     let retries = 0;
 
-    const attemptConnection = async (): Promise<boolean> => {
-      return true;
-    };
+    // TODO: once we figure out the /mcp CORS issues, simply uncomment this out and things should just start working
+    // const attemptConnection = async (): Promise<boolean> => {
+    //   try {
+    //     const client = await configureMcpClient(`${ARCHESTRA_MCP_SERVER_NAME}-client`, archestraMcpServer.url, {
+    //       tools: {},
+    //     });
+
+    //     if (client) {
+    //       const tools = await initializeConnectedMcpServerTools(client, archestraMcpServer);
+
+    //       set({
+    //         archestraMcpServer: {
+    //           ...archestraMcpServer,
+    //           client,
+    //           tools,
+    //           status: McpServerStatus.Connected,
+    //           error: null,
+    //         },
+    //       });
+
+    //       return true;
+    //     }
+    //     return false;
+    //   } catch (error) {
+    //     return false;
+    //   }
+    // };
+    const attemptConnection = async () => true;
 
     // Keep trying to connect until successful or max retries reached
     while (retries < MAX_RETRIES) {
@@ -417,18 +464,7 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
     // If we've exhausted all retries, set error state
     set({
       archestraMcpServer: {
-        id: 0,
-        slug: ARCHESTRA_MCP_SERVER_NAME,
-        name: ARCHESTRA_MCP_SERVER_NAME,
-        createdAt: new Date().toISOString(),
-        serverConfig: {
-          command: '',
-          args: [],
-          env: {},
-        },
-        url: config.archestra.mcpUrl,
-        client: null,
-        tools: [],
+        ...archestraMcpServer,
         status: McpServerStatus.Error,
         error: 'Failed to connect after maximum retries',
       },
