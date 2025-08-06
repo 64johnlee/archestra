@@ -1,9 +1,10 @@
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI, openai } from '@ai-sdk/openai';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { convertToModelMessages, experimental_createMCPClient, stepCountIs, generateId, streamText } from 'ai';
+import { convertToModelMessages, experimental_createMCPClient, generateId, stepCountIs, streamText } from 'ai';
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 
-import ChatModel from '@backend/models/chat';
+import Chat from '@backend/models/chat';
+import { cloudProviderService } from '@backend/services/cloud-provider-service';
 
 interface StreamRequestBody {
   model: string;
@@ -41,7 +42,6 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
   // Initialize MCP on startup
   const mcpConnected = await initMCP();
 
-
   // Add test endpoint for MCP status
   fastify.get('/api/mcp/test', async (request, reply) => {
     return reply.send({
@@ -70,13 +70,28 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
       const { messages, sessionId, model = 'gpt-4o' } = request.body;
 
       try {
+        // Check if it's a cloud provider model
+        const providerConfig = await cloudProviderService.getProviderConfigForModel(model);
+
+        let client;
+        if (providerConfig) {
+          // Use cloud provider configuration
+          client = createOpenAI({
+            apiKey: providerConfig.apiKey,
+            baseURL: providerConfig.provider.baseUrl,
+            headers: providerConfig.provider.headers,
+          });
+        } else {
+          // Default OpenAI client (for backward compatibility)
+          client = openai;
+        }
+
         // Use MCP tools directly from Vercel AI SDK
         const tools = mcpTools || {};
 
-
-        // Create the stream
+        // Create the stream with the appropriate client
         const streamConfig = {
-          model: openai(model),
+          model: client(model),
           messages: convertToModelMessages(messages),
           tools: Object.keys(tools).length > 0 ? tools : undefined,
           maxSteps: 5, // Allow multiple tool calls
@@ -90,7 +105,6 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
           // },
         };
 
-
         const result = streamText(streamConfig);
 
         return reply.send(
@@ -98,7 +112,7 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
             originalMessages: messages,
             onFinish: ({ messages: finalMessages }) => {
               if (sessionId) {
-                chatService.saveMessages(sessionId, finalMessages);
+                Chat.saveMessages(sessionId, finalMessages);
               }
             },
           })

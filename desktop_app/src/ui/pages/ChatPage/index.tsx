@@ -3,6 +3,7 @@ import { DefaultChatTransport } from 'ai';
 import { useEffect, useState, useMemo } from 'react';
 
 import { useChatStore } from '@ui/stores/chat-store';
+import { useCloudProvidersStore } from '@ui/stores/cloud-providers-store';
 import { useOllamaStore } from '@ui/stores/ollama-store';
 
 import ChatHistory from './ChatHistory';
@@ -13,10 +14,12 @@ interface ChatPageProps {}
 
 export default function ChatPage(_props: ChatPageProps) {
   const { getCurrentChat, createNewChat, isLoadingChats } = useChatStore();
-  const { selectedModel } = useOllamaStore();
+  const { selectedModel, installedModels } = useOllamaStore();
+  const { getAvailableModels } = useCloudProvidersStore();
   const currentChat = getCurrentChat();
   const [localInput, setLocalInput] = useState('');
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const [cloudModels, setCloudModels] = useState<Array<{ id: string; provider: string }>>([]);
 
   // Ensure we have a chat session
   useEffect(() => {
@@ -29,13 +32,21 @@ export default function ChatPage(_props: ChatPageProps) {
     }
   }, [currentChat, createNewChat, isLoadingChats, isCreatingChat]);
 
+  // Load cloud models
+  useEffect(() => {
+    getAvailableModels().then(setCloudModels);
+  }, []);
+
   // Use selectedModel from Ollama store
   const model = selectedModel || '';
 
-
   // Create transport that changes based on model selection
   const transport = useMemo(() => {
-    const apiEndpoint = model === 'gpt-4o' ? '/api/llm/openai/stream' : '/api/llm/ollama/stream';
+    // Check if it's a cloud model
+    const isCloudModel = cloudModels.some((m) => m.id === model);
+    
+    // Use OpenAI endpoint for cloud models, Ollama for local
+    const apiEndpoint = isCloudModel ? '/api/llm/openai/stream' : '/api/llm/ollama/stream';
     
     return new DefaultChatTransport({
       api: apiEndpoint,
@@ -50,11 +61,18 @@ export default function ChatPage(_props: ChatPageProps) {
         return fetch(fullUrl, init);
       },
     });
-  }, [model, currentChat?.session_id]);
+  }, [model, currentChat?.session_id, cloudModels]);
 
-  const { sendMessage, messages, setMessages, stop, isLoading, error } = useChat({
+  const { sendMessage, messages, setMessages, stop, isLoading, error, append } = useChat({
     id: currentChat?.session_id, // use the provided chat ID
     transport,
+    initialMessages: currentChat?.messages || [],
+    onFinish: (message) => {
+      console.log('Message finished:', message);
+    },
+    onError: (error) => {
+      console.error('Chat error:', error);
+    },
   });
 
 
@@ -67,6 +85,10 @@ export default function ChatPage(_props: ChatPageProps) {
 
   // Log messages updates
   useEffect(() => {
+    console.log('All messages in ChatPage:', messages);
+    console.log('Messages length:', messages.length);
+    console.log('isLoading:', isLoading);
+    console.log('error:', error);
     const lastMessage = messages[messages.length - 1];
     if (lastMessage) {
       console.log('Last message:', {
@@ -75,7 +97,7 @@ export default function ChatPage(_props: ChatPageProps) {
         toolInvocations: lastMessage.toolInvocations,
       });
     }
-  }, [messages]);
+  }, [messages, isLoading, error]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setLocalInput(e.target.value);
