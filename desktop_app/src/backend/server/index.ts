@@ -6,6 +6,7 @@ import config from '@backend/config';
 import chatRoutes from '@backend/server/plugins/chat';
 import externalMcpClientRoutes from '@backend/server/plugins/externalMcpClient';
 import llmRoutes from '@backend/server/plugins/llm';
+import ollamaLLMRoutes from '@backend/server/plugins/llm/ollama';
 import { createArchestraMcpServer } from '@backend/server/plugins/mcp';
 import mcpRequestLogRoutes from '@backend/server/plugins/mcpRequestLog';
 import mcpServerRoutes from '@backend/server/plugins/mcpServer';
@@ -37,6 +38,7 @@ app.register(cors, {
 });
 app.register(chatRoutes);
 app.register(llmRoutes);
+app.register(ollamaLLMRoutes);
 app.register(externalMcpClientRoutes);
 app.register(mcpRequestLogRoutes);
 app.register(mcpServerRoutes);

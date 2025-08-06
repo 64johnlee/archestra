@@ -1,9 +1,9 @@
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
-import { useChatProvider } from '@ui/hooks/use-chat-provider';
 import { useChatStore } from '@ui/stores/chat-store';
+import { useOllamaStore } from '@ui/stores/ollama-store';
 
 import ChatHistory from './ChatHistory';
 import ChatInput from './ChatInput';
@@ -12,7 +12,8 @@ import SystemPrompt from './SystemPrompt';
 interface ChatPageProps {}
 
 export default function ChatPage(_props: ChatPageProps) {
-  const { getCurrentChat, createNewChat, selectedAIModel, isLoadingChats } = useChatStore();
+  const { getCurrentChat, createNewChat, isLoadingChats } = useChatStore();
+  const { selectedModel } = useOllamaStore();
   const currentChat = getCurrentChat();
   const [localInput, setLocalInput] = useState('');
   const [isCreatingChat, setIsCreatingChat] = useState(false);
@@ -28,29 +29,34 @@ export default function ChatPage(_props: ChatPageProps) {
     }
   }, [currentChat, createNewChat, isLoadingChats, isCreatingChat]);
 
-  // Always use selectedAIModel from centralized config
-  const model = selectedAIModel || '';
+  // Use selectedModel from Ollama store
+  const model = selectedModel || '';
 
-  const { stop, isLoading } = useChatProvider({
-    model,
-    sessionId: currentChat?.session_id,
-    initialMessages: currentChat?.messages || [],
-  });
 
-  const { sendMessage, messages, setMessages } = useChat({
-    id: currentChat?.session_id, // use the provided chat ID
-    onData: (dataPart) => {
-      // Handle all data parts as they arrive (including transient parts)
-      console.log('Received data part:', dataPart);
-    },
-    messages: currentChat?.messages,
-    transport: new DefaultChatTransport({
-      api: '/api/llm/stream',
+  // Create transport that changes based on model selection
+  const transport = useMemo(() => {
+    const apiEndpoint = model === 'gpt-4o' ? '/api/llm/openai/stream' : '/api/llm/ollama/stream';
+    
+    return new DefaultChatTransport({
+      api: apiEndpoint,
       body: {
+        model: model || 'llama3.1:8b',
         sessionId: currentChat?.session_id,
       },
-    }),
+      fetch: async (input, init) => {
+        // Override fetch to use the correct backend URL
+        const url = typeof input === 'string' ? input : input.url;
+        const fullUrl = url.startsWith('http') ? url : `http://localhost:3456${url}`;
+        return fetch(fullUrl, init);
+      },
+    });
+  }, [model, currentChat?.session_id]);
+
+  const { sendMessage, messages, setMessages, stop, isLoading, error } = useChat({
+    id: currentChat?.session_id, // use the provided chat ID
+    transport,
   });
+
 
   // Update messages when current chat changes
   useEffect(() => {
@@ -58,6 +64,18 @@ export default function ChatPage(_props: ChatPageProps) {
       setMessages(currentChat.messages);
     }
   }, [currentChat?.session_id, currentChat?.messages, setMessages]);
+
+  // Log messages updates
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage) {
+      console.log('Last message:', {
+        role: lastMessage.role,
+        content: lastMessage.content,
+        toolInvocations: lastMessage.toolInvocations,
+      });
+    }
+  }, [messages]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setLocalInput(e.target.value);
@@ -67,7 +85,6 @@ export default function ChatPage(_props: ChatPageProps) {
     e?.preventDefault();
     if (localInput.trim()) {
       console.log('Sending message:', localInput);
-      // sendMessage({ parts: [{ type: 'text', text: localInput }] });
       sendMessage({ text: localInput });
       setLocalInput('');
     }
