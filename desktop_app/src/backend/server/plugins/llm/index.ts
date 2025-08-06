@@ -1,22 +1,64 @@
-import { convertToModelMessages, generateId, streamText } from 'ai';
+import { createOpenAI, openai } from '@ai-sdk/openai';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { convertToModelMessages, experimental_createMCPClient, generateId, stepCountIs, streamText } from 'ai';
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
-import { createOllama } from 'ollama-ai-provider-v2';
 
-import ChatModel from '@backend/models/chat';
+import Chat from '@backend/models/chat';
+import { cloudProviderService } from '@backend/services/cloud-provider-service';
 
 interface StreamRequestBody {
-  provider: 'openai' | 'anthropic' | 'ollama';
   model: string;
   messages: Array<any>;
-  apiKey?: string;
   sessionId?: string;
 }
 
-const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
+const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://localhost:3001';
+
+// MCP client using Vercel AI SDK
+let mcpClient: any = null;
+export let mcpTools: any = null;
+
+// Initialize MCP connection using Vercel AI SDK
+export async function initMCP() {
+  try {
+    const transport = new StreamableHTTPClientTransport(new URL(MCP_SERVER_URL + '/mcp'));
+
+    mcpClient = await experimental_createMCPClient({
+      transport,
+    });
+
+    // Get available tools from MCP server
+    mcpTools = await mcpClient.tools();
+
+    return true;
+  } catch (error: any) {
+    mcpClient = null;
+    mcpTools = null;
+    return false;
+  }
+}
 
 const llmRoutes: FastifyPluginAsync = async (fastify) => {
+  // Initialize MCP on startup
+  const mcpConnected = await initMCP();
+
+  // Add test endpoint for MCP status
+  fastify.get('/api/mcp/test', async (request, reply) => {
+    return reply.send({
+      connected: mcpConnected,
+      serverUrl: MCP_SERVER_URL,
+      toolCount: mcpTools ? Object.keys(mcpTools).length : 0,
+      tools: mcpTools
+        ? Object.entries(mcpTools).map(([name, tool]) => ({
+            name,
+            description: (tool as any).description,
+          }))
+        : [],
+    });
+  });
+  // Based on this doc: https://ai-sdk.dev/docs/ai-sdk-core/generating-text
   fastify.post<{ Body: StreamRequestBody }>(
-    '/api/llm/stream',
+    '/api/llm/openai/stream',
     {
       schema: {
         operationId: 'streamLlmResponse',
@@ -25,69 +67,56 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request: FastifyRequest<{ Body: StreamRequestBody }>, reply: FastifyReply) => {
-      const { messages, sessionId } = request.body;
-
-      let customOllama = createOllama({
-        baseURL: OLLAMA_HOST + '/api',
-      });
+      const { messages, sessionId, model = 'gpt-4o' } = request.body;
 
       try {
-        // Create the stream
-        const result = streamText({
-          // model: openai('gpt-4o'),
-          model: customOllama('llama3.1:8b'),
+        // Check if it's a cloud provider model
+        const providerConfig = await cloudProviderService.getProviderConfigForModel(model);
+
+        let client;
+        if (providerConfig) {
+          // Use cloud provider configuration
+          client = createOpenAI({
+            apiKey: providerConfig.apiKey,
+            baseURL: providerConfig.provider.baseUrl,
+            headers: providerConfig.provider.headers,
+          });
+        } else {
+          // Default OpenAI client (for backward compatibility)
+          client = openai;
+        }
+
+        // Use MCP tools directly from Vercel AI SDK
+        const tools = mcpTools || {};
+
+        // Create the stream with the appropriate client
+        const streamConfig = {
+          model: client(model),
           messages: convertToModelMessages(messages),
-          // providerOptions: { ollama: { think: true } },
-        });
+          tools: Object.keys(tools).length > 0 ? tools : undefined,
+          maxSteps: 5, // Allow multiple tool calls
+          stopWhen: stepCountIs(5),
+          // experimental_transform: smoothStream({
+          //   delayInMs: 20, // optional: defaults to 10ms
+          //   chunking: 'line', // optional: defaults to 'word'
+          // }),
+          // onError({ error }) {
+          //   console.error(error); // your error logging logic here
+          // },
+        };
 
-        // There is a bug with toUIMessageStreamResponse and ollama provider
-        // it cannot parse the response and it throws an error
-        // TypeError: Cannot read properties of undefined (reading 'text')
-        // so we send sse stream manually, otherwise we could use:
-        // return reply.send(
-        //   result.toUIMessageStreamResponse({
-        //     originalMessages: messages,
-        //     onFinish: ({ messages: finalMessages }) => {
-        //       console.log('FINAL MESSAGES', finalMessages);
-        //       console.log('Session', sessionId);
-        //       if (sessionId) {
-        //         chatService.saveMessages(sessionId, finalMessages);
-        //       }
-        //     },
-        //   })
-        // );
-        let messageId = generateId();
-        let fullText = '';
+        const result = streamText(streamConfig);
 
-        reply.raw.write(`data: {"type":"start"} \n\n`);
-        reply.raw.write(`data: {"type":"start-step"}\n\n`);
-        reply.raw.write(`data: ${JSON.stringify({ type: 'text-start', id: messageId })}\n\n`);
-
-        for await (const chunk of result.textStream) {
-          fullText += chunk;
-          reply.raw.write(`data: ${JSON.stringify({ type: 'text-delta', id: messageId, delta: chunk })}\n\n`);
-        }
-
-        reply.raw.write(`data: ${JSON.stringify({ type: 'end', id: messageId })}\n\n`);
-        reply.raw.write(`data: [DONE]\n\n`);
-        reply.raw.end();
-
-        // Save messages after streaming completes
-        if (sessionId) {
-          const assistantMessage = {
-            id: messageId,
-            role: 'assistant',
-            content: fullText,
-            parts: [
-              {
-                type: 'text',
-                text: fullText,
-              },
-            ],
-          };
-          const finalMessages = [...messages, assistantMessage];
-          await ChatModel.saveMessages(sessionId, finalMessages);
-        }
+        return reply.send(
+          result.toUIMessageStreamResponse({
+            originalMessages: messages,
+            onFinish: ({ messages: finalMessages }) => {
+              if (sessionId) {
+                Chat.saveMessages(sessionId, finalMessages);
+              }
+            },
+          })
+        );
       } catch (error) {
         fastify.log.error('LLM streaming error:', error);
         return reply.code(500).send({
@@ -97,6 +126,17 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
   );
+
+  // Cleanup MCP client on server shutdown
+  fastify.addHook('onClose', async () => {
+    if (mcpClient) {
+      try {
+        await mcpClient.close();
+      } catch (error) {
+        // Silent cleanup
+      }
+    }
+  });
 };
 
 export default llmRoutes;

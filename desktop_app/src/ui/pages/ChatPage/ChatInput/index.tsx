@@ -1,7 +1,7 @@
 'use client';
 
 import { FileText } from 'lucide-react';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import ToolPill from '@ui/components/ToolPill';
 import {
@@ -18,11 +18,12 @@ import {
   AIInputTools,
 } from '@ui/components/kibo/ai-input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/components/ui/tooltip';
-import { AI_PROVIDERS } from '@ui/hooks/use-ai-chat-backend';
 import { cn } from '@ui/lib/utils/tailwind';
 import { useChatStore } from '@ui/stores/chat-store';
+import { useCloudProvidersStore } from '@ui/stores/cloud-providers-store';
 import { useDeveloperModeStore } from '@ui/stores/developer-mode-store';
 import { useMcpServersStore } from '@ui/stores/mcp-servers-store';
+import { useOllamaStore } from '@ui/stores/ollama-store';
 
 interface ChatInputProps {
   input: string;
@@ -35,14 +36,17 @@ interface ChatInputProps {
 export default function ChatInput({ input, handleInputChange, handleSubmit, isLoading, stop }: ChatInputProps) {
   const { selectedTools } = useMcpServersStore();
   const { isDeveloperMode, toggleDeveloperMode } = useDeveloperModeStore();
-  const { selectedAIModel, setSelectedAIModel } = useChatStore();
+  const { installedModels, selectedModel, setSelectedModel } = useOllamaStore();
+  const { getAvailableModels } = useCloudProvidersStore();
+  const [cloudModels, setCloudModels] = useState<Array<{ id: string; provider: string }>>([]);
 
-  // Always use Ollama as the provider
-  const aiProviderModels = Object.entries(AI_PROVIDERS.ollama.models);
+  useEffect(() => {
+    getAvailableModels().then(setCloudModels);
+  }, []);
 
-  // Always use the centralized config
-  const currentModel = selectedAIModel || '';
-  const handleModelChange = setSelectedAIModel;
+  // Use the selected model from Ollama store
+  const currentModel = selectedModel || '';
+  const handleModelChange = setSelectedModel;
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -78,11 +82,29 @@ export default function ChatInput({ input, handleInputChange, handleSubmit, isLo
                 <AIInputModelSelectValue placeholder="Select a model" />
               </AIInputModelSelectTrigger>
               <AIInputModelSelectContent>
-                {aiProviderModels.map(([modelKey, modelConfig]) => (
-                  <AIInputModelSelectItem key={modelKey} value={modelKey}>
-                    {modelConfig.displayName}
-                  </AIInputModelSelectItem>
-                ))}
+                {/* Local Ollama Models */}
+                {installedModels.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">Local (Ollama)</div>
+                    {installedModels.map((model) => (
+                      <AIInputModelSelectItem key={model.model} value={model.model}>
+                        {model.name || model.model}
+                      </AIInputModelSelectItem>
+                    ))}
+                  </>
+                )}
+                
+                {/* Cloud Provider Models */}
+                {cloudModels.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">Cloud Providers</div>
+                    {cloudModels.map((model) => (
+                      <AIInputModelSelectItem key={model.id} value={model.id}>
+                        {model.id} ({model.provider})
+                      </AIInputModelSelectItem>
+                    ))}
+                  </>
+                )}
               </AIInputModelSelectContent>
             </AIInputModelSelect>
             <Tooltip>
