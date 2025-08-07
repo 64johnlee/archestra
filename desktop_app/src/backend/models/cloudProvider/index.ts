@@ -2,14 +2,10 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@backend/database';
-import {
-  SelectCloudProviderSchema,
-  SupportedCloudProviderTypesSchema,
-  cloudProvidersTable,
-} from '@backend/database/schema/cloudProvider';
+import { SupportedCloudProviderSchema, cloudProvidersTable } from '@backend/database/schema/cloudProvider';
 
-export const CloudProviderRegistrySchema = z.object({
-  type: SupportedCloudProviderTypesSchema,
+const CloudProviderSchema = z.object({
+  type: SupportedCloudProviderSchema,
   name: z.string(),
   apiKeyUrl: z.string().url(),
   apiKeyPlaceholder: z.string(),
@@ -18,21 +14,30 @@ export const CloudProviderRegistrySchema = z.object({
   headers: z.record(z.string(), z.string()).optional(),
 });
 
+export const SupportedCloudProviderModelSchema = z.object({
+  /**
+   * id = unique identifier for the model
+   */
+  id: z.string(),
+  provider: SupportedCloudProviderSchema,
+});
+
 /**
  * Combined schema for API responses (merges definition + config)
  */
-export const CloudProviderRegistryWithConfigSchema = CloudProviderRegistrySchema.extend({
+export const CloudProviderWithConfigSchema = CloudProviderSchema.extend({
   configured: z.boolean(),
   enabled: z.boolean(),
   validatedAt: z.string().nullable(),
 });
 
-export type CloudProviderRegistry = z.infer<typeof CloudProviderRegistrySchema>;
-export type CloudProviderRegistryWithConfig = z.infer<typeof CloudProviderRegistryWithConfigSchema>;
-export type SupportedCloudProviderTypes = z.infer<typeof SupportedCloudProviderTypesSchema>;
+type CloudProvider = z.infer<typeof CloudProviderSchema>;
+export type CloudProviderWithConfig = z.infer<typeof CloudProviderWithConfigSchema>;
+export type SupportedCloudProvider = z.infer<typeof SupportedCloudProviderSchema>;
+export type SupportedCloudProviderModel = z.infer<typeof SupportedCloudProviderModelSchema>;
 
 // Provider definitions - easy to update in code
-const PROVIDER_REGISTRY: Record<SupportedCloudProviderTypes, CloudProviderRegistry> = {
+const PROVIDER_REGISTRY: Record<SupportedCloudProvider, CloudProvider> = {
   anthropic: {
     type: 'anthropic',
     name: 'Claude (Anthropic)',
@@ -72,7 +77,7 @@ const PROVIDER_REGISTRY: Record<SupportedCloudProviderTypes, CloudProviderRegist
 };
 
 // Helper function to get provider for a model
-function getProviderForModel(modelId: string): CloudProviderRegistry | null {
+function getProviderForModel(modelId: string): CloudProvider | null {
   for (const provider of Object.values(PROVIDER_REGISTRY)) {
     if (provider.models.includes(modelId)) {
       return provider;
@@ -120,7 +125,7 @@ export default class CloudProviderModel {
     await db.delete(cloudProvidersTable).where(eq(cloudProvidersTable.providerType, type));
   }
 
-  static async getAllProvidersWithConfig(): Promise<CloudProviderRegistryWithConfig[]> {
+  static async getAllProvidersWithConfig(): Promise<CloudProviderWithConfig[]> {
     const configs = await CloudProviderModel.getAll();
 
     return Object.values(PROVIDER_REGISTRY).map((definition) => {
@@ -135,9 +140,7 @@ export default class CloudProviderModel {
     });
   }
 
-  static async getProviderConfigForModel(
-    modelId: string
-  ): Promise<{ provider: CloudProviderRegistry; apiKey: string } | null> {
+  static async getProviderConfigForModel(modelId: string): Promise<{ provider: CloudProvider; apiKey: string } | null> {
     const provider = getProviderForModel(modelId);
     if (!provider) return null;
 
@@ -147,9 +150,9 @@ export default class CloudProviderModel {
     return { provider, apiKey: config.apiKey };
   }
 
-  static async getAvailableModels(): Promise<Array<{ id: string; provider: SupportedCloudProviderTypes }>> {
+  static async getAvailableModels(): Promise<SupportedCloudProviderModel[]> {
     const configs = await CloudProviderModel.getAll();
-    const models: Array<{ id: string; provider: SupportedCloudProviderTypes }> = [];
+    const models: SupportedCloudProviderModel[] = [];
 
     for (const config of configs) {
       if (!config.enabled) continue;
@@ -166,4 +169,4 @@ export default class CloudProviderModel {
   }
 }
 
-export { SelectCloudProviderSchema as CloudProviderSchema, SupportedCloudProviderTypesSchema };
+export { SupportedCloudProviderSchema };

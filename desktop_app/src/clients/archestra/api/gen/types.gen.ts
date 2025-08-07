@@ -9,17 +9,7 @@ export type ChatInput = {
   messages: Array<unknown>;
 };
 
-export type CloudProviderInput = {
-  id: number;
-  providerType: string;
-  apiKey: string;
-  enabled: boolean;
-  validatedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type CloudProviderRegistryWithConfigInput = {
+export type CloudProviderWithConfigInput = {
   type: SupportedCloudProvidersInput;
   name: string;
   apiKeyUrl: string;
@@ -35,6 +25,11 @@ export type CloudProviderRegistryWithConfigInput = {
 };
 
 export type SupportedCloudProvidersInput = 'anthropic' | 'openai' | 'deepseek' | 'gemini';
+
+export type SupportedCloudProviderModelInput = {
+  id: string;
+  provider: SupportedCloudProvidersInput;
+};
 
 export type ExternalMcpClientInput = {
   clientName: string;
@@ -113,17 +108,7 @@ export type Chat = {
   messages: Array<unknown>;
 };
 
-export type CloudProvider = {
-  id: number;
-  providerType: string;
-  apiKey: string;
-  enabled: boolean;
-  validatedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type CloudProviderRegistryWithConfig = {
+export type CloudProviderWithConfig = {
   type: SupportedCloudProviders;
   name: string;
   apiKeyUrl: string;
@@ -139,6 +124,11 @@ export type CloudProviderRegistryWithConfig = {
 };
 
 export type SupportedCloudProviders = 'anthropic' | 'openai' | 'deepseek' | 'gemini';
+
+export type SupportedCloudProviderModel = {
+  id: string;
+  provider: SupportedCloudProviders;
+};
 
 export type ExternalMcpClient = {
   clientName: string;
@@ -342,7 +332,7 @@ export type GetAvailableCloudProvidersResponses = {
   /**
    * Default Response
    */
-  200: Array<CloudProviderRegistryWithConfig>;
+  200: Array<CloudProviderWithConfig>;
 };
 
 export type GetAvailableCloudProvidersResponse =
@@ -362,7 +352,9 @@ export type ConfigureCloudProviderResponses = {
   /**
    * Default Response
    */
-  200: CloudProvider;
+  200: {
+    success: boolean;
+  };
 };
 
 export type ConfigureCloudProviderResponse = ConfigureCloudProviderResponses[keyof ConfigureCloudProviderResponses];
@@ -398,10 +390,7 @@ export type GetCloudProviderModelsResponses = {
   /**
    * Default Response
    */
-  200: Array<{
-    id: string;
-    provider: SupportedCloudProviders;
-  }>;
+  200: Array<SupportedCloudProviderModel>;
 };
 
 export type GetCloudProviderModelsResponse = GetCloudProviderModelsResponses[keyof GetCloudProviderModelsResponses];

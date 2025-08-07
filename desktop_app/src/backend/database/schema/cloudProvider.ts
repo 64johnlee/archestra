@@ -3,11 +3,11 @@ import { int, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
-export const SupportedCloudProviderTypesSchema = z.enum(['anthropic', 'openai', 'deepseek', 'gemini']);
+export const SupportedCloudProviderSchema = z.enum(['anthropic', 'openai', 'deepseek', 'gemini']);
 
 export const cloudProvidersTable = sqliteTable('cloud_providers', {
   id: int().primaryKey({ autoIncrement: true }),
-  providerType: text().notNull().$type<z.infer<typeof SupportedCloudProviderTypesSchema>>().unique(),
+  providerType: text().notNull().$type<z.infer<typeof SupportedCloudProviderSchema>>().unique(),
   apiKey: text().notNull(), // TODO: Migrate to safeStorage later
   enabled: int({ mode: 'boolean' }).notNull().default(true),
   validatedAt: text(),

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { CloudProviderWithConfig } from '@clients/archestra/api/gen/types.gen';
 import { Button } from '@ui/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui/components/ui/dialog';
 import { Input } from '@ui/components/ui/input';
@@ -7,19 +8,19 @@ import { Label } from '@ui/components/ui/label';
 import { useCloudProvidersStore } from '@ui/stores/cloud-providers-store';
 
 interface Props {
-  provider: any;
+  provider: CloudProviderWithConfig;
   onClose: () => void;
 }
 
 export default function CloudProviderConfigDialog({ provider, onClose }: Props) {
   const [apiKey, setApiKey] = useState('');
   const [loading, setLoading] = useState(false);
-  const { saveProvider } = useCloudProvidersStore();
+  const { configureCloudProvider } = useCloudProvidersStore();
 
   const handleSave = async () => {
     setLoading(true);
     try {
-      await saveProvider(provider.type, apiKey);
+      await configureCloudProvider(provider.type, apiKey);
       onClose();
     } finally {
       setLoading(false);

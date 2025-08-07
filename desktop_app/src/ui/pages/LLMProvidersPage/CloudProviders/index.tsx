@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
+import { CloudProviderWithConfig } from '@clients/archestra/api/gen/types.gen';
 import { Button } from '@ui/components/ui/button';
 import { Card } from '@ui/components/ui/card';
 import { useCloudProvidersStore } from '@ui/stores/cloud-providers-store';
@@ -7,17 +8,13 @@ import { useCloudProvidersStore } from '@ui/stores/cloud-providers-store';
 import CloudProviderConfigDialog from './CloudProviderConfigDialog';
 
 export default function CloudProviders() {
-  const { providers, loadProviders, deleteProvider } = useCloudProvidersStore();
-  const [selectedProvider, setSelectedProvider] = useState<any>(null);
-
-  useEffect(() => {
-    loadProviders();
-  }, []);
+  const { cloudProviders, deleteCloudProvider } = useCloudProvidersStore();
+  const [selectedProvider, setSelectedProvider] = useState<CloudProviderWithConfig | null>(null);
 
   return (
     <>
       <div className="grid grid-cols-2 gap-4">
-        {providers.map((provider) => (
+        {cloudProviders.map((provider) => (
           <Card key={provider.type} className="p-4">
             <h3 className="font-semibold">{provider.name}</h3>
             <div className="mt-2 text-sm text-muted-foreground">
@@ -32,7 +29,7 @@ export default function CloudProviders() {
                 {provider.configured ? 'Reconfigure' : 'Configure'}
               </Button>
               {provider.configured && (
-                <Button onClick={() => deleteProvider(provider.type)} variant="destructive" size="sm">
+                <Button onClick={() => deleteCloudProvider(provider.type)} variant="destructive" size="sm">
                   Remove
                 </Button>
               )}

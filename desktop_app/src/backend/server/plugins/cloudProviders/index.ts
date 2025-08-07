@@ -2,18 +2,18 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 
 import CloudProviderModel, {
-  CloudProviderRegistryWithConfigSchema,
-  CloudProviderSchema,
-  SupportedCloudProviderTypesSchema,
+  CloudProviderWithConfigSchema,
+  SupportedCloudProviderModelSchema,
+  SupportedCloudProviderSchema,
 } from '@backend/models/cloudProvider';
 
 /**
  * Register our zod schemas into the global registry, such that they get output as components in the openapi spec
  * https://github.com/turkerdev/fastify-type-provider-zod?tab=readme-ov-file#how-to-create-refs-to-the-schemas
  */
-z.globalRegistry.add(CloudProviderSchema, { id: 'CloudProvider' });
-z.globalRegistry.add(CloudProviderRegistryWithConfigSchema, { id: 'CloudProviderRegistryWithConfig' });
-z.globalRegistry.add(SupportedCloudProviderTypesSchema, { id: 'SupportedCloudProviders' });
+z.globalRegistry.add(CloudProviderWithConfigSchema, { id: 'CloudProviderWithConfig' });
+z.globalRegistry.add(SupportedCloudProviderSchema, { id: 'SupportedCloudProviders' });
+z.globalRegistry.add(SupportedCloudProviderModelSchema, { id: 'SupportedCloudProviderModel' });
 
 const cloudProviderRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get('/api/cloud-providers/available', {
@@ -22,7 +22,7 @@ const cloudProviderRoutes: FastifyPluginAsyncZod = async (fastify) => {
       description: 'Get all available cloud providers with configuration status',
       tags: ['Cloud Providers'],
       response: {
-        200: z.array(CloudProviderRegistryWithConfigSchema),
+        200: z.array(CloudProviderWithConfigSchema),
       },
     },
     handler: async (_request, reply) => {
@@ -39,17 +39,19 @@ const cloudProviderRoutes: FastifyPluginAsyncZod = async (fastify) => {
         description: 'Configure a cloud provider with API key',
         tags: ['Cloud Providers'],
         body: z.object({
-          type: SupportedCloudProviderTypesSchema,
+          type: SupportedCloudProviderSchema,
           apiKey: z.string(),
         }),
         response: {
-          200: CloudProviderSchema,
+          200: z.object({
+            success: z.boolean(),
+          }),
         },
       },
     },
     async ({ body: { type, apiKey } }, reply) => {
-      const provider = await CloudProviderModel.upsert(type, apiKey);
-      return reply.send(provider);
+      await CloudProviderModel.upsert(type, apiKey);
+      return reply.send({ success: true });
     }
   );
 
@@ -61,7 +63,7 @@ const cloudProviderRoutes: FastifyPluginAsyncZod = async (fastify) => {
         description: 'Remove cloud provider configuration',
         tags: ['Cloud Providers'],
         params: z.object({
-          type: SupportedCloudProviderTypesSchema,
+          type: SupportedCloudProviderSchema,
         }),
         response: {
           200: z.object({
@@ -84,12 +86,7 @@ const cloudProviderRoutes: FastifyPluginAsyncZod = async (fastify) => {
         description: 'Get all available models from configured providers',
         tags: ['Cloud Providers'],
         response: {
-          200: z.array(
-            z.object({
-              id: z.string(),
-              provider: SupportedCloudProviderTypesSchema,
-            })
-          ),
+          200: z.array(SupportedCloudProviderModelSchema),
         },
       },
     },

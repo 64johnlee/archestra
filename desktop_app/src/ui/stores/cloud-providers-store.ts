@@ -1,63 +1,66 @@
 import { create } from 'zustand';
 
 import {
+  type CloudProviderWithConfig,
+  type SupportedCloudProviderModel,
+  type SupportedCloudProviders,
   configureCloudProvider,
   deleteCloudProvider,
   getAvailableCloudProviders,
   getCloudProviderModels,
 } from '@clients/archestra/api/gen';
 
-interface CloudProvider {
-  type: string;
-  name: string;
-  apiKeyUrl: string;
-  apiKeyPlaceholder: string;
-  models: string[];
-  configured: boolean;
-  enabled: boolean;
-  validatedAt: string | null;
-}
-
 interface CloudProvidersStore {
-  providers: CloudProvider[];
-  loading: boolean;
+  cloudProviders: CloudProviderWithConfig[];
+  loadingCloudProviders: boolean;
 
-  loadProviders: () => Promise<void>;
-  saveProvider: (type: string, apiKey: string) => Promise<void>;
-  deleteProvider: (type: string) => Promise<void>;
-  getAvailableModels: () => Promise<Array<{ id: string; provider: string }>>;
+  availableCloudProviderModels: SupportedCloudProviderModel[];
+  loadingAvailableCloudProviderModels: boolean;
+
+  loadCloudProviders: () => Promise<void>;
+  configureCloudProvider: (type: SupportedCloudProviders, apiKey: string) => Promise<void>;
+  deleteCloudProvider: (type: SupportedCloudProviders) => Promise<void>;
+  getAvailableCloudProviderModels: () => Promise<void>;
 }
 
 export const useCloudProvidersStore = create<CloudProvidersStore>((set, get) => ({
-  providers: [],
-  loading: false,
+  cloudProviders: [],
+  loadingCloudProviders: false,
 
-  loadProviders: async () => {
-    set({ loading: true });
+  availableCloudProviderModels: [],
+  loadingAvailableCloudProviderModels: false,
+
+  loadCloudProviders: async () => {
+    set({ loadingCloudProviders: true });
     try {
-      const response = await getAvailableCloudProviders();
-      if (response.data) {
-        const data = response.data as { providers: CloudProvider[] };
-        set({ providers: data.providers });
-      }
+      const { data } = await getAvailableCloudProviders();
+      set({ cloudProviders: data });
     } finally {
-      set({ loading: false });
+      set({ loadingCloudProviders: false });
     }
   },
 
-  saveProvider: async (type: string, apiKey: string) => {
-    await configureCloudProvider({ body: { type, apiKey } } as any);
-    await get().loadProviders();
+  configureCloudProvider: async (type: SupportedCloudProviders, apiKey: string) => {
+    await configureCloudProvider({ body: { type, apiKey } });
+    await get().loadCloudProviders();
   },
 
-  deleteProvider: async (type: string) => {
+  deleteCloudProvider: async (type: SupportedCloudProviders) => {
     await deleteCloudProvider({ path: { type } });
-    await get().loadProviders();
+    await get().loadCloudProviders();
   },
 
-  getAvailableModels: async () => {
-    const response = await getCloudProviderModels();
-    const data = response.data as { models: Array<{ id: string; provider: string }> } | undefined;
-    return data?.models || [];
+  getAvailableCloudProviderModels: async () => {
+    set({ loadingAvailableCloudProviderModels: true });
+    try {
+      const { data } = await getCloudProviderModels();
+      set({ availableCloudProviderModels: data });
+    } finally {
+      set({ loadingAvailableCloudProviderModels: false });
+    }
   },
 }));
+
+// Initialize data on store creation
+useCloudProvidersStore.getState().loadCloudProviders();
+useCloudProvidersStore.getState().getAvailableCloudProviderModels();

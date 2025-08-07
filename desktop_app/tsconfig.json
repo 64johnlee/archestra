@@ -15,7 +15,7 @@
     "types": ["vitest/globals"],
 
     /*
-     Aliasing (added for shadcn/ui
+     Aliasing (added for shadcn/ui)
     */
     "baseUrl": ".",
     "paths": {

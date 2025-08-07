@@ -1,16 +1,9 @@
-import type {
-  ChatMessage as BaseChatMessage,
-  ChatWithMessages as BaseChatWithMessages,
-} from '@clients/archestra/api/gen';
+import type { Chat as BaseChat } from '@clients/archestra/api/gen';
 
-// TODO: what is the proper type on this?
-type ToolCall = any;
+import { type ToolCall } from './tools';
 
-/**
- * ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
- * ARE THE BELOW TYPES STILL NEEDED?
- * ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
- */
+type BaseChatMessage = BaseChat['messages'][number];
+
 export enum ChatMessageStatus {
   Submitted = 'submitted',
   Streaming = 'streaming',
@@ -30,7 +23,7 @@ export interface ChatMessage extends Omit<BaseChatMessage, 'tool_calls'> {
   isThinkingStreaming: boolean;
 }
 
-export interface ChatWithMessages extends Omit<BaseChatWithMessages, 'messages'> {
+export interface ChatWithMessages extends Omit<BaseChat, 'messages'> {
   /**
    * messages is a superset of the messages field in the backend API
    */

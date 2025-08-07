@@ -14,12 +14,11 @@ interface ChatPageProps {}
 
 export default function ChatPage(_props: ChatPageProps) {
   const { getCurrentChat, createNewChat, isLoadingChats } = useChatStore();
-  const { selectedModel, installedModels } = useOllamaStore();
-  const { getAvailableModels } = useCloudProvidersStore();
+  const { selectedModel } = useOllamaStore();
+  const { availableCloudProviderModels } = useCloudProvidersStore();
   const currentChat = getCurrentChat();
   const [localInput, setLocalInput] = useState('');
   const [isCreatingChat, setIsCreatingChat] = useState(false);
-  const [cloudModels, setCloudModels] = useState<Array<{ id: string; provider: string }>>([]);
 
   // Ensure we have a chat session
   useEffect(() => {
@@ -32,18 +31,13 @@ export default function ChatPage(_props: ChatPageProps) {
     }
   }, [currentChat, createNewChat, isLoadingChats, isCreatingChat]);
 
-  // Load cloud models
-  useEffect(() => {
-    getAvailableModels().then(setCloudModels);
-  }, []);
-
   // Use selectedModel from Ollama store
   const model = selectedModel || '';
 
   // Create transport that changes based on model selection
   const transport = useMemo(() => {
     // Check if it's a cloud model
-    const isCloudModel = cloudModels.some((m) => m.id === model);
+    const isCloudModel = availableCloudProviderModels.some((m) => m.id === model);
 
     // Use OpenAI endpoint for cloud models, Ollama for local
     const apiEndpoint = isCloudModel ? '/api/llm/openai/stream' : '/api/llm/ollama/stream';
@@ -52,7 +46,7 @@ export default function ChatPage(_props: ChatPageProps) {
       api: apiEndpoint,
       body: {
         model: model || 'llama3.1:8b',
-        sessionId: currentChat?.session_id,
+        sessionId: currentChat?.sessionId,
       },
       fetch: async (input, init) => {
         // Override fetch to use the correct backend URL
@@ -61,10 +55,10 @@ export default function ChatPage(_props: ChatPageProps) {
         return fetch(fullUrl, init);
       },
     });
-  }, [model, currentChat?.session_id, cloudModels]);
+  }, [model, currentChat?.sessionId, availableCloudProviderModels]);
 
   const { sendMessage, messages, setMessages, stop, isLoading, error, append } = useChat({
-    id: currentChat?.session_id, // use the provided chat ID
+    id: currentChat?.sessionId, // use the provided chat ID
     transport,
     initialMessages: currentChat?.messages || [],
     onFinish: (message) => {
