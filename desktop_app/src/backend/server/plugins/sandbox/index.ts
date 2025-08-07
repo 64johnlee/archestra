@@ -1,23 +1,15 @@
-import { FastifyPluginAsync } from 'fastify';
-import { zodToJsonSchema } from 'zod-to-json-schema';
-import { z } from 'zod/v4';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 
-import { PODMAN_MACHINE_STATUSES } from '@archestra/types';
+import { PodmanMachineStatusSchema } from '@backend/sandbox/podman/runtime';
 
-// Response schemas
-const sandboxStatusResponseSchema = z.object({
-  isInitialized: z.boolean(),
-  podmanMachineStatus: z.enum(PODMAN_MACHINE_STATUSES).describe('Status of the Podman machine'),
-  // mcpServersStatus: z.record(z.string(), z.object({})), // TODO: implement later
-});
+/**
+ * Register our zod schemas into the global registry, such that they get output as components in the openapi spec
+ * https://github.com/turkerdev/fastify-type-provider-zod?tab=readme-ov-file#how-to-create-refs-to-the-schemas
+ */
+z.globalRegistry.add(PodmanMachineStatusSchema, { id: 'PodmanMachineStatus' });
 
-// Type exports
-export type SandboxStatusResponse = z.infer<typeof sandboxStatusResponseSchema>;
-
-const sandboxRoutes: FastifyPluginAsync = async (fastify) => {
-  /**
-   * Get sandbox status
-   */
+const sandboxRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get(
     '/api/sandbox/status',
     {
@@ -26,11 +18,15 @@ const sandboxRoutes: FastifyPluginAsync = async (fastify) => {
         description: 'Get the current status of the sandbox environment',
         tags: ['Sandbox'],
         response: {
-          200: zodToJsonSchema(sandboxStatusResponseSchema as any),
+          200: z.object({
+            isInitialized: z.boolean(),
+            podmanMachineStatus: PodmanMachineStatusSchema,
+            // mcpServersStatus: z.record(z.string(), z.object({})), // TODO: implement later
+          }),
         },
       },
     },
-    async (request, reply) => {
+    async (_request, reply) => {
       // Lazy import to avoid initialization during OpenAPI generation
       const sandboxManager = (await import('@backend/sandbox/manager')).default;
       const status = sandboxManager.getSandboxStatus();

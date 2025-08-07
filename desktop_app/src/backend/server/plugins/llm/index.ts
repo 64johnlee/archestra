@@ -1,10 +1,10 @@
 import { createOpenAI, openai } from '@ai-sdk/openai';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { convertToModelMessages, experimental_createMCPClient, generateId, stepCountIs, streamText } from 'ai';
+import { convertToModelMessages, experimental_createMCPClient, stepCountIs, streamText } from 'ai';
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 
 import Chat from '@backend/models/chat';
-import { cloudProviderService } from '@backend/services/cloud-provider-service';
+import CloudProviderModel from '@backend/models/cloudProvider';
 
 interface StreamRequestBody {
   model: string;
@@ -71,7 +71,7 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
 
       try {
         // Check if it's a cloud provider model
-        const providerConfig = await cloudProviderService.getProviderConfigForModel(model);
+        const providerConfig = await CloudProviderModel.getProviderConfigForModel(model);
 
         let client;
         if (providerConfig) {

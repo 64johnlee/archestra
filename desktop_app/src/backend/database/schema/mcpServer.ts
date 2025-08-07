@@ -1,15 +1,58 @@
 import { sql } from 'drizzle-orm';
-import { int, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
 
-import { ServerConfig } from '@archestra/types';
+/**
+ * Borrowed from @anthropic-ai/dxt
+ *
+ * https://github.com/anthropics/dxt/blob/v0.2.6/src/schemas.ts#L3-L7
+ */
+export const McpServerConfigSchema = z.strictObject({
+  command: z.string(),
+  args: z.array(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
+});
+
+export const McpServerUserConfigValuesSchema = z.record(
+  z.string(),
+  z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])
+);
 
 export const mcpServersTable = sqliteTable('mcp_servers', {
-  id: int().primaryKey({ autoIncrement: true }),
-  slug: text().notNull().unique(), // Catalog slug or UUID for custom servers
-  name: text(), // Display name (from catalog or user-defined for custom)
-  // https://orm.drizzle.team/docs/column-types/sqlite#blob
-  serverConfig: text({ mode: 'json' }).$type<ServerConfig>().notNull(),
+  /**
+   * Catalog "name" (unique identifier) or UUID for custom servers
+   */
+  id: text().primaryKey(),
+  /**
+   * Display name (from catalog or user-defined for custom)
+   */
+  name: text(),
+  /**
+   * https://orm.drizzle.team/docs/column-types/sqlite#blob
+   */
+  serverConfig: text({ mode: 'json' }).$type<z.infer<typeof McpServerConfigSchema>>().notNull(),
+  /**
+   * `userConfigValues` are user-provided/custom values for `DxtManifestMcpConfig`
+   * (think API keys, etc)
+   *
+   * This is only used for mcp servers installed via the catalog, as it allows users to provide
+   * dynamic configuration
+   *
+   * See https://github.com/anthropics/dxt/blob/main/MANIFEST.md#variable-substitution-in-user-configuration
+   */
+  userConfigValues: text({ mode: 'json' }).$type<z.infer<typeof McpServerUserConfigValuesSchema>>(),
   createdAt: text()
     .notNull()
     .default(sql`(current_timestamp)`),
 });
+
+// TODO: this is kinda a hack to get the outputted zod (and thereby openapi spec) to be 100% correct...
+export const McpServerSchema = createSelectSchema(mcpServersTable).extend({
+  serverConfig: McpServerConfigSchema,
+  userConfigValues: McpServerUserConfigValuesSchema,
+});
+
+export type McpServer = z.infer<typeof McpServerSchema>;
+export type McpServerConfig = z.infer<typeof McpServerConfigSchema>;
+export type McpServerUserConfigValues = z.infer<typeof McpServerUserConfigValuesSchema>;

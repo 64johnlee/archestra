@@ -1,6 +1,6 @@
-import { ServerConfig } from '@archestra/types';
 import config from '@backend/config';
-import { containerCreateLibpod, containerStartLibpod, containerWaitLibpod } from '@clients/libpod/gen/sdk.gen';
+import type { McpServer, McpServerConfig, McpServerUserConfigValues } from '@backend/models/mcpServer';
+import { containerCreateLibpod, containerStartLibpod, containerWaitLibpod } from '@clients/libpod/gen';
 
 export default class PodmanContainer {
   private containerName: string;
@@ -8,12 +8,34 @@ export default class PodmanContainer {
   private args: string[];
   private envVars: Record<string, string>;
 
-  constructor(mcpServerSlug: string, serverConfig: ServerConfig) {
-    this.containerName = `archestra-ai-${mcpServerSlug}-mcp-server`;
-    this.command = serverConfig.command;
-    this.args = serverConfig.args;
-    this.envVars = serverConfig.env;
+  constructor({ name, serverConfig, userConfigValues }: McpServer) {
+    this.containerName = PodmanContainer.prettifyServerNameIntoContainerName(name);
+    const { command, args, env } = PodmanContainer.injectUserConfigValuesIntoServerConfig(
+      serverConfig,
+      userConfigValues
+    );
+
+    this.command = command;
+    this.args = args;
+    this.envVars = env;
   }
+
+  private static prettifyServerNameIntoContainerName = (serverName: string) =>
+    `archestra-ai-${serverName.replace(/ /g, '-').toLowerCase()}-mcp-server`;
+
+  // TODO: implement this
+  private static injectUserConfigValuesIntoServerConfig = (
+    serverConfig: McpServerConfig,
+    userConfigValues: McpServerUserConfigValues
+  ) => {
+    return {
+      command: serverConfig.command,
+      args: serverConfig.args,
+      env: {
+        ...serverConfig.env,
+      },
+    };
+  };
 
   /**
    * Wait for container to be healthy

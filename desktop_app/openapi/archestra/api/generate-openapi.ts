@@ -1,12 +1,28 @@
 import autoLoad from '@fastify/autoload';
 import fastifySwagger from '@fastify/swagger';
 import fastify from 'fastify';
+import {
+  jsonSchemaTransform,
+  jsonSchemaTransformObject,
+  serializerCompiler,
+  validatorCompiler,
+} from 'fastify-type-provider-zod';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/**
+ * TODO: update/configure this (somehow) so that it doesn't output the <SchemaName>Input variant component types...
+ */
 async function generateOpenAPISpec() {
   const app = fastify({ logger: false });
+  /**
+   * Add schema validator and serializer
+   * https://github.com/turkerdev/fastify-type-provider-zod?tab=readme-ov-file#how-to-use
+   * https://github.com/turkerdev/fastify-type-provider-zod?tab=readme-ov-file#how-to-use-together-with-fastifyswagger
+   */
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
 
   /**
    * @fastify/swagger MUST be loaded before routes are loaded with @fastify/autoload
@@ -21,6 +37,14 @@ async function generateOpenAPISpec() {
         version: '0.0.1', // x-release-please-version
       },
     },
+    /**
+     * https://github.com/turkerdev/fastify-type-provider-zod?tab=readme-ov-file#how-to-use-together-with-fastifyswagger
+     */
+    transform: jsonSchemaTransform,
+    /**
+     * https://github.com/turkerdev/fastify-type-provider-zod?tab=readme-ov-file#how-to-create-refs-to-the-schemas
+     */
+    transformObject: jsonSchemaTransformObject,
   });
 
   /**
