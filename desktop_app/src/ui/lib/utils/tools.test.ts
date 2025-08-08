@@ -9,7 +9,7 @@ describe('tools utility functions', () => {
     });
   });
 
-  describe('convertOllamaToolNameToServerAndToolName', () => {
+  describe('convertArchestraToolNameToServerAndToolName', () => {
     it('should split on first underscore only', () => {
       expect(convertArchestraToolNameToServerAndToolName('Slack_channel_get_history')).toEqual([
         'Slack',
