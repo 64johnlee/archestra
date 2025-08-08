@@ -22,22 +22,37 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Validation schema
 /**
- * TODO: see if there is a way that we can EXTEND the fields in McpServerServerConfigSchema, such that
- * we can add "validation messages" like the below
+ * NOTE: this is the exact same schema as McpServerConfigSchema from @anthropic-ai/dxt
+ * (https://github.com/anthropics/dxt/blob/main/src/schemas.ts#L3C14-L7)
+ *
+ * We could just use zod.extend, BUT for some reason this👇 just doesn't work (typescript complains)
+ *
+ * const FormSchema = z.object({
+ *   name: z.string().min(1, 'Name is required'), <-- Type 'ZodString' is missing the following properties from type 'ZodType
+ *   command: z.string().min(1, 'Command is required'),
+ *   args: z.string(),
+ *   env: z.string(),
+ * });
+ *
+ * See also:
+ * https://github.com/archestra-ai/website/blob/fd34cd6400031011a94562785691547fbf152059/app/src/schemas.ts#L106
  */
-// const serverConfigSchema = McpServerServerConfigSchema.extend({
-//   mcp_config: z.object({
-//     command: z.string().min(1, 'Command is required'),
-//     args: z.string(),
-//     env: z.string(),
-//   }),
-//   name: z.string().min(1, 'Name is required'),
-//   command: z.string().min(1, 'Command is required'),
-//   args: z.string(),
-//   env: z.string(),
-// });
+const FormSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  command: z.string().min(1, 'Command is required'),
+  args: z.string(),
+  env: z.string(),
+});
+
+type FormData = z.infer<typeof FormSchema>;
+
+const defaultFormData: FormData = {
+  name: 'My Cool Custom MCP Server',
+  command: 'node',
+  args: '/path/to/server.js --verbose',
+  env: 'API_KEY=your-key\nPORT=3000',
+};
 
 export default function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { loadInstalledMcpServers } = useMcpServersStore();
@@ -46,12 +61,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [error, setError] = useState<string | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    command: '',
-    args: '',
-    env: '',
-  });
+  const [formData, setFormData] = useState<FormData>(defaultFormData);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +70,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
 
     try {
       // Validate form data
-      const validated = serverConfigSchema.parse(formData);
+      const validated = FormSchema.parse(formData);
 
       // Parse args and env
       const args = validated.args
@@ -87,7 +97,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       const env = Object.fromEntries(envPairs.map(({ key, value }) => [key, value]));
 
       // Submit to API
-      const response = await installCustomMcpServer({
+      const { error } = await installCustomMcpServer({
         body: {
           name: validated.name,
           serverConfig: {
@@ -98,25 +108,16 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
         },
       });
 
-      if ('error' in response) {
-        throw new Error(response.error);
+      if (error) {
+        setError(`There was an error installing the MCP server: ${error}`);
+      } else {
+        // Refresh the list and close dialog
+        await loadInstalledMcpServers();
+        onOpenChange(false);
+        setFormData(defaultFormData);
       }
-
-      // Refresh the list and close dialog
-      await loadInstalledMcpServers();
-      onOpenChange(false);
-
-      // Reset form
-      setFormData({
-        name: '',
-        command: '',
-        args: '',
-        env: '',
-      });
     } catch (err) {
-      if (err instanceof z.ZodError) {
-        setError(err.errors[0].message);
-      } else if (err instanceof Error) {
+      if (err instanceof z.ZodError || err instanceof Error) {
         setError(err.message);
       } else {
         setError('Failed to install MCP server');
