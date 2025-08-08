@@ -9,7 +9,6 @@ import {
   updateChat,
 } from '@clients/archestra/api/gen';
 import config from '@ui/config';
-import { getDefaultModel } from '@ui/hooks/use-ai-chat-backend';
 import { initializeChat } from '@ui/lib/utils/chat';
 import { websocketService } from '@ui/lib/websocket';
 import { type ChatWithMessages } from '@ui/types';
@@ -90,7 +89,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
       set((state) => ({
         chats: [initializedChat, ...state.chats],
-        currentChatSessionId: initializedChat.session_id,
+        currentChatSessionId: initializedChat.sessionId,
       }));
 
       return initializedChat;
@@ -111,7 +110,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         // Update the chat in the store with the fetched data
         set((state) => ({
           chats: state.chats.map((chat) => (chat.id === chatId ? initializedChat : chat)),
-          currentChatSessionId: initializedChat.session_id,
+          currentChatSessionId: initializedChat.sessionId,
         }));
       }
     } catch (error) {
@@ -119,14 +118,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       // Fall back to just switching without loading messages
       const chat = get().chats.find((c) => c.id === chatId);
       if (chat) {
-        set({ currentChatSessionId: chat.session_id });
+        set({ currentChatSessionId: chat.sessionId });
       }
     }
   },
 
   getCurrentChat: () => {
     const { currentChatSessionId, chats } = get();
-    return chats.find((chat) => chat.session_id === currentChatSessionId) || null;
+    return chats.find((chat) => chat.sessionId === currentChatSessionId) || null;
   },
 
   getCurrentChatTitle: () => {
@@ -144,7 +143,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         const newChats = state.chats.filter((chat) => chat.id !== currentChat.id);
         return {
           chats: newChats,
-          currentChatSessionId: newChats.length > 0 ? newChats[0].session_id : null,
+          currentChatSessionId: newChats.length > 0 ? newChats[0].sessionId : null,
         };
       });
     } catch (error) {
