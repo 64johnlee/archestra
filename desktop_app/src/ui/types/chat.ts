@@ -1,8 +1,14 @@
-import type { Chat as ServerChatRepresentation } from '@clients/archestra/api/gen';
+import type { ChatWithMessages as ServerChatWithMessagesRepresentation } from '@clients/archestra/api/gen';
 
 import { type ToolCall } from './tools';
 
-type ServerChatMessageRepresentation = ServerChatRepresentation['messages'][number];
+type ServerChatMessageRepresentation = ServerChatWithMessagesRepresentation['messages'][number];
+
+export type ParsedContent = {
+  thinking: string;
+  response: string;
+  isThinkingStreaming: boolean;
+};
 
 export enum ChatMessageStatus {
   Submitted = 'submitted',
@@ -11,8 +17,7 @@ export enum ChatMessageStatus {
   Error = 'error',
 }
 
-export interface ChatMessage extends Omit<ServerChatMessageRepresentation, 'tool_calls'> {
-  id: string;
+export interface ChatMessage extends ServerChatMessageRepresentation {
   /**
    * toolCalls is a superset of the tool_calls field in the backend API
    */
@@ -23,17 +28,11 @@ export interface ChatMessage extends Omit<ServerChatMessageRepresentation, 'tool
   isThinkingStreaming: boolean;
 }
 
-export interface ChatWithMessages extends Omit<ServerChatRepresentation, 'messages'> {
+export interface ChatWithMessages extends ServerChatWithMessagesRepresentation {
   /**
    * messages is a superset of the messages field in the backend API
    */
   messages: ChatMessage[];
 }
 
-export type ParsedContent = {
-  thinking: string;
-  response: string;
-  isThinkingStreaming: boolean;
-};
-
-export { type ServerChatMessageRepresentation, type ServerChatRepresentation };
+export { type ServerChatMessageRepresentation, type ServerChatWithMessagesRepresentation };

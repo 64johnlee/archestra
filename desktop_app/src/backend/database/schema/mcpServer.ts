@@ -47,7 +47,9 @@ export const mcpServersTable = sqliteTable('mcp_servers', {
     .default(sql`(current_timestamp)`),
 });
 
-// TODO: this is kinda a hack to get the outputted zod (and thereby openapi spec) to be 100% correct...
+/**
+ * TODO: this is kinda a hack to get the outputted zod (and thereby openapi spec) to be 100% correct...
+ */
 export const McpServerSchema = createSelectSchema(mcpServersTable).extend({
   serverConfig: McpServerConfigSchema,
   userConfigValues: McpServerUserConfigValuesSchema,

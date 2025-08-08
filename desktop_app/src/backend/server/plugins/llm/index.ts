@@ -23,6 +23,9 @@ export async function initMCP() {
   try {
     const transport = new StreamableHTTPClientTransport(new URL(MCP_SERVER_URL + '/mcp'));
 
+    /**
+     * TODO: fix type error here...
+     */
     mcpClient = await experimental_createMCPClient({
       transport,
     });

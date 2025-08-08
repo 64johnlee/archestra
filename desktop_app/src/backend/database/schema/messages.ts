@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { int, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
 import { chatsTable } from './chat';
@@ -25,4 +26,11 @@ export const messagesTable = sqliteTable('messages', {
   createdAt: text()
     .notNull()
     .default(sql`(current_timestamp)`),
+});
+
+/**
+ * TODO: this is kinda a hack to get the outputted zod (and thereby openapi spec) to be 100% correct...
+ */
+export const SelectMessagesSchema = createSelectSchema(messagesTable).extend({
+  role: ChatMessageRoleSchema,
 });

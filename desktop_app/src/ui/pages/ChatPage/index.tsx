@@ -57,10 +57,13 @@ export default function ChatPage(_props: ChatPageProps) {
     });
   }, [model, currentChat?.sessionId, availableCloudProviderModels]);
 
-  const { sendMessage, messages, setMessages, stop, isLoading, error, append } = useChat({
-    id: currentChat?.sessionId, // use the provided chat ID
+  const { sendMessage, messages, setMessages, stop, status, error } = useChat({
+    id: currentChat.sessionId, // use the provided chat ID
     transport,
-    initialMessages: currentChat?.messages || [],
+    /**
+     * TODO: we probably need to map our messages to what the ai-sdk expects here
+     */
+    initialMessages: currentChat.messages,
     onFinish: (message) => {
       console.log('Message finished:', message);
     },
@@ -68,6 +71,8 @@ export default function ChatPage(_props: ChatPageProps) {
       console.error('Chat error:', error);
     },
   });
+
+  const isLoading = status === 'streaming';
 
   // Update messages when current chat changes
   useEffect(() => {

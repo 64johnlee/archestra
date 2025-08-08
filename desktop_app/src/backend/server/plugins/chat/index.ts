@@ -1,21 +1,14 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 
-import ChatModel, { ChatSchema as BaseChatSchema } from '@backend/models/chat';
+import ChatModel, { ChatWithMessagesSchema } from '@backend/models/chat';
 import { ErrorResponseSchema, StringNumberIdSchema } from '@backend/schemas';
-
-/**
- * TODO: is there any where to get BaseChatSchema to "naturally" include "messages"
- */
-const ChatSchema = BaseChatSchema.extend({
-  messages: z.array(z.any()), // Messages are added by the service
-});
 
 /**
  * Register our zod schemas into the global registry, such that they get output as components in the openapi spec
  * https://github.com/turkerdev/fastify-type-provider-zod?tab=readme-ov-file#how-to-create-refs-to-the-schemas
  */
-z.globalRegistry.add(ChatSchema, { id: 'Chat' });
+z.globalRegistry.add(ChatWithMessagesSchema, { id: 'ChatWithMessages' });
 
 const chatRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get(
@@ -26,7 +19,7 @@ const chatRoutes: FastifyPluginAsyncZod = async (fastify) => {
         description: 'Get all chats',
         tags: ['Chat'],
         response: {
-          200: z.array(ChatSchema),
+          200: z.array(ChatWithMessagesSchema),
         },
       },
     },
@@ -47,7 +40,7 @@ const chatRoutes: FastifyPluginAsyncZod = async (fastify) => {
           id: StringNumberIdSchema,
         }),
         response: {
-          200: ChatSchema,
+          200: ChatWithMessagesSchema,
           404: ErrorResponseSchema,
         },
       },
@@ -73,7 +66,7 @@ const chatRoutes: FastifyPluginAsyncZod = async (fastify) => {
           // Currently empty - chat creation doesn't require any fields
         }),
         response: {
-          201: ChatSchema,
+          201: ChatWithMessagesSchema,
         },
       },
     },
@@ -97,7 +90,7 @@ const chatRoutes: FastifyPluginAsyncZod = async (fastify) => {
           title: z.string().nullable().optional(),
         }),
         response: {
-          200: ChatSchema,
+          200: ChatWithMessagesSchema,
           404: ErrorResponseSchema,
         },
       },

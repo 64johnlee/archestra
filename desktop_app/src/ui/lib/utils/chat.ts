@@ -1,7 +1,7 @@
 import {
   type ChatWithMessages,
   type ParsedContent,
-  type ServerChatRepresentation,
+  type ServerChatWithMessagesRepresentation,
   type ServerToolCallRepresentation,
   type ToolCall,
   ToolCallStatus,
@@ -68,29 +68,33 @@ export const initializeToolCalls = (toolCalls: ServerToolCallRepresentation[]): 
   });
 };
 
-const generateNewMessageId = () => crypto.randomUUID();
-
-export const initializeChat = (chat: ServerChatRepresentation): ChatWithMessages => {
+export const initializeChat = (chat: ServerChatWithMessagesRepresentation): ChatWithMessages => {
   return {
     ...chat,
-    /**
-     * TODO: update/remove these.. what should these actual types be?
-     *
-     * I think we need to update the content "json" type in
-     * desktop_app/src/backend/database/schema/messages.ts
-     * to be more strongly typed (see some of the other schema files in desktop_app/src/backend/database/schema
-     * for examples of how we do this)
-     *
-     * The benefit of this is that that strongly typed value than trickles down into zod schemas, into our
-     * openapi schema, and finally as codegen'd typescript types that we can then use here properly
-     */
-    messages: (chat.messages || []).map((message: any) => {
-      const { thinking, response } = parseThinkingContent(message.content);
+    messages: chat.messages.map((message) => {
+      /**
+       * TODO: message.content can be of the following type:
+       *
+       * (property) content: string | number | boolean | {
+       * [key: string]: unknown;
+       * } | unknown[]
+       *
+       * but parseThinkingContent expects a string, so we should really think carefully about what
+       * we are doing here..
+       */
+      const { thinking, response } = parseThinkingContent(message.content as any);
 
       return {
         ...message,
-        id: generateNewMessageId(),
-        toolCalls: initializeToolCalls(message.tool_calls || []),
+        /**
+         * TODO: what should this be?👇 message.tool_calls isn't actually a thing, if it's not
+         * then do we actually need to have it on the ChatWithMessages type?
+         *
+         * or if it is, we're not properly typing it (should be typed going into and out of the database, such
+         * that it trickles down into openapi codegen'd types...)
+         */
+        // toolCalls: initializeToolCalls(message.tool_calls || []),
+        toolCalls: [] as ToolCall[],
         content: response,
         thinkingContent: thinking,
         isStreaming: false,
