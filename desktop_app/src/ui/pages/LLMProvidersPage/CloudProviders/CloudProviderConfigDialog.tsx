@@ -7,12 +7,12 @@ import { Input } from '@ui/components/ui/input';
 import { Label } from '@ui/components/ui/label';
 import { useCloudProvidersStore } from '@ui/stores/cloud-providers-store';
 
-interface Props {
+interface CloudProviderConfigDialogProps {
   provider: CloudProviderWithConfig;
   onClose: () => void;
 }
 
-export default function CloudProviderConfigDialog({ provider, onClose }: Props) {
+export default function CloudProviderConfigDialog({ provider, onClose }: CloudProviderConfigDialogProps) {
   const [apiKey, setApiKey] = useState('');
   const [loading, setLoading] = useState(false);
   const { configureCloudProvider } = useCloudProvidersStore();
