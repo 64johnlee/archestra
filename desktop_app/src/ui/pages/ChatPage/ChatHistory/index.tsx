@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollArea } from '@ui/components/ui/scroll-area';
 import { cn } from '@ui/lib/utils/tailwind';
 
-import { AssistantMessage, OtherMessage, ToolMessage, UserMessage } from './Messages';
+import { AssistantMessage, OtherMessage, UserMessage } from './Messages';
 
 const CHAT_SCROLL_AREA_ID = 'chat-scroll-area';
 const CHAT_SCROLL_AREA_SELECTOR = `#${CHAT_SCROLL_AREA_ID} [data-radix-scroll-area-viewport]`;
@@ -53,6 +53,9 @@ export default function ChatHistory({ messages }: ChatHistoryProps) {
   useEffect(() => {
     console.log('ChatHistory received messages:', messages);
     messages.forEach((msg, idx) => {
+      /**
+       * TODO: apparently content and toolInvocations are not typed correctly here..
+       */
       console.log(`Message ${idx}:`, {
         role: msg.role,
         content: msg.content,
