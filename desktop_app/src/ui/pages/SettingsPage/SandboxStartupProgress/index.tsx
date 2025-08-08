@@ -1,4 +1,4 @@
-import { CheckCircle, Loader2, Package, Server, XCircle } from 'lucide-react';
+import { CheckCircle, Loader2, Server, XCircle } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/ui/card';
 import { Progress } from '@ui/components/ui/progress';
