@@ -15,7 +15,13 @@ import config from '@ui/config';
 import { getToolsGroupedByServer } from '@ui/lib/utils/mcp-server';
 import { formatToolName } from '@ui/lib/utils/tools';
 import { websocketService } from '@ui/lib/websocket';
-import { ConnectedMcpServer, McpServerStatus, McpServerToolsMap, ToolWithMcpServerInfo } from '@ui/types';
+import {
+  ConnectedMcpServer,
+  McpServerStatus,
+  McpServerToolsMap,
+  McpServerUserConfigValues,
+  ToolWithMcpServerInfo,
+} from '@ui/types';
 
 /**
  * NOTE: these are here because the "archestra" MCP server is "injected" into the list of "installed" MCP servers
@@ -99,8 +105,6 @@ const TEMPORARY_CONNECTOR_CATALOG_CATEGORIES: { value: string; label: string }[]
   { value: 'Travel', label: 'Travel' },
   { value: 'Utilities', label: 'Utilities' },
 ];
-
-type McpServerUserConfigValues = McpServer['userConfigValues'];
 
 interface McpServersState {
   archestraMcpServer: ConnectedMcpServer;

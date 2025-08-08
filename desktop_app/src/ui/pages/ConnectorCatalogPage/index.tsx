@@ -23,6 +23,7 @@ import { Input } from '@ui/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/components/ui/select';
 import { Separator } from '@ui/components/ui/separator';
 import { useMcpServersStore } from '@ui/stores/mcp-servers-store';
+import { type McpServerUserConfigValues } from '@ui/types';
 
 import McpServerInstallDialog from './McpServerInstallDialog';
 
@@ -41,8 +42,8 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
     catalogTotalCount,
     installedMcpServers,
     loadingConnectorCatalog,
-    installingMcpServerSlug,
-    uninstallingMcpServerSlug,
+    installingMcpServerId,
+    uninstallingMcpServerId,
     installMcpServerFromConnectorCatalog,
     uninstallMcpServer,
     setCatalogSearchQuery,
@@ -101,7 +102,7 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
     }
   };
 
-  const handleInstallWithConfig = async (config: ArchestraMcpServerManifest) => {
+  const handleInstallWithConfig = async (config: McpServerUserConfigValues) => {
     if (selectedServerForInstall) {
       await installMcpServerFromConnectorCatalog(selectedServerForInstall, config);
       setInstallDialogOpen(false);
@@ -180,14 +181,32 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
       {connectorCatalog.length > 0 && (
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {connectorCatalog.map((mcpServer) => {
-              const isInstalled = installedMcpServers.some((server) => server.slug === mcpServer.slug);
-              const isInstalling = installingMcpServerSlug === mcpServer.slug;
-              const isUninstalling = uninstallingMcpServerSlug === mcpServer.slug;
+            {connectorCatalog.map((connectorCatalogMcpServer) => {
+              const {
+                name,
+                server: serverConfig,
+                description,
+                github_info: gitHubInfo,
+                category,
+                config_for_archestra: {
+                  oauth: { required: requiresOAuthSetup },
+                },
+                programming_language: programmingLanguage,
+                quality_score: qualityScore,
+              } = connectorCatalogMcpServer;
+
+              /**
+               * NOTE: the "name" field is the unique identifier for an MCP server in the catalog
+               * When an mcp server from the catalog is installed (ie. persisted in the database),
+               * the "name" field is what is set as the "id" field
+               */
+              const isInstalled = installedMcpServers.some((server) => server.id === name);
+              const isInstalling = installingMcpServerId === name;
+              const isUninstalling = uninstallingMcpServerId === name;
 
               return (
                 <Card
-                  key={mcpServer.slug}
+                  key={name}
                   className={`transition-all duration-200 hover:shadow-lg ${
                     isInstalled ? 'ring-2 ring-green-500/20' : ''
                   }`}
@@ -196,10 +215,10 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          {getCategoryIcon(mcpServer.category)}
-                          <h3 className="font-semibold text-lg">{mcpServer.name}</h3>
+                          {getCategoryIcon(category)}
+                          <h3 className="font-semibold text-lg">{name}</h3>
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">{mcpServer.description}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
                       </div>
                       {isInstalled && <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 ml-2" />}
                     </div>
@@ -208,23 +227,23 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
                   <CardContent className="space-y-4">
                     {/* Metadata */}
                     <div className="flex flex-wrap gap-2 text-xs">
-                      {mcpServer.gh_stars !== undefined && mcpServer.gh_stars > 0 && (
+                      {gitHubInfo.stars > 0 && (
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Star className="h-3 w-3" />
-                          <span>{mcpServer.gh_stars.toLocaleString()}</span>
+                          <span>{gitHubInfo.stars.toLocaleString()}</span>
                         </div>
                       )}
-                      {mcpServer.gh_contributors !== undefined && mcpServer.gh_contributors > 0 && (
+                      {gitHubInfo.contributors > 0 && (
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Users className="h-3 w-3" />
-                          <span>{mcpServer.gh_contributors}</span>
+                          <span>{gitHubInfo.contributors}</span>
                         </div>
                       )}
-                      {mcpServer.gitHubOrg && mcpServer.gitHubRepo && (
+                      {gitHubInfo.owner && gitHubInfo.repo && (
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <GitFork className="h-3 w-3" />
                           <span>
-                            {mcpServer.gitHubOrg}/{mcpServer.gitHubRepo}
+                            {gitHubInfo.owner}/{gitHubInfo.repo}
                           </span>
                         </div>
                       )}
@@ -232,27 +251,27 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
 
                     {/* Tags */}
                     <div className="flex flex-wrap gap-1.5">
-                      {mcpServer.category && (
+                      {category && (
                         <Badge variant="secondary" className="text-xs">
-                          {mcpServer.category}
+                          {category}
                         </Badge>
                       )}
-                      {mcpServer.programmingLanguage && (
+                      {programmingLanguage && (
                         <Badge variant="outline" className="text-xs">
-                          {mcpServer.programmingLanguage}
+                          {programmingLanguage}
                         </Badge>
                       )}
-                      {mcpServer.configForArchestra?.transport && (
+                      {serverConfig.mcp_config.command && (
                         <Badge variant="outline" className="text-xs">
-                          {mcpServer.configForArchestra.transport}
+                          {serverConfig.mcp_config.command}
                         </Badge>
                       )}
-                      {mcpServer.configForArchestra?.oauth?.required && (
+                      {requiresOAuthSetup && (
                         <Badge variant="outline" className="text-xs">
                           OAuth
                         </Badge>
                       )}
-                      {getQualityBadge(mcpServer.qualityScore)}
+                      {getQualityBadge(qualityScore)}
                     </div>
 
                     <Separator />
@@ -263,7 +282,7 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => uninstallMcpServer(mcpServer.name)}
+                          onClick={() => uninstallMcpServer(name)}
                           disabled={isUninstalling}
                           className="text-destructive hover:text-destructive"
                         >
@@ -277,13 +296,17 @@ export default function ConnectorCatalogPage(_props: ConnectorCatalogPageProps) 
                           )}
                         </Button>
                       ) : (
-                        <Button size="sm" onClick={() => handleInstallClick(mcpServer)} disabled={isInstalling}>
+                        <Button
+                          size="sm"
+                          onClick={() => handleInstallClick(connectorCatalogMcpServer)}
+                          disabled={isInstalling}
+                        >
                           {isInstalling ? (
                             <>
                               <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
                               Installing...
                             </>
-                          ) : mcpServer.configForArchestra?.oauth?.required ? (
+                          ) : requiresOAuthSetup ? (
                             <>
                               <Settings className="h-4 w-4 mr-2" />
                               Setup & Install

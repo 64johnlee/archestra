@@ -16,12 +16,13 @@ import {
 import { Input } from '@ui/components/ui/input';
 import { Label } from '@ui/components/ui/label';
 import { Switch } from '@ui/components/ui/switch';
+import { type McpServerUserConfigValues } from '@ui/types';
 
 interface McpServerInstallDialogProps {
   mcpServer: ArchestraMcpServerManifest | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInstall: (config: ArchestraMcpServerManifest) => void;
+  onInstall: (config: McpServerUserConfigValues) => void;
 }
 
 export default function McpServerInstallDialog({
@@ -30,7 +31,7 @@ export default function McpServerInstallDialog({
   onOpenChange,
   onInstall,
 }: McpServerInstallDialogProps) {
-  const [configValues, setConfigValues] = useState<ArchestraMcpServerManifest>({});
+  const [configValues, setConfigValues] = useState<McpServerUserConfigValues>({});
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -56,7 +57,7 @@ export default function McpServerInstallDialog({
 
   const userConfig = mcpServer.user_config || {};
   const hasUserConfig = Object.keys(userConfig).length > 0;
-  const hasOAuth = mcpServer.configForArchestra?.oauth?.required;
+  const hasOAuth = mcpServer.config_for_archestra.oauth.required;
 
   const toggleSecretVisibility = (key: string) => {
     setShowSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -147,6 +148,14 @@ export default function McpServerInstallDialog({
     });
   };
 
+  /**
+   * TODO: figure out a "stronger" way to conditionally render the "userConfig" fields
+   * (because the "type" of a user config is dynamic)
+   *
+   * See the following for some inspiration/ideas:
+   * - https://www.typescriptlang.org/docs/handbook/advanced-types.html
+   * - https://github.com/anthropics/dxt/blob/main/MANIFEST.md#user-configuration
+   */
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">

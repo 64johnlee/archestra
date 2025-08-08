@@ -4,6 +4,8 @@ import { McpServer } from '@clients/archestra/api/gen';
 
 import { type Tool } from './tools';
 
+export type McpServerUserConfigValues = McpServer['userConfigValues'];
+
 export interface ToolWithMcpServerInfo extends Tool {
   server: {
     /**
