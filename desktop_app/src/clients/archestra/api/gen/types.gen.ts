@@ -55,12 +55,12 @@ export type McpRequestLogInput = {
   sessionId: string | null;
   mcpSessionId: string | null;
   serverName: string;
-  clientInfo:
-    | (string | number | boolean | null)
-    | {
-        [key: string]: unknown;
-      }
-    | Array<unknown>;
+  clientInfo: {
+    userAgent?: string;
+    clientName?: string;
+    clientVersion?: string;
+    clientPlatform?: string;
+  };
   method: string | null;
   requestHeaders:
     | (string | number | boolean | null)
@@ -167,12 +167,12 @@ export type McpRequestLog = {
   sessionId: string | null;
   mcpSessionId: string | null;
   serverName: string;
-  clientInfo:
-    | (string | number | boolean | null)
-    | {
-        [key: string]: unknown;
-      }
-    | Array<unknown>;
+  clientInfo: {
+    userAgent?: string;
+    clientName?: string;
+    clientVersion?: string;
+    clientPlatform?: string;
+  };
   method: string | null;
   requestHeaders:
     | (string | number | boolean | null)

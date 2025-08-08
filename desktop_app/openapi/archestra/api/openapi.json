@@ -221,33 +221,21 @@
             "type": "string"
           },
           "clientInfo": {
-            "anyOf": [
-              {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "boolean"
-                  },
-                  {
-                    "nullable": true,
-                    "enum": [null]
-                  }
-                ]
+            "type": "object",
+            "properties": {
+              "userAgent": {
+                "type": "string"
               },
-              {
-                "type": "object",
-                "additionalProperties": {}
+              "clientName": {
+                "type": "string"
               },
-              {
-                "type": "array",
-                "items": {}
+              "clientVersion": {
+                "type": "string"
+              },
+              "clientPlatform": {
+                "type": "string"
               }
-            ]
+            }
           },
           "method": {
             "anyOf": [
@@ -710,33 +698,22 @@
             "type": "string"
           },
           "clientInfo": {
-            "anyOf": [
-              {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "boolean"
-                  },
-                  {
-                    "nullable": true,
-                    "enum": [null]
-                  }
-                ]
+            "type": "object",
+            "properties": {
+              "userAgent": {
+                "type": "string"
               },
-              {
-                "type": "object",
-                "additionalProperties": {}
+              "clientName": {
+                "type": "string"
               },
-              {
-                "type": "array",
-                "items": {}
+              "clientVersion": {
+                "type": "string"
+              },
+              "clientPlatform": {
+                "type": "string"
               }
-            ]
+            },
+            "additionalProperties": false
           },
           "method": {
             "anyOf": [

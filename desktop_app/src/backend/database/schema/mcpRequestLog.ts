@@ -29,4 +29,9 @@ export const mcpRequestLogs = sqliteTable('mcp_request_logs', {
     .$defaultFn(() => new Date().toISOString()),
 });
 
-export const SelectMcpRequestLogSchema = createSelectSchema(mcpRequestLogs);
+/**
+ * TODO: this is kinda a hack to get the outputted zod (and thereby openapi spec) to be 100% correct...
+ */
+export const SelectMcpRequestLogSchema = createSelectSchema(mcpRequestLogs).extend({
+  clientInfo: McpClientInfoSchema,
+});
