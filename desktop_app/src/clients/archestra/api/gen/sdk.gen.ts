@@ -233,7 +233,7 @@ export const disconnectExternalMcpClient = <ThrowOnError extends boolean = false
   options: Options<DisconnectExternalMcpClientData, ThrowOnError>
 ) => {
   return (options.client ?? _heyApiClient).delete<DisconnectExternalMcpClientResponses, unknown, ThrowOnError>({
-    url: '/api/external_mcp_client/{client_name}/disconnect',
+    url: '/api/external_mcp_client/{clientName}/disconnect',
     ...options,
   });
 };

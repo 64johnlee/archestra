@@ -44,6 +44,7 @@ export default function ExternalClients() {
                   </div>
                 )}
                 <Button
+                  className="cursor-pointer"
                   variant={isConnected ? 'destructive' : 'outline'}
                   size="sm"
                   onClick={() =>

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import {
   type ExternalMcpClient,
+  ExternalMcpClientName,
   connectExternalMcpClient,
   disconnectExternalMcpClient,
   getConnectedExternalMcpClients,
@@ -30,7 +31,7 @@ interface ExternalMcpClientsActions {
 
 type ExternalMcpClientsStore = ExternalMcpClientsState & ExternalMcpClientsActions;
 
-export const useExternalMcpClientsStore = create<ExternalMcpClientsStore>((set) => ({
+export const useExternalMcpClientsStore = create<ExternalMcpClientsStore>((set, get) => ({
   // State
   supportedExternalMcpClientNames: [],
   isLoadingSupportedExternalMcpClientNames: true,
@@ -51,12 +52,8 @@ export const useExternalMcpClientsStore = create<ExternalMcpClientsStore>((set) 
         errorLoadingSupportedExternalMcpClientNames: null,
       });
 
-      const response = await getSupportedExternalMcpClients();
-      if ('data' in response && response.data) {
-        set({ supportedExternalMcpClientNames: response.data as string[] });
-      } else if ('error' in response) {
-        throw new Error(response.error as string);
-      }
+      const { data } = await getSupportedExternalMcpClients();
+      set({ supportedExternalMcpClientNames: data });
     } catch (error) {
       set({ errorLoadingSupportedExternalMcpClientNames: error as string });
     } finally {
@@ -71,11 +68,9 @@ export const useExternalMcpClientsStore = create<ExternalMcpClientsStore>((set) 
         errorLoadingConnectedExternalMcpClients: null,
       });
 
-      const response = await getConnectedExternalMcpClients();
-      if ('data' in response && response.data) {
-        set({ connectedExternalMcpClients: response.data as ExternalMcpClient[] });
-      } else if ('error' in response) {
-        throw new Error(response.error as string);
+      const { data } = await getConnectedExternalMcpClients();
+      if (data) {
+        set({ connectedExternalMcpClients: data });
       }
     } catch (error) {
       set({ errorLoadingConnectedExternalMcpClients: error as string });
@@ -84,22 +79,24 @@ export const useExternalMcpClientsStore = create<ExternalMcpClientsStore>((set) 
     }
   },
 
-  connectExternalMcpClient: async (clientName: string) => {
+  connectExternalMcpClient: async (clientName: ExternalMcpClientName) => {
     try {
       set({
         isConnectingExternalMcpClient: true,
         errorConnectingExternalMcpClient: null,
       });
 
-      const response = await connectExternalMcpClient({
-        body: { client_name: clientName },
-      });
-      if ('error' in response) {
-        throw new Error(response.error as string);
-      }
+      await connectExternalMcpClient({ body: { clientName } });
 
-      // Refresh connected clients after successful connection
-      await useExternalMcpClientsStore.getState().loadConnectedClients();
+      set({
+        connectedExternalMcpClients: [
+          ...get().connectedExternalMcpClients,
+          {
+            clientName,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      });
     } catch (error) {
       set({ errorConnectingExternalMcpClient: error as string });
     } finally {
@@ -107,22 +104,20 @@ export const useExternalMcpClientsStore = create<ExternalMcpClientsStore>((set) 
     }
   },
 
-  disconnectExternalMcpClient: async (clientName: string) => {
+  disconnectExternalMcpClient: async (clientName: ExternalMcpClientName) => {
     try {
       set({
         isDisconnectingExternalMcpClient: true,
         errorDisconnectingExternalMcpClient: null,
       });
 
-      const response = await disconnectExternalMcpClient({
-        path: { client_name: clientName },
-      });
-      if ('error' in response) {
-        throw new Error(response.error as string);
-      }
+      await disconnectExternalMcpClient({ path: { clientName } });
 
-      // Refresh connected clients after successful disconnection
-      await useExternalMcpClientsStore.getState().loadConnectedClients();
+      set({
+        connectedExternalMcpClients: get().connectedExternalMcpClients.filter(
+          (client) => client.clientName !== clientName
+        ),
+      });
     } catch (error) {
       set({ errorDisconnectingExternalMcpClient: error as string });
     } finally {

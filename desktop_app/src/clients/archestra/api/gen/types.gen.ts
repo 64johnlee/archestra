@@ -457,7 +457,7 @@ export type GetSupportedExternalMcpClientsResponse =
 
 export type ConnectExternalMcpClientData = {
   body: {
-    client_name: ExternalMcpClientNameInput;
+    clientName: ExternalMcpClientNameInput;
   };
   path?: never;
   query?: never;
@@ -479,10 +479,10 @@ export type ConnectExternalMcpClientResponse =
 export type DisconnectExternalMcpClientData = {
   body?: never;
   path: {
-    client_name: ExternalMcpClientNameInput;
+    clientName: ExternalMcpClientNameInput;
   };
   query?: never;
-  url: '/api/external_mcp_client/{client_name}/disconnect';
+  url: '/api/external_mcp_client/{clientName}/disconnect';
 };
 
 export type DisconnectExternalMcpClientResponses = {

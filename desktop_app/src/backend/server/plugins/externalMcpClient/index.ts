@@ -57,7 +57,7 @@ const externalMcpClientRoutes: FastifyPluginAsyncZod = async (fastify) => {
         description: 'Connect an external MCP client',
         tags: ['External MCP Client'],
         body: z.object({
-          client_name: ExternalMcpClientNameSchema,
+          clientName: ExternalMcpClientNameSchema,
         }),
         response: {
           200: z.object({
@@ -66,21 +66,21 @@ const externalMcpClientRoutes: FastifyPluginAsyncZod = async (fastify) => {
         },
       },
     },
-    async ({ body: { client_name } }, reply) => {
-      await ExternalMcpClientModel.connectExternalMcpClient(client_name);
+    async ({ body: { clientName } }, reply) => {
+      await ExternalMcpClientModel.connectExternalMcpClient(clientName);
       return reply.code(200).send({ success: true });
     }
   );
 
   fastify.delete(
-    '/api/external_mcp_client/:client_name/disconnect',
+    '/api/external_mcp_client/:clientName/disconnect',
     {
       schema: {
         operationId: 'disconnectExternalMcpClient',
         description: 'Disconnect an external MCP client',
         tags: ['External MCP Client'],
         params: z.object({
-          client_name: ExternalMcpClientNameSchema,
+          clientName: ExternalMcpClientNameSchema,
         }),
         response: {
           200: z.object({
@@ -89,8 +89,8 @@ const externalMcpClientRoutes: FastifyPluginAsyncZod = async (fastify) => {
         },
       },
     },
-    async ({ params: { client_name } }, reply) => {
-      await ExternalMcpClientModel.disconnectExternalMcpClient(client_name);
+    async ({ params: { clientName } }, reply) => {
+      await ExternalMcpClientModel.disconnectExternalMcpClient(clientName);
       return reply.code(200).send({ success: true });
     }
   );

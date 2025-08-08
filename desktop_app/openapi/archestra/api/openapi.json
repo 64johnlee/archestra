@@ -1568,12 +1568,12 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "client_name": {
+                  "clientName": {
                     "$ref": "#/components/schemas/ExternalMcpClientNameInput"
                   }
                 },
                 "required": [
-                  "client_name"
+                  "clientName"
                 ]
               }
             }
@@ -1603,7 +1603,7 @@
         }
       }
     },
-    "/api/external_mcp_client/{client_name}/disconnect": {
+    "/api/external_mcp_client/{clientName}/disconnect": {
       "delete": {
         "operationId": "disconnectExternalMcpClient",
         "tags": [
@@ -1616,7 +1616,7 @@
               "$ref": "#/components/schemas/ExternalMcpClientNameInput"
             },
             "in": "path",
-            "name": "client_name",
+            "name": "clientName",
             "required": true
           }
         ],
