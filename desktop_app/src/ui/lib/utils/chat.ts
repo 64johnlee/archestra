@@ -1,12 +1,12 @@
-import { type ChatWithMessages, type ToolCall, ToolCallStatus } from '@ui/types';
+import {
+  type ChatWithMessages,
+  type ServerChatRepresentation,
+  type ServerToolCallRepresentation,
+  type ToolCall,
+  ToolCallStatus,
+} from '@ui/types';
 
 import { convertArchestraToolNameToServerAndToolName } from './tools';
-
-/**
- * TODO: update/remove these.. what should these actual types be?
- */
-type ServerChatWithMessages = any;
-type ServerToolCall = any;
 
 interface ParsedContent {
   thinking: string;
@@ -72,7 +72,7 @@ export function parseThinkingContent(content: string): ParsedContent {
 
 export const generateNewToolCallId = () => crypto.randomUUID();
 
-export const initializeToolCalls = (toolCalls: ServerToolCall[]): ToolCall[] => {
+export const initializeToolCalls = (toolCalls: ServerToolCallRepresentation[]): ToolCall[] => {
   return toolCalls.map((toolCall) => {
     const [serverName, toolName] = convertArchestraToolNameToServerAndToolName(toolCall.function.name);
     return {
@@ -95,11 +95,19 @@ export const generateNewMessageId = () => crypto.randomUUID();
 
 export const generateNewMessageCreatedAt = () => crypto.randomUUID();
 
-export const initializeChat = (chat: ServerChatWithMessages): ChatWithMessages => {
+export const initializeChat = (chat: ServerChatRepresentation): ChatWithMessages => {
   return {
     ...chat,
     /**
      * TODO: update/remove these.. what should these actual types be?
+     *
+     * I think we need to update the content "json" type in
+     * desktop_app/src/backend/database/schema/messages.ts
+     * to be more strongly typed (see some of the other schema files in desktop_app/src/backend/database/schema
+     * for examples of how we do this)
+     *
+     * The benefit of this is that that strongly typed value than trickles down into zod schemas, into our
+     * openapi schema, and finally as codegen'd typescript types that we can then use here properly
      */
     messages: (chat.messages || []).map((message: any) => {
       const { thinking, response } = parseThinkingContent(message.content);

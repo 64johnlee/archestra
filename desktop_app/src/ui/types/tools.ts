@@ -1,7 +1,7 @@
 /**
  * TODO: what is the proper type on this? It used to be this👇
  *
- * import type { ToolCall as BaseToolCall } from '@clients/archestra/api/gen';
+ * import type { ToolCall as ServerToolCallRepresentation } from '@clients/archestra/api/gen';
  *
  * However, we're no longer exporting a ToolCall type as part of the API's openapi schema.
  * We used to do this with the Rust backend.. what does a ToolCall represent now?
@@ -12,7 +12,7 @@
  * such that it would get codegen'd into @clients/archestra/api/gen/types.gen.ts
  * (see calls to z.globalRegistry.add for an example of how to do this)
  */
-type BaseToolCall = any;
+export type ServerToolCallRepresentation = any;
 
 export enum ToolCallStatus {
   Pending = 'pending',
@@ -21,7 +21,7 @@ export enum ToolCallStatus {
   Error = 'error',
 }
 
-export interface ToolCall extends BaseToolCall {
+export interface ToolCall extends ServerToolCallRepresentation {
   id: string;
   serverName: string;
   name: string;
