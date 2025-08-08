@@ -1,5 +1,6 @@
 import {
   type ChatWithMessages,
+  type ParsedContent,
   type ServerChatRepresentation,
   type ServerToolCallRepresentation,
   type ToolCall,
@@ -7,30 +8,6 @@ import {
 } from '@ui/types';
 
 import { convertArchestraToolNameToServerAndToolName } from './tools';
-
-interface ParsedContent {
-  thinking: string;
-  response: string;
-  isThinkingStreaming: boolean;
-}
-
-export function checkModelSupportsTools(model: string): boolean {
-  return (
-    model.includes('functionary') ||
-    model.includes('mistral') ||
-    model.includes('command') ||
-    (model.includes('qwen') && !model.includes('0.6b')) ||
-    model.includes('hermes') ||
-    model.includes('llama3.1') ||
-    model.includes('llama-3.1') ||
-    model.includes('phi') ||
-    model.includes('granite')
-  );
-}
-
-export function addCancellationText(content: string): string {
-  return content.includes('[Cancelled]') ? content : content + ' [Cancelled]';
-}
 
 export function parseThinkingContent(content: string): ParsedContent {
   if (!content) {
@@ -70,7 +47,7 @@ export function parseThinkingContent(content: string): ParsedContent {
   };
 }
 
-export const generateNewToolCallId = () => crypto.randomUUID();
+const generateNewToolCallId = () => crypto.randomUUID();
 
 export const initializeToolCalls = (toolCalls: ServerToolCallRepresentation[]): ToolCall[] => {
   return toolCalls.map((toolCall) => {
@@ -91,9 +68,7 @@ export const initializeToolCalls = (toolCalls: ServerToolCallRepresentation[]): 
   });
 };
 
-export const generateNewMessageId = () => crypto.randomUUID();
-
-export const generateNewMessageCreatedAt = () => crypto.randomUUID();
+const generateNewMessageId = () => crypto.randomUUID();
 
 export const initializeChat = (chat: ServerChatRepresentation): ChatWithMessages => {
   return {

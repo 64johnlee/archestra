@@ -30,4 +30,10 @@ export interface ChatWithMessages extends Omit<ServerChatRepresentation, 'messag
   messages: ChatMessage[];
 }
 
+export type ParsedContent = {
+  thinking: string;
+  response: string;
+  isThinkingStreaming: boolean;
+};
+
 export { type ServerChatMessageRepresentation, type ServerChatRepresentation };
