@@ -23,6 +23,8 @@ import {
   ToolWithMcpServerInfo,
 } from '@ui/types';
 
+const CATALOG_PAGE_SIZE = 20;
+
 /**
  * NOTE: these are here because the "archestra" MCP server is "injected" into the list of "installed" MCP servers
  * (since it is not actually persisted in the database)
@@ -210,8 +212,6 @@ const initializeConnectedMcpServerTools = async (
     enabled: true,
   }));
 };
-
-const CATALOG_PAGE_SIZE = 20;
 
 export const useMcpServersStore = create<McpServersStore>((set, get) => ({
   // State
@@ -466,36 +466,34 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
 
     let retries = 0;
 
-    // TODO: once we figure out the /mcp CORS issues, simply uncomment this out and things should just start working
-    // const attemptConnection = async (): Promise<boolean> => {
-    //   const { archestraMcpServer } = get();
+    const attemptConnection = async (): Promise<boolean> => {
+      const { archestraMcpServer } = get();
 
-    //   try {
-    //     const client = await configureMcpClient(`${ARCHESTRA_MCP_SERVER_NAME}-client`, archestraMcpServer.url, {
-    //       tools: {},
-    //     });
+      try {
+        const client = await configureMcpClient(`${ARCHESTRA_MCP_SERVER_NAME}-client`, archestraMcpServer.url, {
+          tools: {},
+        });
 
-    //     if (client) {
-    //       const tools = await initializeConnectedMcpServerTools(client, archestraMcpServer);
+        if (client) {
+          const tools = await initializeConnectedMcpServerTools(client, archestraMcpServer);
 
-    //       set({
-    //         archestraMcpServer: {
-    //           ...archestraMcpServer,
-    //           client,
-    //           tools,
-    //           status: McpServerStatus.Connected,
-    //           error: null,
-    //         },
-    //       });
+          set({
+            archestraMcpServer: {
+              ...archestraMcpServer,
+              client,
+              tools,
+              status: McpServerStatus.Connected,
+              error: null,
+            },
+          });
 
-    //       return true;
-    //     }
-    //     return false;
-    //   } catch (error) {
-    //     return false;
-    //   }
-    // };
-    const attemptConnection = async () => true;
+          return true;
+        }
+        return false;
+      } catch (error) {
+        return false;
+      }
+    };
 
     // Keep trying to connect until successful or max retries reached
     while (retries < MAX_RETRIES) {

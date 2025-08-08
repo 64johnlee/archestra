@@ -1,6 +1,6 @@
 import cors from '@fastify/cors';
 import fastify from 'fastify';
-import { streamableHttp } from 'fastify-mcp';
+import FastifyMcpServer from 'fastify-mcp-server';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 
 import config from '@backend/config';
@@ -15,55 +15,54 @@ import mcpServerRoutes from '@backend/server/plugins/mcpServer';
 import ollamaRoutes from '@backend/server/plugins/ollama';
 import sandboxRoutes from '@backend/server/plugins/sandbox';
 
-const app = fastify({
-  logger: {
-    level: 'info',
-    serializers: {
-      req: (req) => ({ method: req.method, url: req.url }),
-      res: (res) => ({ statusCode: res.statusCode }),
-    },
-  },
-});
-
-/**
- * Add schema validator and serializer
- * https://github.com/turkerdev/fastify-type-provider-zod?tab=readme-ov-file#how-to-use
- */
-app.setValidatorCompiler(validatorCompiler);
-app.setSerializerCompiler(serializerCompiler);
-
-app.register(cors, {
-  // Allow all origins in development
-  origin: true,
-  credentials: true,
-  // Ensure all methods are allowed
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  // Allow common headers
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  // Expose headers that might be needed
-  exposedHeaders: ['X-Total-Count'],
-  // Cache preflight response for 1 hour
-  maxAge: 3600,
-});
-app.register(chatRoutes);
-app.register(cloudProviderRoutes);
-app.register(llmRoutes);
-app.register(ollamaLLMRoutes);
-app.register(externalMcpClientRoutes);
-app.register(mcpRequestLogRoutes);
-app.register(mcpServerRoutes);
-app.register(ollamaRoutes);
-app.register(sandboxRoutes);
-
-app.register(streamableHttp, {
-  // Set to `true` if you want a stateful server
-  stateful: false,
-  mcpEndpoint: '/mcp',
-  // sessions: new Sessions<StreamableHTTPServerTransport>()
-  createServer: createArchestraMcpServer,
-});
-
 export const startServer = async () => {
+  const app = fastify({
+    logger: {
+      level: 'info',
+      serializers: {
+        req: (req) => ({ method: req.method, url: req.url }),
+        res: (res) => ({ statusCode: res.statusCode }),
+      },
+    },
+  });
+
+  /**
+   * Add schema validator and serializer
+   * https://github.com/turkerdev/fastify-type-provider-zod?tab=readme-ov-file#how-to-use
+   */
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+
+  const archestraMcpServer = createArchestraMcpServer();
+
+  await app.register(cors, {
+    // Allow all origins in development
+    origin: true,
+    credentials: true,
+    // Ensure all methods are allowed
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    // Allow common headers
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    // Expose headers that might be needed
+    exposedHeaders: ['X-Total-Count'],
+    // Cache preflight response for 1 hour
+    maxAge: 3600,
+  });
+  await app.register(chatRoutes);
+  await app.register(cloudProviderRoutes);
+  await app.register(llmRoutes);
+  await app.register(ollamaLLMRoutes);
+  await app.register(externalMcpClientRoutes);
+  await app.register(mcpRequestLogRoutes);
+  await app.register(mcpServerRoutes);
+  await app.register(ollamaRoutes);
+  await app.register(sandboxRoutes);
+
+  await app.register(FastifyMcpServer, {
+    server: archestraMcpServer.server,
+    endpoint: '/mcp',
+  });
+
   const { http } = config.server;
 
   // Start the Fastify server

@@ -1,10 +1,9 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
 import McpServerModel from '@backend/models/mcpServer';
 
-export const createArchestraMcpServer = (): Server => {
+export const createArchestraMcpServer = (): McpServer => {
   const archestraMcpServer = new McpServer({
     name: 'archestra-server',
     version: '1.0.0',
@@ -46,18 +45,17 @@ export const createArchestraMcpServer = (): Server => {
     {
       title: 'Install MCP Server',
       description: 'Install an MCP server',
-      inputSchema: { slug: z.string({ description: 'The slug of the MCP server to install' }) },
+      inputSchema: { id: z.string().describe('The id of the MCP server to install') },
     },
-    async (args, extra) => {
+    async ({ id }, extra) => {
       try {
-        const { slug } = args;
-        const server = await McpServerModel.getBySlug(slug);
+        const server = await McpServerModel.getById(id);
         if (!server) {
           return {
             content: [
               {
                 type: 'text',
-                text: `MCP server with slug ${slug} not found`,
+                text: `MCP server with id ${id} not found`,
               },
             ],
           };
@@ -89,19 +87,17 @@ export const createArchestraMcpServer = (): Server => {
     {
       title: 'Uninstall MCP Server',
       description: 'Uninstall an MCP server',
-      inputSchema: { slug: z.string({ description: 'The slug of the MCP server to uninstall' }) },
+      inputSchema: { id: z.string().describe('The id of the MCP server to uninstall') },
     },
-    async (args, extra) => {
+    async ({ id }, extra) => {
       try {
-        const { slug } = args;
-
-        await McpServerModel.uninstallMcpServer(slug);
+        await McpServerModel.uninstallMcpServer(id);
 
         return {
           content: [
             {
               type: 'text',
-              text: `MCP server with slug ${slug} uninstalled`,
+              text: `MCP server with id ${id} uninstalled`,
             },
           ],
         };
@@ -118,5 +114,5 @@ export const createArchestraMcpServer = (): Server => {
     }
   );
 
-  return archestraMcpServer.server;
+  return archestraMcpServer;
 };
