@@ -2,6 +2,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 
 import McpRequestLogModel, {
+  McpRequestLogFilterStatusSchema,
   McpRequestLogFiltersSchema,
   McpRequestLogSchema,
   McpRequestLogStatsSchema,
@@ -19,6 +20,7 @@ export const McpRequestLogFiltersWithPaginationSchema = McpRequestLogFiltersSche
  */
 z.globalRegistry.add(McpRequestLogSchema, { id: 'McpRequestLog' });
 z.globalRegistry.add(McpRequestLogStatsSchema, { id: 'McpRequestLogStats' });
+z.globalRegistry.add(McpRequestLogFilterStatusSchema, { id: 'McpRequestLogFilterStatus' });
 /**
  * NOTE: for some reason, it fails to output these 👇 two components in the openapi spec because of this:
  *

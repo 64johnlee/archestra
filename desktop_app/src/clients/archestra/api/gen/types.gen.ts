@@ -81,6 +81,8 @@ export type McpRequestLogStatsInput = {
   };
 };
 
+export type McpRequestLogFilterStatusInput = 'HTTP 200' | 'HTTP 40x' | 'HTTP 50x';
+
 export type McpServerInput = {
   id: string;
   name: string | null;
@@ -179,6 +181,8 @@ export type McpRequestLogStats = {
     [key: string]: number;
   };
 };
+
+export type McpRequestLogFilterStatus = 'HTTP 200' | 'HTTP 40x' | 'HTTP 50x';
 
 export type McpServer = {
   id: string;
@@ -523,9 +527,10 @@ export type GetMcpRequestLogsData = {
   body?: never;
   path?: never;
   query?: {
+    mcpSessionId?: string;
     serverName?: string;
     method?: string;
-    status?: 'success' | 'error';
+    status?: McpRequestLogFilterStatusInput;
     search?: string;
     dateFrom?: string;
     dateTo?: string;
@@ -582,9 +587,10 @@ export type GetMcpRequestLogStatsData = {
   body?: never;
   path?: never;
   query?: {
+    mcpSessionId?: string;
     serverName?: string;
     method?: string;
-    status?: 'success' | 'error';
+    status?: McpRequestLogFilterStatusInput;
     search?: string;
     dateFrom?: string;
     dateTo?: string;

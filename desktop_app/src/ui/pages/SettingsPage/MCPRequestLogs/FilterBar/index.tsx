@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { useState } from 'react';
 
+import { type McpRequestLogFilterStatus } from '@clients/archestra/api/gen';
 import { Button } from '@ui/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui/components/ui/collapsible';
 import { Input } from '@ui/components/ui/input';
@@ -48,15 +49,15 @@ export default function FilterBar({ filters, onFiltersChange, onReset }: FilterB
               onChange={(e) => onFiltersChange({ ...filters, method: e.target.value || undefined })}
             />
           </div>
-          {/* <div className="space-y-2">
+          <div className="space-y-2">
             <Label htmlFor="session-filter">Session ID</Label>
             <Input
               id="session-filter"
               placeholder="Filter by session..."
-              value={filters.sessionId || ''}
-              onChange={(e) => onFiltersChange({ ...filters, sessionId: e.target.value || undefined })}
+              value={filters.mcpSessionId || ''}
+              onChange={(e) => onFiltersChange({ ...filters, mcpSessionId: e.target.value || undefined })}
             />
-          </div> */}
+          </div>
           <div className="space-y-2">
             <Label htmlFor="status-filter">Status Code</Label>
             <Select
@@ -64,7 +65,7 @@ export default function FilterBar({ filters, onFiltersChange, onReset }: FilterB
               onValueChange={(value) =>
                 onFiltersChange({
                   ...filters,
-                  status: value === 'all' ? undefined : value,
+                  status: value === 'all' ? undefined : (value as McpRequestLogFilterStatus),
                 })
               }
             >
@@ -73,9 +74,9 @@ export default function FilterBar({ filters, onFiltersChange, onReset }: FilterB
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status Codes</SelectItem>
-                <SelectItem value="200">200 - Success</SelectItem>
-                <SelectItem value="400">400 - Bad Request</SelectItem>
-                <SelectItem value="500">500 - Server Error</SelectItem>
+                <SelectItem value="HTTP 200">200 - Success</SelectItem>
+                <SelectItem value="HTTP 40x">400 - Bad Request</SelectItem>
+                <SelectItem value="HTTP 50x">500 - Server Error</SelectItem>
               </SelectContent>
             </Select>
           </div>

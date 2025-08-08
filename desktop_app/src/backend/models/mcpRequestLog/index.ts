@@ -4,10 +4,13 @@ import { z } from 'zod';
 import db from '@backend/database';
 import { McpClientInfoSchema, SelectMcpRequestLogSchema, mcpRequestLogs } from '@backend/database/schema/mcpRequestLog';
 
+export const McpRequestLogFilterStatusSchema = z.enum(['HTTP 200', 'HTTP 40x', 'HTTP 50x']);
+
 export const McpRequestLogFiltersSchema = z.object({
+  mcpSessionId: z.string().optional(),
   serverName: z.string().optional(),
   method: z.string().optional(),
-  status: z.enum(['success', 'error']).optional(),
+  status: McpRequestLogFilterStatusSchema.optional(),
   search: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
@@ -41,6 +44,9 @@ export default class McpRequestLog {
     const conditions = [];
 
     if (filters) {
+      if (filters.mcpSessionId) {
+        conditions.push(eq(mcpRequestLogs.mcpSessionId, filters.mcpSessionId));
+      }
       if (filters.serverName) {
         conditions.push(eq(mcpRequestLogs.serverName, filters.serverName));
       }
@@ -48,11 +54,13 @@ export default class McpRequestLog {
         conditions.push(eq(mcpRequestLogs.method, filters.method));
       }
       if (filters.status) {
-        if (filters.status === 'success') {
+        if (filters.status === 'HTTP 200') {
           conditions.push(gte(mcpRequestLogs.statusCode, 200));
           conditions.push(lte(mcpRequestLogs.statusCode, 299));
-        } else if (filters.status === 'error') {
+        } else if (filters.status === 'HTTP 40x') {
           conditions.push(gte(mcpRequestLogs.statusCode, 400));
+        } else if (filters.status === 'HTTP 50x') {
+          conditions.push(gte(mcpRequestLogs.statusCode, 500));
         }
       }
       if (filters.dateFrom) {
@@ -101,6 +109,9 @@ export default class McpRequestLog {
     const conditions = [];
 
     if (filters) {
+      if (filters.mcpSessionId) {
+        conditions.push(eq(mcpRequestLogs.mcpSessionId, filters.mcpSessionId));
+      }
       if (filters.serverName) {
         conditions.push(eq(mcpRequestLogs.serverName, filters.serverName));
       }
@@ -108,11 +119,13 @@ export default class McpRequestLog {
         conditions.push(eq(mcpRequestLogs.method, filters.method));
       }
       if (filters.status) {
-        if (filters.status === 'success') {
+        if (filters.status === 'HTTP 200') {
           conditions.push(gte(mcpRequestLogs.statusCode, 200));
           conditions.push(lte(mcpRequestLogs.statusCode, 299));
-        } else if (filters.status === 'error') {
+        } else if (filters.status === 'HTTP 40x') {
           conditions.push(gte(mcpRequestLogs.statusCode, 400));
+        } else if (filters.status === 'HTTP 50x') {
+          conditions.push(gte(mcpRequestLogs.statusCode, 500));
         }
       }
       if (filters.dateFrom) {

@@ -418,6 +418,14 @@
           "requestsPerServer"
         ]
       },
+      "McpRequestLogFilterStatusInput": {
+        "type": "string",
+        "enum": [
+          "HTTP 200",
+          "HTTP 40x",
+          "HTTP 50x"
+        ]
+      },
       "McpServerInput": {
         "type": "object",
         "properties": {
@@ -921,6 +929,14 @@
           "requestsPerServer"
         ],
         "additionalProperties": false
+      },
+      "McpRequestLogFilterStatus": {
+        "type": "string",
+        "enum": [
+          "HTTP 200",
+          "HTTP 40x",
+          "HTTP 50x"
+        ]
       },
       "McpServer": {
         "type": "object",
@@ -1540,6 +1556,14 @@
               "type": "string"
             },
             "in": "query",
+            "name": "mcpSessionId",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
             "name": "serverName",
             "required": false
           },
@@ -1553,11 +1577,7 @@
           },
           {
             "schema": {
-              "type": "string",
-              "enum": [
-                "success",
-                "error"
-              ]
+              "$ref": "#/components/schemas/McpRequestLogFilterStatusInput"
             },
             "in": "query",
             "name": "status",
@@ -1756,6 +1776,14 @@
               "type": "string"
             },
             "in": "query",
+            "name": "mcpSessionId",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
             "name": "serverName",
             "required": false
           },
@@ -1769,11 +1797,7 @@
           },
           {
             "schema": {
-              "type": "string",
-              "enum": [
-                "success",
-                "error"
-              ]
+              "$ref": "#/components/schemas/McpRequestLogFilterStatusInput"
             },
             "in": "query",
             "name": "status",
