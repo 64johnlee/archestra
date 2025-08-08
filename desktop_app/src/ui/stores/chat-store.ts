@@ -1,13 +1,6 @@
 import { create } from 'zustand';
 
-import {
-  ChatWithMessages as ServerChatWithMessages,
-  createChat,
-  deleteChat,
-  getChatById,
-  getChats,
-  updateChat,
-} from '@clients/archestra/api/gen';
+import { createChat, deleteChat, getChatById, getChats, updateChat } from '@clients/archestra/api/gen';
 import config from '@ui/config';
 import { initializeChat } from '@ui/lib/utils/chat';
 import { websocketService } from '@ui/lib/websocket';
@@ -62,7 +55,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         const initializedChats = data.map(initializeChat);
         set({
           chats: initializedChats,
-          currentChatSessionId: initializedChats.length > 0 ? initializedChats[0].session_id : null,
+          currentChatSessionId: initializedChats.length > 0 ? initializedChats[0].sessionId : null,
           isLoadingChats: false,
         });
       }
@@ -74,18 +67,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   createNewChat: async () => {
     try {
-      const response = await createChat({
+      const { data } = await createChat({
         body: {
           llm_provider: 'ollama',
         },
       });
 
       // The API client returns { data: ... } wrapper
-      if (!response.data) {
+      if (!data) {
         throw new Error('No data returned from create chat API');
       }
 
-      const initializedChat = initializeChat(response.data as ServerChatWithMessages);
+      const initializedChat = initializeChat(data);
 
       set((state) => ({
         chats: [initializedChat, ...state.chats],
