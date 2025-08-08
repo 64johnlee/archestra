@@ -4,7 +4,7 @@ import { CallToolRequest, ClientCapabilities } from '@modelcontextprotocol/sdk/t
 import { create } from 'zustand';
 
 import {
-  McpServer,
+  type McpServer,
   getMcpServers,
   installMcpServer,
   startMcpServerOauth,
@@ -17,12 +17,93 @@ import { formatToolName } from '@ui/lib/utils/tools';
 import { websocketService } from '@ui/lib/websocket';
 import { ConnectedMcpServer, McpServerStatus, McpServerToolsMap, ToolWithMcpServerInfo } from '@ui/types';
 
-const ARCHESTRA_MCP_SERVER_NAME = 'archestra';
+/**
+ * NOTE: these are here because the "archestra" MCP server is "injected" into the list of "installed" MCP servers
+ * (since it is not actually persisted in the database)
+ */
+const ARCHESTRA_MCP_SERVER_ID = 'archestra';
+const ARCHESTRA_MCP_SERVER_NAME = 'Archestra.ai';
+
+/**
+ * TODO: This is temporary test data. Remove once catalog API returns user_config
+ *
+ * Right now user_config is in the returned objects, but we haven't yet actually populated
+ * any data into user_config in our catalog objects
+ */
+const TEST_USER_CONFIG: ArchestraMcpServerManifest['user_config'] = {
+  allowed_directories: {
+    type: 'directory',
+    title: 'Allowed Directories',
+    description: 'Directories the server can access',
+    multiple: true,
+    required: true,
+    default: ['${HOME}/Desktop'],
+  },
+  api_key: {
+    type: 'string',
+    title: 'API Key',
+    description: 'Your API key for authentication',
+    sensitive: true,
+    required: false,
+  },
+  max_file_size: {
+    type: 'number',
+    title: 'Maximum File Size (MB)',
+    description: 'Maximum file size to process',
+    default: 10,
+    min: 1,
+    max: 100,
+  },
+};
+
+/**
+ * TODO: these shouldn't be hardcoded here, instead we should expose an endpoint on the catalog server that
+ * returns all options
+ *
+ * Right now we DO have all of the available values, but this is via a typescript type in the codegen'd types
+ * NOT an actual javascript variable that we can use here
+ *
+ * (somewhere around here https://github.com/archestra-ai/website/blob/5dc8864287bd147c6d3548ae447d4404936e595b/app/app/mcp-catalog/api/search)
+ */
+const TEMPORARY_CONNECTOR_CATALOG_CATEGORIES: { value: string; label: string }[] = [
+  { value: 'all', label: 'All Categories' },
+  { value: 'Aggregators', label: 'Aggregators' },
+  { value: 'AI Tools', label: 'AI Tools' },
+  { value: 'Art & Culture', label: 'Art & Culture' },
+  { value: 'Audio', label: 'Audio' },
+  { value: 'Browser Automation', label: 'Browser Automation' },
+  { value: 'CLI Tools', label: 'CLI Tools' },
+  { value: 'Cloud', label: 'Cloud' },
+  { value: 'Communication', label: 'Communication' },
+  { value: 'Data', label: 'Data' },
+  { value: 'Data Science', label: 'Data Science' },
+  { value: 'Development', label: 'Development' },
+  { value: 'File Management', label: 'File Management' },
+  { value: 'Finance', label: 'Finance' },
+  { value: 'Gaming', label: 'Gaming' },
+  { value: 'Healthcare', label: 'Healthcare' },
+  { value: 'IoT', label: 'IoT' },
+  { value: 'Knowledge', label: 'Knowledge' },
+  { value: 'Location', label: 'Location' },
+  { value: 'Logistics', label: 'Logistics' },
+  { value: 'Marketing', label: 'Marketing' },
+  { value: 'Media', label: 'Media' },
+  { value: 'Monitoring', label: 'Monitoring' },
+  { value: 'Productivity', label: 'Productivity' },
+  { value: 'Search', label: 'Search' },
+  { value: 'Security', label: 'Security' },
+  { value: 'Social Media', label: 'Social Media' },
+  { value: 'Sports', label: 'Sports' },
+  { value: 'Support', label: 'Support' },
+  { value: 'Translation', label: 'Translation' },
+  { value: 'Travel', label: 'Travel' },
+  { value: 'Utilities', label: 'Utilities' },
+];
 
 type McpServerUserConfigValues = McpServer['userConfigValues'];
 
 interface McpServersState {
-  archestraMcpServer: ConnectedMcpServer | null;
+  archestraMcpServer: ConnectedMcpServer;
 
   installedMcpServers: ConnectedMcpServer[];
   loadingInstalledMcpServers: boolean;
@@ -42,10 +123,10 @@ interface McpServersState {
   catalogTotalCount: number;
   catalogOffset: number;
 
-  installingMcpServerSlug: string | null;
+  installingMcpServerId: string | null;
   errorInstallingMcpServer: string | null;
 
-  uninstallingMcpServerSlug: string | null;
+  uninstallingMcpServerId: string | null;
   errorUninstallingMcpServer: string | null;
 
   selectedTools: ToolWithMcpServerInfo[];
@@ -55,7 +136,7 @@ interface McpServersState {
 interface McpServersActions {
   loadInstalledMcpServers: () => Promise<void>;
   addMcpServerToInstalledMcpServers: (mcpServer: McpServer) => void;
-  removeMcpServerFromInstalledMcpServers: (slug: string) => void;
+  removeMcpServerFromInstalledMcpServers: (mcpServerId: string) => void;
 
   loadConnectorCatalog: (append?: boolean) => Promise<void>;
   loadMoreCatalogServers: () => Promise<void>;
@@ -66,12 +147,12 @@ interface McpServersActions {
     mcpServer: ArchestraMcpServerManifest,
     userConfigValues?: McpServerUserConfigValues
   ) => Promise<void>;
-  uninstallMcpServer: (slug: string) => Promise<void>;
+  uninstallMcpServer: (mcpServerId: string) => Promise<void>;
 
   connectToArchestraMcpServer: () => Promise<void>;
   connectToMcpServer: (mcpServer: ConnectedMcpServer, url: string) => Promise<Client | null>;
 
-  executeTool: (slug: string, request: CallToolRequest['params']) => Promise<any>;
+  executeTool: (mcpServerId: string, request: CallToolRequest['params']) => Promise<any>;
   getAllAvailableTools: () => ToolWithMcpServerInfo[];
   getFilteredTools: () => ToolWithMcpServerInfo[];
   getAllAvailableToolsGroupedByServer: () => McpServerToolsMap;
@@ -119,7 +200,7 @@ const initializeConnectedMcpServerTools = async (
   return tools.map((tool) => ({
     ...tool,
     server: {
-      slug: server.slug,
+      id: server.id,
       name: server.name,
     },
     enabled: true,
@@ -130,7 +211,22 @@ const CATALOG_PAGE_SIZE = 20;
 
 export const useMcpServersStore = create<McpServersStore>((set, get) => ({
   // State
-  archestraMcpServer: null,
+  archestraMcpServer: {
+    id: ARCHESTRA_MCP_SERVER_ID,
+    name: ARCHESTRA_MCP_SERVER_NAME,
+    createdAt: new Date().toISOString(),
+    serverConfig: {
+      command: '',
+      args: [],
+      env: {},
+    },
+    url: config.archestra.mcpUrl,
+    client: null,
+    tools: [],
+    status: McpServerStatus.Connecting,
+    error: null,
+    userConfigValues: {},
+  },
 
   installedMcpServers: [],
   loadingInstalledMcpServers: false,
@@ -145,53 +241,14 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
   catalogTotalCount: 0,
   catalogOffset: 0,
 
-  /**
-   * TODO: these shouldn't be hardcoded here, instead we should expose an endpoint on the catalog server that
-   * returns all options
-   *
-   * (somewhere around here https://github.com/archestra-ai/website/blob/5dc8864287bd147c6d3548ae447d4404936e595b/app/app/mcp-catalog/api/search)
-   */
-  connectorCatalogCategories: [
-    { value: 'all', label: 'All Categories' },
-    { value: 'Aggregators', label: 'Aggregators' },
-    { value: 'AI Tools', label: 'AI Tools' },
-    { value: 'Art & Culture', label: 'Art & Culture' },
-    { value: 'Audio', label: 'Audio' },
-    { value: 'Browser Automation', label: 'Browser Automation' },
-    { value: 'CLI Tools', label: 'CLI Tools' },
-    { value: 'Cloud', label: 'Cloud' },
-    { value: 'Communication', label: 'Communication' },
-    { value: 'Data', label: 'Data' },
-    { value: 'Data Science', label: 'Data Science' },
-    { value: 'Development', label: 'Development' },
-    { value: 'File Management', label: 'File Management' },
-    { value: 'Finance', label: 'Finance' },
-    { value: 'Gaming', label: 'Gaming' },
-    { value: 'Healthcare', label: 'Healthcare' },
-    { value: 'IoT', label: 'IoT' },
-    { value: 'Knowledge', label: 'Knowledge' },
-    { value: 'Location', label: 'Location' },
-    { value: 'Logistics', label: 'Logistics' },
-    { value: 'Marketing', label: 'Marketing' },
-    { value: 'Media', label: 'Media' },
-    { value: 'Monitoring', label: 'Monitoring' },
-    { value: 'Productivity', label: 'Productivity' },
-    { value: 'Search', label: 'Search' },
-    { value: 'Security', label: 'Security' },
-    { value: 'Social Media', label: 'Social Media' },
-    { value: 'Sports', label: 'Sports' },
-    { value: 'Support', label: 'Support' },
-    { value: 'Translation', label: 'Translation' },
-    { value: 'Travel', label: 'Travel' },
-    { value: 'Utilities', label: 'Utilities' },
-  ],
+  connectorCatalogCategories: TEMPORARY_CONNECTOR_CATALOG_CATEGORIES,
   loadingConnectorCatalogCategories: false,
   errorFetchingConnectorCatalogCategories: null,
 
-  installingMcpServerSlug: null,
+  installingMcpServerId: null,
   errorInstallingMcpServer: null,
 
-  uninstallingMcpServerSlug: null,
+  uninstallingMcpServerId: null,
   errorUninstallingMcpServer: null,
 
   selectedTools: [],
@@ -199,22 +256,17 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
 
   // Actions
   loadInstalledMcpServers: async () => {
+    set({
+      loadingInstalledMcpServers: true,
+      errorLoadingInstalledMcpServers: null,
+    });
+
     try {
-      set({
-        loadingInstalledMcpServers: true,
-        errorLoadingInstalledMcpServers: null,
-      });
-
-      const response = await getMcpServers();
-
-      if ('data' in response && response.data) {
-        // Add servers and connect to them
-        for (const server of response.data) {
+      const { data } = await getMcpServers();
+      if (data) {
+        for (const server of data) {
           get().addMcpServerToInstalledMcpServers(server);
         }
-      } else if ('error' in response) {
-        const errorMessage = typeof response.error === 'string' ? response.error : JSON.stringify(response.error);
-        throw new Error(errorMessage);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -246,15 +298,15 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
     }
   },
 
-  removeMcpServerFromInstalledMcpServers: (slug: string) => {
+  removeMcpServerFromInstalledMcpServers: (mcpServerId: string) => {
     // Close the client connection before removing
-    const server = get().installedMcpServers.find((s) => s.slug === slug);
+    const server = get().installedMcpServers.find((s) => s.id === mcpServerId);
     if (server?.client) {
       server.client.close();
     }
 
     set((state) => ({
-      installedMcpServers: state.installedMcpServers.filter((mcpServer) => mcpServer.slug !== slug),
+      installedMcpServers: state.installedMcpServers.filter((mcpServer) => mcpServer.id !== mcpServerId),
     }));
   },
 
@@ -280,44 +332,16 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
         params.category = catalogSelectedCategory;
       }
 
-      const response = await searchCatalog({
-        query: params,
-      });
+      const { data } = await searchCatalog({ query: params });
 
-      if ('data' in response && response.data) {
-        const data = response.data;
-
-        // TODO: This is temporary test data. Remove once catalog API returns user_config
-        const testUserConfig: McpServerUserConfig = {
-          allowed_directories: {
-            type: 'directory',
-            title: 'Allowed Directories',
-            description: 'Directories the server can access',
-            multiple: true,
-            required: true,
-            default: ['${HOME}/Desktop'],
-          },
-          api_key: {
-            type: 'string',
-            title: 'API Key',
-            description: 'Your API key for authentication',
-            sensitive: true,
-            required: false,
-          },
-          max_file_size: {
-            type: 'number',
-            title: 'Maximum File Size (MB)',
-            description: 'Maximum file size to process',
-            default: 10,
-            min: 1,
-            max: 100,
-          },
-        };
-
-        // Inject user_config into each server for testing
+      if (data) {
+        /**
+         * NOTE: see the note above about TEST_USER_CONFIG
+         * remove this once we have real "user config" data
+         */
         const serversWithUserConfig = (data.servers || []).map((server) => ({
           ...server,
-          user_config: testUserConfig,
+          user_config: TEST_USER_CONFIG,
         }));
 
         set({
@@ -326,8 +350,6 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
           catalogTotalCount: data.totalCount || 0,
           catalogOffset: append ? get().catalogOffset + CATALOG_PAGE_SIZE : CATALOG_PAGE_SIZE,
         });
-      } else if ('error' in response) {
-        throw new Error(response.error as string);
       }
     } catch (error) {
       set({ errorFetchingConnectorCatalog: error as string });
@@ -370,40 +392,39 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
   },
 
   installMcpServerFromConnectorCatalog: async (
-    { configForArchestra, name, slug }: ArchestraMcpServerManifest,
+    { config_for_archestra, name }: ArchestraMcpServerManifest,
     userConfigValues?: McpServerUserConfigValues
   ) => {
     try {
       set({
-        installingMcpServerSlug: slug,
+        /**
+         * NOTE: the "name" field is the unique identifier for an MCP server in the catalog
+         * When an mcp server from the catalog is installed (ie. persisted in the database),
+         * the "name" field is what is set as the "id" field
+         */
+        installingMcpServerId: name,
         errorInstallingMcpServer: null,
       });
 
       // Check if OAuth is required
-      if (configForArchestra?.oauth?.required) {
+      if (config_for_archestra.oauth.required) {
         try {
           // Start OAuth flow
-          const response = await startMcpServerOauth({
-            body: { slug },
+          const { data } = await startMcpServerOauth({
+            body: { catalogName: name },
           });
 
-          if ('data' in response && response.data) {
+          if (data) {
             // For OAuth connectors, the backend will handle the installation after successful auth
             alert(`OAuth setup started for ${name}. Please complete the authentication in your browser.`);
-          } else if ('error' in response) {
-            throw new Error(response.error as string);
           }
         } catch (error) {
           set({ errorInstallingMcpServer: error as string });
         }
       } else {
-        const response = await installMcpServer({
-          body: { catalogSlug: slug, userConfigValues },
+        const { data } = await installMcpServer({
+          body: { catalogName: name, userConfigValues },
         });
-
-        if ('error' in response) {
-          throw new Error(response.error as string);
-        }
 
         // Refresh the MCP servers list
         await useMcpServersStore.getState().loadInstalledMcpServers();
@@ -411,31 +432,27 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
     } catch (error) {
       set({ errorInstallingMcpServer: error as string });
     } finally {
-      set({ installingMcpServerSlug: null });
+      set({ installingMcpServerId: null });
     }
   },
 
-  uninstallMcpServer: async (slug: string) => {
+  uninstallMcpServer: async (mcpServerId: string) => {
     try {
       set({
-        uninstallingMcpServerSlug: slug,
+        uninstallingMcpServerId: mcpServerId,
         errorUninstallingMcpServer: null,
       });
 
-      const response = await uninstallMcpServer({
-        path: { slug },
+      await uninstallMcpServer({
+        path: { id: mcpServerId },
       });
 
-      if ('error' in response) {
-        throw new Error(response.error as string);
-      }
-
       // Remove from MCP servers store
-      useMcpServersStore.getState().removeMcpServerFromInstalledMcpServers(slug);
+      useMcpServersStore.getState().removeMcpServerFromInstalledMcpServers(mcpServerId);
     } catch (error) {
       set({ errorUninstallingMcpServer: error as string });
     } finally {
-      set({ uninstallingMcpServerSlug: null });
+      set({ uninstallingMcpServerId: null });
     }
   },
 
@@ -443,31 +460,12 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
     const MAX_RETRIES = 30;
     const RETRY_DELAY_MILLISECONDS = 1000;
 
-    /**
-     * id, slug, name, createdAt, and serverConfig aren't needed for the Archestra MCP server, they're simply added
-     * here to appease typing 😛
-     */
-    const archestraMcpServer: ConnectedMcpServer = {
-      id: 0,
-      slug: ARCHESTRA_MCP_SERVER_NAME,
-      name: ARCHESTRA_MCP_SERVER_NAME,
-      createdAt: new Date().toISOString(),
-      serverConfig: {
-        command: '',
-        args: [],
-        env: {},
-      },
-      url: config.archestra.mcpUrl,
-      client: null,
-      tools: [],
-      status: McpServerStatus.Connecting,
-      error: null,
-    };
-
     let retries = 0;
 
     // TODO: once we figure out the /mcp CORS issues, simply uncomment this out and things should just start working
     // const attemptConnection = async (): Promise<boolean> => {
+    //   const { archestraMcpServer } = get();
+
     //   try {
     //     const client = await configureMcpClient(`${ARCHESTRA_MCP_SERVER_NAME}-client`, archestraMcpServer.url, {
     //       tools: {},
@@ -511,7 +509,7 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
     // If we've exhausted all retries, set error state
     set({
       archestraMcpServer: {
-        ...archestraMcpServer,
+        ...get().archestraMcpServer,
         status: McpServerStatus.Error,
         error: 'Failed to connect after maximum retries',
       },
@@ -519,12 +517,12 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
   },
 
   connectToMcpServer: async (mcpServer: ConnectedMcpServer, url: string) => {
-    const { name, slug } = mcpServer;
+    const { id } = mcpServer;
 
     if (!url) {
       set((state) => ({
         installedMcpServers: state.installedMcpServers.map((server) =>
-          server.slug === slug
+          server.id === id
             ? {
                 ...server,
                 client: null,
@@ -538,7 +536,7 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
     }
 
     try {
-      const client = await configureMcpClient(`${slug}-client`, url, {
+      const client = await configureMcpClient(`${id}-client`, url, {
         tools: {},
       });
 
@@ -551,7 +549,7 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
 
       set(({ installedMcpServers }) => ({
         installedMcpServers: installedMcpServers.map((server) =>
-          server.slug === slug
+          server.id === id
             ? {
                 ...server,
                 client,
@@ -575,7 +573,7 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
 
       set((state) => ({
         installedMcpServers: state.installedMcpServers.map((server) =>
-          server.slug === slug
+          server.id === id
             ? {
                 ...server,
                 client: null,
@@ -589,19 +587,19 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
     }
   },
 
-  executeTool: async (slug: string, toolCallRequest: CallToolRequest['params']) => {
+  executeTool: async (mcpServerId: string, toolCallRequest: CallToolRequest['params']) => {
     const { archestraMcpServer, installedMcpServers } = get();
 
     let client: Client | null = null;
-    if (slug === ARCHESTRA_MCP_SERVER_NAME && archestraMcpServer) {
+    if (mcpServerId === ARCHESTRA_MCP_SERVER_ID && archestraMcpServer) {
       client = archestraMcpServer.client;
     } else {
-      const server = installedMcpServers.find((s) => s.slug === slug);
+      const server = installedMcpServers.find((s) => s.id === mcpServerId);
       client = server?.client || null;
     }
 
     if (!client) {
-      throw new Error(`No connection to server ${slug}`);
+      throw new Error(`No connection to server ${mcpServerId}`);
     }
 
     try {
@@ -674,11 +672,11 @@ const subscribeToMcpWebSocketEvents = () => {
   // MCP server starting
   mcpUnsubscribers.push(
     websocketService.subscribe('sandbox-mcp-server-starting', (message) => {
-      const { serverSlug } = message.payload;
+      const { serverId } = message.payload;
 
       useMcpServersStore.setState((state) => ({
         installedMcpServers: state.installedMcpServers.map((server) =>
-          server.slug === serverSlug
+          server.id === serverId
             ? {
                 ...server,
                 status: McpServerStatus.Connecting,
@@ -693,10 +691,10 @@ const subscribeToMcpWebSocketEvents = () => {
   // MCP server started successfully
   mcpUnsubscribers.push(
     websocketService.subscribe('sandbox-mcp-server-started', (message) => {
-      const { serverSlug } = message.payload;
+      const { serverId } = message.payload;
 
       // Server started in sandbox, now connect to it
-      const server = useMcpServersStore.getState().installedMcpServers.find((s) => s.slug === serverSlug);
+      const server = useMcpServersStore.getState().installedMcpServers.find((s) => s.id === serverId);
       if (server) {
         useMcpServersStore.getState().connectToMcpServer(server, server.url);
       }
@@ -706,11 +704,11 @@ const subscribeToMcpWebSocketEvents = () => {
   // MCP server failed to start
   mcpUnsubscribers.push(
     websocketService.subscribe('sandbox-mcp-server-failed', (message) => {
-      const { serverSlug, error } = message.payload;
+      const { serverId, error } = message.payload;
 
       useMcpServersStore.setState((state) => ({
         installedMcpServers: state.installedMcpServers.map((server) =>
-          server.slug === serverSlug
+          server.id === serverId
             ? {
                 ...server,
                 status: McpServerStatus.Error,

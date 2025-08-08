@@ -6,7 +6,15 @@ import { type Tool } from './tools';
 
 export interface ToolWithMcpServerInfo extends Tool {
   server: {
-    slug: string;
+    /**
+     * id is the unique identifier of an mcp server
+     * it's the "slug" from the catalog for mcp servers installed via the catalog
+     * otherwise, for "custom" mcp servers, it's a UUID
+     */
+    id: string;
+    /**
+     * name is the display name of the mcp server
+     */
     name: string;
   };
   enabled: boolean;
