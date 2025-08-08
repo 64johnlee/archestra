@@ -2,6 +2,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { useEffect, useMemo, useState } from 'react';
 
+import { Skeleton } from '@ui/components/ui/skeleton';
 import { useChatStore } from '@ui/stores/chat-store';
 import { useCloudProvidersStore } from '@ui/stores/cloud-providers-store';
 import { useOllamaStore } from '@ui/stores/ollama-store';
@@ -13,31 +14,19 @@ import SystemPrompt from './SystemPrompt';
 interface ChatPageProps {}
 
 export default function ChatPage(_props: ChatPageProps) {
-  const { getCurrentChat, createNewChat, isLoadingChats } = useChatStore();
+  const { getCurrentChat } = useChatStore();
   const { selectedModel } = useOllamaStore();
   const { availableCloudProviderModels } = useCloudProvidersStore();
-  const currentChat = getCurrentChat();
   const [localInput, setLocalInput] = useState('');
-  const [isCreatingChat, setIsCreatingChat] = useState(false);
 
-  // Ensure we have a chat session
-  useEffect(() => {
-    // Only create a new chat if we're not loading, there's no current chat, and we're not already creating one
-    if (!isLoadingChats && !currentChat && !isCreatingChat) {
-      setIsCreatingChat(true);
-      createNewChat().finally(() => {
-        setIsCreatingChat(false);
-      });
-    }
-  }, [currentChat, createNewChat, isLoadingChats, isCreatingChat]);
-
-  // Use selectedModel from Ollama store
-  const model = selectedModel || '';
+  const currentChat = getCurrentChat();
+  const currentChatSessionId = currentChat?.sessionId || '';
+  const currentChatMessages = currentChat?.messages || [];
 
   // Create transport that changes based on model selection
   const transport = useMemo(() => {
     // Check if it's a cloud model
-    const isCloudModel = availableCloudProviderModels.some((m) => m.id === model);
+    const isCloudModel = availableCloudProviderModels.some((m) => m.id === selectedModel);
 
     // Use OpenAI endpoint for cloud models, Ollama for local
     const apiEndpoint = isCloudModel ? '/api/llm/openai/stream' : '/api/llm/ollama/stream';
@@ -45,8 +34,8 @@ export default function ChatPage(_props: ChatPageProps) {
     return new DefaultChatTransport({
       api: apiEndpoint,
       body: {
-        model: model || 'llama3.1:8b',
-        sessionId: currentChat?.sessionId,
+        model: selectedModel || 'llama3.1:8b',
+        sessionId: currentChatSessionId,
       },
       fetch: async (input, init) => {
         // Override fetch to use the correct backend URL
@@ -55,31 +44,28 @@ export default function ChatPage(_props: ChatPageProps) {
         return fetch(fullUrl, init);
       },
     });
-  }, [model, currentChat?.sessionId, availableCloudProviderModels]);
+  }, [selectedModel, currentChatSessionId, availableCloudProviderModels]);
 
   const { sendMessage, messages, setMessages, stop, status, error } = useChat({
-    id: currentChat.sessionId, // use the provided chat ID
+    id: currentChatSessionId || 'temp-id', // use the provided chat ID or a temp ID
     transport,
     /**
      * TODO: we probably need to map our messages to what the ai-sdk expects here
      */
-    initialMessages: currentChat.messages,
+    initialMessages: currentChatMessages,
     onFinish: (message) => {
       console.log('Message finished:', message);
     },
     onError: (error) => {
       console.error('Chat error:', error);
     },
+    setMessages: (messages) => {
+      console.log('Setting messages:', messages);
+      setMessages(messages);
+    },
   });
 
   const isLoading = status === 'streaming';
-
-  // Update messages when current chat changes
-  useEffect(() => {
-    if (currentChat?.messages) {
-      setMessages(currentChat.messages);
-    }
-  }, [currentChat?.session_id, currentChat?.messages, setMessages]);
 
   // Log messages updates
   useEffect(() => {
@@ -89,11 +75,7 @@ export default function ChatPage(_props: ChatPageProps) {
     console.log('error:', error);
     const lastMessage = messages[messages.length - 1];
     if (lastMessage) {
-      console.log('Last message:', {
-        role: lastMessage.role,
-        content: lastMessage.content,
-        toolInvocations: lastMessage.toolInvocations,
-      });
+      console.log('Last message:', lastMessage);
     }
   }, [messages, isLoading, error]);
 
@@ -109,6 +91,11 @@ export default function ChatPage(_props: ChatPageProps) {
       setLocalInput('');
     }
   };
+
+  // Early return after all hooks have been called
+  if (!currentChat) {
+    return <Skeleton className="h-full w-full" />;
+  }
 
   return (
     <div className="flex flex-col h-full gap-2 max-w-full overflow-hidden">

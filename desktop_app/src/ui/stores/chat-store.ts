@@ -58,6 +58,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           currentChatSessionId: initializedChats.length > 0 ? initializedChats[0].sessionId : null,
           isLoadingChats: false,
         });
+      } else {
+        // No chats found, create a new one
+        const newChat = await get().createNewChat();
+        set({
+          chats: [newChat],
+          currentChatSessionId: newChat.sessionId,
+          isLoadingChats: false,
+        });
       }
     } catch (error) {
       console.error('Failed to load chats:', error);
