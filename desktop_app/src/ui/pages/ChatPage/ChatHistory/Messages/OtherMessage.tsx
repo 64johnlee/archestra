@@ -4,6 +4,9 @@ interface OtherMessageProps {
   message: UIMessage;
 }
 
+/**
+ * TODO: fix the typing issues in this file (also remove the "as" casts)
+ */
 export default function OtherMessage({ message }: OtherMessageProps) {
   // Extract text content from parts if available, otherwise use content
   let textContent = '';

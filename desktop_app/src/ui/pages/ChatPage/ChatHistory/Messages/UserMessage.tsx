@@ -4,6 +4,9 @@ interface UserMessageProps {
   message: UIMessage;
 }
 
+/**
+ * TODO: fix the typing issues in this file (also remove the "as" casts)
+ */
 export default function UserMessage({ message }: UserMessageProps) {
   // Extract text content from parts if available, otherwise use content
 
