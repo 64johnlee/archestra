@@ -166,6 +166,10 @@ describe('binaries utilities', () => {
         // First reset the module cache
         vi.resetModules();
 
+        // Mock process.cwd() since that's what getBinariesDirectory uses when app is undefined or not packaged
+        const originalCwd = process.cwd;
+        process.cwd = vi.fn(() => '/dev/app/path');
+
         setupMocks({
           platform: 'darwin',
           arch: 'arm64',
@@ -176,6 +180,9 @@ describe('binaries utilities', () => {
         const { getBinaryExecPath } = await import('./');
         const binaryPath = getBinaryExecPath('ollama-v0.9.6');
         expect(binaryPath).toBe(path.resolve('/dev/app/path/resources/bin/mac/arm64/ollama-v0.9.6'));
+
+        // Restore original cwd
+        process.cwd = originalCwd;
       });
 
       it('should add .exe extension on Windows', async () => {
@@ -212,6 +219,10 @@ describe('binaries utilities', () => {
         // First reset the module cache
         vi.resetModules();
 
+        // Mock process.cwd() since that's what getBinariesDirectory uses when app is undefined or not packaged
+        const originalCwd = process.cwd;
+        process.cwd = vi.fn(() => '/test/app');
+
         setupMocks({
           platform: 'darwin',
           arch: 'arm64',
@@ -223,6 +234,9 @@ describe('binaries utilities', () => {
         expect(() => getBinaryExecPath('ollama-v0.9.6')).toThrow(
           'Binary ollama-v0.9.6 not found at /test/app/resources/bin/mac/arm64/ollama-v0.9.6'
         );
+
+        // Restore original cwd
+        process.cwd = originalCwd;
       });
     });
 
@@ -250,6 +264,10 @@ describe('binaries utilities', () => {
         // First reset the module cache
         vi.resetModules();
 
+        // Mock process.cwd() since that's what getBinariesDirectory uses when app is undefined or not packaged
+        const originalCwd = process.cwd;
+        process.cwd = vi.fn(() => '/path with spaces/app');
+
         setupMocks({
           platform: 'darwin',
           arch: 'arm64',
@@ -259,6 +277,9 @@ describe('binaries utilities', () => {
         const { getBinaryExecPath } = await import('./');
         const binaryPath = getBinaryExecPath('ollama-v0.9.6');
         expect(binaryPath).toBe(path.resolve('/path with spaces/app/resources/bin/mac/arm64/ollama-v0.9.6'));
+
+        // Restore original cwd
+        process.cwd = originalCwd;
       });
     });
   });
