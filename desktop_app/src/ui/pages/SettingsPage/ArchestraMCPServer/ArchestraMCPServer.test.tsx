@@ -7,8 +7,8 @@ import ArchestraMcpServer from '.';
 describe('ArchestraMcpServer', () => {
   it('renders the ArchestraMcpServer component', () => {
     const mockArchestraMcpServer = {
-      id: 1,
-      name: 'archestra',
+      id: 'archestra',
+      name: 'Archestra.ai',
       createdAt: new Date().toISOString(),
       serverConfig: {
         command: '',
@@ -20,6 +20,7 @@ describe('ArchestraMcpServer', () => {
       tools: [],
       status: McpServerStatus.Connected,
       error: null,
+      userConfigValues: {},
     };
     render(<ArchestraMcpServer archestraMcpServer={mockArchestraMcpServer} />);
   });
