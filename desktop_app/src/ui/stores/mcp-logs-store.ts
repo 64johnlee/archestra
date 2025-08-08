@@ -58,22 +58,22 @@ export const useMcpLogsStore = create<McpLogsStore>((set, get) => ({
   refreshInterval: 30, // 30 seconds
 
   // Actions
-  setFilters: (filters) => {
+  setFilters: (filters: McpRequestLogFilters) => {
     set({ filters, currentPage: 0 }); // Reset to first page when filters change
     get().fetchLogs();
   },
 
-  setPage: (page) => {
+  setPage: (page: number) => {
     set({ currentPage: page });
     get().fetchLogs();
   },
 
-  setPageSize: (size) => {
+  setPageSize: (size: number) => {
     set({ pageSize: size, currentPage: 0 }); // Reset to first page when page size changes
     get().fetchLogs();
   },
 
-  setSelectedLogId: (id) => {
+  setSelectedLogId: (id: number | null) => {
     set({ selectedLogId: id });
     if (id !== null) {
       get().fetchLogById(id);
@@ -82,12 +82,12 @@ export const useMcpLogsStore = create<McpLogsStore>((set, get) => ({
     }
   },
 
-  setAutoRefresh: (enabled) => {
-    set({ autoRefresh: enabled });
+  setAutoRefresh: (autoRefresh: boolean) => {
+    set({ autoRefresh });
   },
 
-  setRefreshInterval: (interval) => {
-    set({ refreshInterval: interval });
+  setRefreshInterval: (refreshInterval: number) => {
+    set({ refreshInterval });
   },
 
   fetchLogs: async () => {
@@ -95,7 +95,7 @@ export const useMcpLogsStore = create<McpLogsStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response = await getMcpRequestLogs({
+      const { data } = await getMcpRequestLogs({
         query: {
           ...filters,
           page: currentPage,
@@ -103,12 +103,10 @@ export const useMcpLogsStore = create<McpLogsStore>((set, get) => ({
         },
       });
 
-      if ('data' in response && response.data) {
-        const { data: logs, total } = response.data;
+      if (data) {
+        const { data: logs, total } = data;
         const totalPages = Math.ceil(total / pageSize);
         set({ logs, totalPages, isLoading: false });
-      } else if ('error' in response) {
-        throw new Error(response.error as string);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -116,19 +114,17 @@ export const useMcpLogsStore = create<McpLogsStore>((set, get) => ({
     }
   },
 
-  fetchLogById: async (id) => {
+  fetchLogById: async (id: number) => {
     try {
       // Get the log from current page if available
       const currentLog = get().logs.find((log) => log.id === id);
       if (currentLog) {
-        const response = await getMcpRequestLogById({
+        const { data } = await getMcpRequestLogById({
           path: { id: String(id) },
         });
 
-        if ('data' in response && response.data) {
-          set({ selectedLog: response.data });
-        } else if ('error' in response) {
-          throw new Error(response.error as string);
+        if (data) {
+          set({ selectedLog: data });
         }
       } else {
         set({ selectedLog: null });
@@ -142,14 +138,12 @@ export const useMcpLogsStore = create<McpLogsStore>((set, get) => ({
   fetchStats: async () => {
     const { filters } = get();
     try {
-      const response = await getMcpRequestLogStats({
+      const { data } = await getMcpRequestLogStats({
         query: filters,
       });
 
-      if ('data' in response && response.data) {
-        set({ stats: response.data });
-      } else if ('error' in response) {
-        throw new Error(response.error as string);
+      if (data) {
+        set({ stats: data });
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -159,15 +153,13 @@ export const useMcpLogsStore = create<McpLogsStore>((set, get) => ({
 
   clearLogs: async (clearAll = false) => {
     try {
-      const response = await clearMcpRequestLogs({
-        body: { clear_all: clearAll },
+      const { data } = await clearMcpRequestLogs({
+        body: { clearAll },
       });
 
-      if ('data' in response && response.data !== undefined) {
+      if (data) {
         // Refresh the data after clearing
         await get().refresh();
-      } else if ('error' in response) {
-        throw new Error(response.error as string);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
