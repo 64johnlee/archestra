@@ -19,7 +19,7 @@ export default function ExternalClients() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {supportedExternalMcpClientNames.map((clientName) => {
         const connectedExternalMcpClient = connectedExternalMcpClients.find(
-          (client) => client.client_name === clientName
+          (client) => client.clientName === clientName
         );
         const isConnected = connectedExternalMcpClient !== undefined;
 
