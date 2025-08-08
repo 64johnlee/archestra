@@ -92,26 +92,28 @@ export default function ChatPage(_props: ChatPageProps) {
     }
   };
 
-  // Early return after all hooks have been called
-  if (!currentChat) {
-    return <Skeleton className="h-full w-full" />;
-  }
-
   return (
     <div className="flex flex-col h-full gap-2 max-w-full overflow-hidden">
-      <div className="flex-1 min-h-0 overflow-hidden max-w-full">
-        <ChatHistory messages={messages} />
-      </div>
-      <SystemPrompt />
-      <div className="flex-shrink-0">
-        <ChatInput
-          input={localInput}
-          handleInputChange={handleInputChange}
-          handleSubmit={handleSubmit}
-          isLoading={isLoading}
-          stop={stop}
-        />
-      </div>
+      {/* TODO: this is a temporary skeleton, let's make some cool loading animations with a mascot :) */}
+      {!currentChat ? (
+        <Skeleton className="h-1/4 w-1/4 mx-auto mt-10" />
+      ) : (
+        <>
+          <div className="flex-1 min-h-0 overflow-hidden max-w-full">
+            <ChatHistory messages={messages} />
+          </div>
+          <SystemPrompt />
+          <div className="flex-shrink-0">
+            <ChatInput
+              input={localInput}
+              handleInputChange={handleInputChange}
+              handleSubmit={handleSubmit}
+              isLoading={isLoading}
+              stop={stop}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
