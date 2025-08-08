@@ -2,12 +2,13 @@ import { ChevronDown, ChevronRight, Clock, Wrench } from 'lucide-react';
 import { useState } from 'react';
 
 import { cn } from '@ui/lib/utils/tailwind';
+import { ToolCallStatus } from '@ui/types';
 
 interface ToolInvocationProps {
   toolName: string;
   args: any;
   result?: any;
-  state?: 'pending' | 'completed' | 'error';
+  state?: ToolCallStatus;
   startTime?: number;
   endTime?: number;
 }
@@ -16,7 +17,7 @@ export default function ToolInvocation({
   toolName,
   args,
   result,
-  state = 'completed',
+  state = ToolCallStatus.Completed,
   startTime,
   endTime,
 }: ToolInvocationProps) {

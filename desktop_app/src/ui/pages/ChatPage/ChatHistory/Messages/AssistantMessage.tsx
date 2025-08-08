@@ -7,6 +7,9 @@ interface AssistantMessageProps {
   message: UIMessage;
 }
 
+/**
+ * TODO: fix the typing issues in this file (also remove the "any" types)
+ */
 export default function AssistantMessage({ message }: AssistantMessageProps) {
   // Extract text content and dynamic tools from parts
   let textContent = '';
