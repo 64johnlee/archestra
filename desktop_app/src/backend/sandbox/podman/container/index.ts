@@ -1,7 +1,8 @@
 import type { RawReplyDefaultExpression } from 'fastify';
 import fs from 'fs';
 import path from 'path';
-import { Agent, request, upgrade } from 'undici';
+import { Agent, upgrade } from 'undici';
+import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 
 import {
@@ -477,11 +478,25 @@ export default class PodmanContainer {
    * https://docs.podman.io/en/latest/_static/api.html#tag/containers/operation/ContainerAttachLibpod
    */
   async streamToContainer(requestBody: any, responseStream: RawReplyDefaultExpression) {
-    const requestId = requestBody.id || null;
+    // Log the original request
+    log.info(`Original request body:`, {
+      method: requestBody.method,
+      id: requestBody.id,
+      idType: typeof requestBody.id,
+    });
+
+    // Preserve the original request ID or assign one if missing
+    const requestId = requestBody.id !== null && requestBody.id !== undefined ? requestBody.id : uuidv4();
+
+    // Only update the request body if we generated a new ID
+    if (requestBody.id === null || requestBody.id === undefined) {
+      requestBody.id = requestId;
+    }
 
     log.info(`Handling MCP request for container ${this.containerName}`, {
       method: requestBody.method,
       id: requestId,
+      originalId: requestBody.id,
     });
 
     try {
@@ -514,15 +529,13 @@ export default class PodmanContainer {
 
       try {
         // Use undici.upgrade() for WebSocket-style upgrades
+        // undici automatically adds the connection: upgrade header
         const { socket, headers } = await upgrade(
           `http://localhost/v5.0.0/libpod/containers/${this.containerName}/attach?stream=true&stdin=true&stdout=true&stderr=true`,
           {
             method: 'POST',
             dispatcher: agent,
-            headers: {
-              connection: 'upgrade',
-              upgrade: 'tcp',
-            },
+            protocol: 'tcp',
           }
         );
 
@@ -540,32 +553,87 @@ export default class PodmanContainer {
           socket.on('data', (chunk: Buffer) => {
             responseBuffer = Buffer.concat([responseBuffer, chunk]);
 
-            // MCP servers send line-delimited JSON
-            const lines = responseBuffer.toString().split('\n');
+            // Process multiplexed stream format
+            while (responseBuffer.length >= 8) {
+              // Read the 8-byte header
+              const streamType = responseBuffer[0]; // 0=stdin, 1=stdout, 2=stderr
+              const payloadSize = responseBuffer.readUInt32BE(4);
 
-            for (let i = 0; i < lines.length - 1; i++) {
-              const line = lines[i].trim();
-              if (line && !responseFound) {
-                try {
-                  const parsed = JSON.parse(line);
-                  if (parsed.jsonrpc === '2.0' && parsed.id === requestId) {
-                    // Found our response!
-                    log.info('Received JSON-RPC response from MCP server');
-                    responseFound = true;
-                    responseStream.write(JSON.stringify(parsed));
-                    responseStream.end();
-                    socket.end();
-                    return;
+              // Check if we have the full payload
+              if (responseBuffer.length < 8 + payloadSize) {
+                break; // Wait for more data
+              }
+
+              // Extract the payload
+              const payload = responseBuffer.slice(8, 8 + payloadSize);
+              responseBuffer = responseBuffer.slice(8 + payloadSize);
+
+              // Process stdout (stream type 1)
+              if (streamType === 1) {
+                const text = payload.toString('utf-8').trim();
+
+                if (text) {
+                  log.debug(`Container stdout (stream type ${streamType}): ${text}`);
+
+                  if (text.startsWith('{')) {
+                    try {
+                      const parsed = JSON.parse(text);
+                      log.debug(`Parsed JSON - id: ${parsed.id}, requestId: ${requestId}, method: ${parsed.method}`);
+
+                      // Check if this is our response (need to handle numeric/string ID comparison)
+                      const idMatches =
+                        parsed.id !== undefined &&
+                        (parsed.id === requestId || parsed.id.toString() === requestId.toString());
+
+                      if (
+                        parsed.jsonrpc === '2.0' &&
+                        idMatches &&
+                        (parsed.result !== undefined || parsed.error !== undefined) &&
+                        !responseFound
+                      ) {
+                        // Found our response!
+                        log.info('Received JSON-RPC response from MCP server', {
+                          parsedId: parsed.id,
+                          parsedIdType: typeof parsed.id,
+                          requestId: requestId,
+                          requestIdType: typeof requestId,
+                          hasResult: parsed.result !== undefined,
+                          hasError: parsed.error !== undefined,
+                        });
+                        responseFound = true;
+                        const responseJson = JSON.stringify(parsed);
+                        log.info(`Writing response to stream: ${responseJson.substring(0, 100)}...`);
+                        responseStream.write(responseJson);
+                        responseStream.end();
+                        socket.end();
+                        log.info(`Response sent and socket closed`);
+                        return;
+                      } else if (parsed.method) {
+                        // This is a notification, not our response
+                        log.debug(`MCP notification: ${parsed.method}`);
+                      } else if (parsed.id !== undefined) {
+                        // This might be a response but doesn't match our criteria
+                        log.warn(`Received JSON with id but not recognized as response:`, {
+                          parsedId: parsed.id,
+                          requestId: requestId,
+                          hasResult: parsed.result !== undefined,
+                          hasError: parsed.error !== undefined,
+                          jsonrpc: parsed.jsonrpc,
+                        });
+                      }
+                    } catch (e) {
+                      log.debug(`Failed to parse JSON from container: ${text}`);
+                    }
                   }
-                } catch (e) {
-                  // Not JSON or not our response, continue
-                  log.debug(`Non-JSON line from container: ${line}`);
+                }
+              } else if (streamType === 2) {
+                // stderr
+                const text = payload.toString('utf-8').trim();
+                if (text) {
+                  log.debug(`Container stderr: ${text}`);
                 }
               }
             }
-
-            // Keep the incomplete line for next iteration
-            responseBuffer = Buffer.from(lines[lines.length - 1]);
           });
 
           socket.on('error', (err: Error) => {

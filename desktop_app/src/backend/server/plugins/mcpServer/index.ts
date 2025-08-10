@@ -153,10 +153,8 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
         // Set up streaming response headers!
         reply.raw.writeHead(200, {
-          'Content-Type': 'application/octet-stream',
-          'Transfer-Encoding': 'chunked',
+          'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
         });
 
         // Stream the request to the container!
