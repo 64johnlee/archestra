@@ -13,12 +13,12 @@ import {
   SidebarProvider,
 } from '@ui/components/ui/sidebar';
 import config from '@ui/config';
-import { useNavigationStore } from '@ui/stores/navigation-store';
+import { useNavigationStore } from '@ui/stores';
 import { NavigationSubViewKey, NavigationViewKey } from '@ui/types';
 
 import ChatSidebarSection from './ChatSidebarSection';
 import LLMProvidersSidebarSection from './LLMProvidersSidebarSection';
-import McpServerWithToolsSidebarSection from './MCPServerWithToolsSidebarSection';
+import McpServerWithToolsSidebarSection from './McpServerWithToolsSidebarSection';
 
 interface SidebarProps extends React.PropsWithChildren {}
 

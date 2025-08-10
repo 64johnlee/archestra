@@ -1,12 +1,10 @@
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport, type UIMessage } from 'ai';
+import { DefaultChatTransport } from 'ai';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Skeleton } from '@ui/components/ui/skeleton';
 import config from '@ui/config';
-import { useChatStore } from '@ui/stores/chat-store';
-import { useCloudProvidersStore } from '@ui/stores/cloud-providers-store';
-import { useOllamaStore } from '@ui/stores/ollama-store';
+import { useChatStore, useCloudProvidersStore, useOllamaStore } from '@ui/stores';
 
 import ChatHistory from './ChatHistory';
 import ChatInput from './ChatInput';

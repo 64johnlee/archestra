@@ -1,7 +1,6 @@
 import { Eye, EyeOff, File, Folder, Info } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { ArchestraMcpServerManifest } from '@clients/archestra/catalog/gen';
 import { Alert, AlertDescription } from '@ui/components/ui/alert';
 import { Badge } from '@ui/components/ui/badge';
 import { Button } from '@ui/components/ui/button';
@@ -16,6 +15,7 @@ import {
 import { Input } from '@ui/components/ui/input';
 import { Label } from '@ui/components/ui/label';
 import { Switch } from '@ui/components/ui/switch';
+import { ArchestraMcpServerManifest } from '@ui/lib/clients/archestra/catalog/gen';
 import { type McpServerUserConfigValues } from '@ui/types';
 
 interface McpServerInstallDialogProps {
@@ -57,7 +57,7 @@ export default function McpServerInstallDialog({
 
   const userConfig = mcpServer.user_config || {};
   const hasUserConfig = Object.keys(userConfig).length > 0;
-  const hasOAuth = mcpServer.config_for_archestra.oauth.required;
+  const hasOAuth = mcpServer.archestra_config.oauth.required;
 
   const toggleSecretVisibility = (key: string) => {
     setShowSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -211,7 +211,7 @@ export default function McpServerInstallDialog({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent cursor-pointer"
                             onClick={() => toggleSecretVisibility(key)}
                           >
                             {showValue ? (
@@ -330,6 +330,7 @@ export default function McpServerInstallDialog({
                           type="button"
                           variant="outline"
                           size="icon"
+                          className="cursor-pointer"
                           onClick={() =>
                             isDirectory
                               ? handleDirectorySelect(key, field.multiple)
@@ -363,10 +364,10 @@ export default function McpServerInstallDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button className="cursor-pointer" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleInstall} disabled={Object.keys(errors).length > 0}>
+          <Button className="cursor-pointer" onClick={handleInstall} disabled={Object.keys(errors).length > 0}>
             Install
           </Button>
         </DialogFooter>
