@@ -352,16 +352,6 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
       return null;
     }
 
-    // Sandbox is ready, proceed with connection!
-    if (!url) {
-      get().updateMcpServer(id, {
-        client: null,
-        state: 'error',
-        error: 'No URL configured',
-      });
-      return null;
-    }
-
     try {
       const client = await configureMcpClient(`${id}-client`, url, {
         tools: {},

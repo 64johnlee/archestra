@@ -1,16 +1,15 @@
 import type { RawReplyDefaultExpression } from 'fastify';
 import fs from 'fs';
 import path from 'path';
+import { Agent, request, upgrade } from 'undici';
 import { z } from 'zod';
 
 import {
   containerCreateLibpod,
-  containerExecLibpod,
   containerLogsLibpod,
   containerStartLibpod,
   containerStopLibpod,
   containerWaitLibpod,
-  execStartLibpod,
 } from '@backend/clients/libpod/gen';
 import config from '@backend/config';
 import type { McpServer, McpServerConfig, McpServerUserConfigValues } from '@backend/models/mcpServer';
@@ -53,14 +52,17 @@ type PodmanContainerStatusSummary = z.infer<typeof PodmanContainerStatusSummaryS
 
 export default class PodmanContainer {
   containerName: string;
+
   private command: string;
   private args: string[];
   private envVars: Record<string, string>;
 
-  private _startupPercentage = 0;
-  private _state: PodmanContainerState;
-  private _statusMessage: string | null = null;
-  private _statusError: string | null = null;
+  private startupPercentage = 0;
+  private state: PodmanContainerState;
+  private statusMessage: string | null = null;
+  private statusError: string | null = null;
+
+  private socketPath: string | null = null;
 
   /*
    * TODO: Use app.getPath('logs') from Electron to get proper logs directory
@@ -79,7 +81,7 @@ export default class PodmanContainer {
   private logStream: fs.WriteStream | null = null;
   private isStreamingLogs = false;
 
-  constructor({ name, serverConfig, userConfigValues }: McpServer) {
+  constructor({ name, serverConfig, userConfigValues }: McpServer, socketPath: string) {
     this.containerName = PodmanContainer.prettifyServerNameIntoContainerName(name);
     const { command, args, env } = PodmanContainer.injectUserConfigValuesIntoServerConfig(
       serverConfig,
@@ -90,11 +92,14 @@ export default class PodmanContainer {
     this.args = args;
     this.envVars = env;
 
+    // Set the socket path for the container (needed for attach operations)
+    this.socketPath = socketPath;
+
     // Initialize state
-    this._state = 'not_created';
-    this._startupPercentage = 0;
-    this._statusMessage = 'Container not yet created';
-    this._statusError = null;
+    this.state = 'not_created';
+    this.startupPercentage = 0;
+    this.statusMessage = 'Container not yet created';
+    this.statusError = null;
 
     // Set up log file path
     const homeDir = process.env.HOME || process.env.USERPROFILE || '';
@@ -249,10 +254,10 @@ export default class PodmanContainer {
     );
 
     // Update state to initializing
-    this._state = 'initializing';
-    this._startupPercentage = 10;
-    this._statusMessage = 'Starting MCP server container';
-    this._statusError = null;
+    this.state = 'initializing';
+    this.startupPercentage = 10;
+    this.statusMessage = 'Starting MCP server container';
+    this.statusError = null;
 
     try {
       const { response } = await this.startContainer();
@@ -261,9 +266,9 @@ export default class PodmanContainer {
         log.info(`MCP server container ${this.containerName} is already running.`);
 
         // Update state
-        this._state = 'running';
-        this._startupPercentage = 100;
-        this._statusMessage = 'Container is already running';
+        this.state = 'running';
+        this.startupPercentage = 100;
+        this.statusMessage = 'Container is already running';
 
         // Start streaming logs even if container was already running
         await this.startStreamingLogs();
@@ -272,9 +277,9 @@ export default class PodmanContainer {
         log.info(`MCP server container ${this.containerName} started.`);
 
         // Update state
-        this._state = 'initializing';
-        this._startupPercentage = 50;
-        this._statusMessage = 'Container started, waiting for health check';
+        this.state = 'initializing';
+        this.startupPercentage = 50;
+        this.statusMessage = 'Container started, waiting for health check';
 
         // Wait for container to be healthy before considering it ready
         await this.waitForHealthy();
@@ -286,14 +291,14 @@ export default class PodmanContainer {
       // If container doesn't exist (404), we'll create it below
       if (error && typeof error === 'object' && 'response' in error && (error as any).response?.status === 404) {
         log.info(`Container ${this.containerName} doesn't exist, will create it...`);
-        this._startupPercentage = 20;
-        this._statusMessage = 'Container does not exist, creating new container';
+        this.startupPercentage = 20;
+        this.statusMessage = 'Container does not exist, creating new container';
       } else {
         log.error(`Error starting MCP server container ${this.containerName}`, error);
-        this._state = 'error';
-        this._startupPercentage = 0;
-        this._statusMessage = null;
-        this._statusError = error instanceof Error ? error.message : 'Failed to start container';
+        this.state = 'error';
+        this.startupPercentage = 0;
+        this.statusMessage = null;
+        this.statusError = error instanceof Error ? error.message : 'Failed to start container';
         throw error;
       }
     }
@@ -304,9 +309,9 @@ export default class PodmanContainer {
 
     try {
       // Update state for creation
-      this._state = 'created';
-      this._startupPercentage = 30;
-      this._statusMessage = 'Creating container';
+      this.state = 'created';
+      this.startupPercentage = 30;
+      this.statusMessage = 'Creating container';
 
       const response = await containerCreateLibpod({
         body: {
@@ -343,35 +348,35 @@ export default class PodmanContainer {
       log.info(`MCP server container ${this.containerName} created with ID: ${response.data.Id}`);
 
       // Update state
-      this._startupPercentage = 40;
-      this._statusMessage = 'Container created, starting it';
+      this.startupPercentage = 40;
+      this.statusMessage = 'Container created, starting it';
 
       await this.startContainer();
 
       // Wait for container to be healthy
       log.info(`MCP server container ${this.containerName} started, waiting for it to be healthy...`);
-      this._startupPercentage = 60;
-      this._statusMessage = 'Container started, waiting for health check';
+      this.startupPercentage = 60;
+      this.statusMessage = 'Container started, waiting for health check';
 
       await this.waitForHealthy();
 
       // Start streaming logs to file and console
-      this._startupPercentage = 90;
-      this._statusMessage = 'Container healthy, starting log streaming';
+      this.startupPercentage = 90;
+      this.statusMessage = 'Container healthy, starting log streaming';
 
       await this.startStreamingLogs();
 
       // Final state
-      this._state = 'running';
-      this._startupPercentage = 100;
-      this._statusMessage = 'Container is running and healthy';
-      this._statusError = null;
+      this.state = 'running';
+      this.startupPercentage = 100;
+      this.statusMessage = 'Container is running and healthy';
+      this.statusError = null;
     } catch (error) {
       log.error(`Error creating MCP server container ${this.containerName}`, error);
-      this._state = 'error';
-      this._startupPercentage = 0;
-      this._statusMessage = null;
-      this._statusError = error instanceof Error ? error.message : 'Failed to create container';
+      this.state = 'error';
+      this.startupPercentage = 0;
+      this.statusMessage = null;
+      this.statusError = error instanceof Error ? error.message : 'Failed to create container';
       throw error;
     }
   }
@@ -395,16 +400,16 @@ export default class PodmanContainer {
 
       if (response.response.status === 200) {
         log.info(`Container ${this.containerName} is healthy!`);
-        this._startupPercentage = 80;
-        this._statusMessage = 'Container is healthy';
+        this.startupPercentage = 80;
+        this.statusMessage = 'Container is healthy';
         return true;
       }
 
-      this._statusMessage = 'Container health check failed';
+      this.statusMessage = 'Container health check failed';
       return false;
     } catch (error) {
       log.error(`Error waiting for container ${this.containerName} to be healthy:`, error);
-      this._statusError = error instanceof Error ? error.message : 'Health check failed';
+      this.statusError = error instanceof Error ? error.message : 'Health check failed';
       return false;
     }
   }
@@ -416,9 +421,9 @@ export default class PodmanContainer {
     log.info(`Stopping MCP server container ${this.containerName}`);
 
     // Update state
-    this._state = 'stopping';
-    this._statusMessage = 'Stopping container';
-    this._statusError = null;
+    this.state = 'stopping';
+    this.statusMessage = 'Stopping container';
+    this.statusError = null;
 
     // Stop streaming logs before stopping container
     this.stopStreamingLogs();
@@ -433,27 +438,27 @@ export default class PodmanContainer {
 
       if (status === 204) {
         log.info(`MCP server container ${this.containerName} stopped`);
-        this._state = 'stopped';
-        this._statusMessage = 'Container stopped successfully';
+        this.state = 'stopped';
+        this.statusMessage = 'Container stopped successfully';
       } else if (status === 304) {
         log.info(`MCP server container ${this.containerName} already stopped`);
-        this._state = 'stopped';
-        this._statusMessage = 'Container was already stopped';
+        this.state = 'stopped';
+        this.statusMessage = 'Container was already stopped';
       } else if (status === 404) {
         log.info(`MCP server container ${this.containerName} not found, already stopped`);
-        this._state = 'not_created';
-        this._statusMessage = 'Container not found';
+        this.state = 'not_created';
+        this.statusMessage = 'Container not found';
       } else {
         log.error(`Error stopping MCP server container ${this.containerName}`, response);
-        this._state = 'error';
-        this._statusError = `Unexpected status: ${status}`;
+        this.state = 'error';
+        this.statusError = `Unexpected status: ${status}`;
       }
 
-      this._startupPercentage = 0;
+      this.startupPercentage = 0;
     } catch (error) {
       log.error(`Error stopping MCP server container ${this.containerName}`, error);
-      this._state = 'error';
-      this._statusError = error instanceof Error ? error.message : 'Failed to stop container';
+      this.state = 'error';
+      this.statusError = error instanceof Error ? error.message : 'Failed to stop container';
       throw error;
     }
   }
@@ -462,131 +467,212 @@ export default class PodmanContainer {
    * Stream bidirectional communication with the MCP server container!
    *
    * MCP servers communicate via stdin/stdout using JSON-RPC protocol.
-   * This is a temporary implementation - MCP servers should be running continuously
-   * and we should attach to their stdin/stdout, not use exec.
    *
-   * https://docs.podman.io/en/latest/_static/api.html#tag/exec/operation/ContainerExecLibpod
+   * We use raw HTTP requests here instead of the libpod SDK because the container attach
+   * endpoint hijacks the HTTP connection to create a bidirectional TCP stream. The SDK
+   * doesn't support this hijacking mechanism - after the 101 Upgrade response, the connection
+   * becomes a raw TCP socket for stdin/stdout/stderr multiplexing, which requires manual
+   * handling of the stream protocol.
+   *
+   * https://docs.podman.io/en/latest/_static/api.html#tag/containers/operation/ContainerAttachLibpod
    */
-  async streamToContainer(request: any, responseStream: RawReplyDefaultExpression) {
-    log.info(`Handling MCP request for container ${this.containerName}`, request);
+  async streamToContainer(requestBody: any, responseStream: RawReplyDefaultExpression) {
+    const requestId = requestBody.id || null;
+
+    log.info(`Handling MCP request for container ${this.containerName}`, {
+      method: requestBody.method,
+      id: requestId,
+    });
 
     try {
-      /**
-       * First check if container exists and is running
-       * TODO: this may be excessive and maybe we can drop this?
-       */
+      // First check if container is healthy
       const containerIsHealthy = await this.waitForHealthy();
-
       if (!containerIsHealthy) {
         throw new Error(`Container ${this.containerName} is not healthy`);
       }
 
-      /**
-       * TODO: This is a temporary implementation using exec
-       * The proper implementation should:
-       * 1. Keep the MCP server process running continuously in the container
-       * 2. Attach to the container's stdin/stdout streams
-       * 3. Send JSON-RPC requests via stdin and receive responses via stdout
-       * 4. Handle multiplexing of multiple concurrent requests
-       *
-       * For now, we'll use exec to demonstrate the flow
-       * In a real implementation, we'd need to maintain a persistent connection
-       */
-      log.info(`Creating exec session for container ${this.containerName} (temporary implementation)...`);
+      // Prepare the JSON-RPC request with newline (MCP servers expect line-delimited JSON)
+      const jsonRequest = JSON.stringify(requestBody) + '\n';
 
-      const execResponse = await containerExecLibpod({
-        path: {
-          name: this.containerName,
+      // Create HTTP request options for the attach endpoint
+      const options = {
+        socketPath: this.socketPath,
+        path: `/v5.0.0/libpod/containers/${this.containerName}/attach?stream=true&stdin=true&stdout=true&stderr=true`,
+        method: 'POST',
+        headers: {
+          Upgrade: 'tcp',
+          Connection: 'Upgrade',
         },
-        body: {
-          AttachStdin: true,
-          AttachStdout: true,
-          AttachStderr: true,
-          // Echo back a test response to verify the exec mechanism works
-          Cmd: [
-            'sh',
-            '-c',
-            `echo '{"jsonrpc":"2.0","id":${request.id || 1},"result":{"message":"MCP server container ${this.containerName} received request","test":true}}'`,
-          ],
-          Tty: false,
-        },
+      };
+
+      log.info(`Attaching to container ${this.containerName} via ${this.socketPath}`);
+
+      // Create an agent for the unix socket
+      const agent = new Agent({
+        connect: { socketPath: this.socketPath },
       });
 
-      if (execResponse.response.status === 201 && execResponse.data) {
-        // Type assertion since the API returns unknown but we know it has an Id
-        const execData = execResponse.data as { Id: string };
-        log.info(`Exec session created: ${execData.Id}`);
-
-        const startResponse = await execStartLibpod({
-          path: {
-            id: execData.Id,
-          },
-          body: {},
-        });
-
-        log.info(`Exec start response status: ${startResponse.response.status}`);
-
-        if (startResponse.response.status === 200) {
-          // Send the response back
-          const responseData = startResponse.data || {
-            jsonrpc: '2.0',
-            id: request.id || 1,
-            result: {
-              message: `Temporary exec implementation - container ${this.containerName} is running`,
-              warning:
-                'This is a temporary implementation. MCP servers should use persistent stdin/stdout connections.',
-            },
-          };
-
-          responseStream.write(JSON.stringify(responseData));
-          responseStream.end();
-        } else {
-          throw new Error(`Failed to start exec session: ${startResponse.response.status}`);
-        }
-      } else {
-        throw new Error(
-          `Failed to create exec session: ${execResponse.response.status} - ${JSON.stringify(execResponse.data)}`
-        );
-      }
-    } catch (error) {
-      log.error(`Error communicating with MCP server container ${this.containerName}:`, error);
-      log.error(`Error details:`, {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        errorType: error?.constructor?.name,
-      });
-
-      // Send error response in JSON-RPC format
       try {
+        // Use undici.upgrade() for WebSocket-style upgrades
+        const { socket, headers } = await upgrade(
+          `http://localhost/v5.0.0/libpod/containers/${this.containerName}/attach?stream=true&stdin=true&stdout=true&stderr=true`,
+          {
+            method: 'POST',
+            dispatcher: agent,
+            headers: {
+              connection: 'upgrade',
+              upgrade: 'tcp',
+            },
+          }
+        );
+
+        if (socket) {
+          // Connection has been upgraded - we have the raw socket
+          log.info('Connection upgraded to raw TCP socket');
+
+          // Write the JSON-RPC request to container's stdin
+          socket.write(jsonRequest);
+
+          // Handle response data
+          let responseBuffer = Buffer.alloc(0);
+          let responseFound = false;
+
+          socket.on('data', (chunk: Buffer) => {
+            responseBuffer = Buffer.concat([responseBuffer, chunk]);
+
+            // MCP servers send line-delimited JSON
+            const lines = responseBuffer.toString().split('\n');
+
+            for (let i = 0; i < lines.length - 1; i++) {
+              const line = lines[i].trim();
+              if (line && !responseFound) {
+                try {
+                  const parsed = JSON.parse(line);
+                  if (parsed.jsonrpc === '2.0' && parsed.id === requestId) {
+                    // Found our response!
+                    log.info('Received JSON-RPC response from MCP server');
+                    responseFound = true;
+                    responseStream.write(JSON.stringify(parsed));
+                    responseStream.end();
+                    socket.end();
+                    return;
+                  }
+                } catch (e) {
+                  // Not JSON or not our response, continue
+                  log.debug(`Non-JSON line from container: ${line}`);
+                }
+              }
+            }
+
+            // Keep the incomplete line for next iteration
+            responseBuffer = Buffer.from(lines[lines.length - 1]);
+          });
+
+          socket.on('error', (err: Error) => {
+            log.error('Socket error:', err);
+            if (!responseFound) {
+              responseStream.write(
+                JSON.stringify({
+                  jsonrpc: '2.0',
+                  id: requestId,
+                  error: {
+                    code: -32603,
+                    message: `Socket error: ${err.message}`,
+                  },
+                })
+              );
+              responseStream.end();
+            }
+          });
+
+          socket.on('close', () => {
+            log.info('Socket closed');
+            if (!responseFound) {
+              responseStream.write(
+                JSON.stringify({
+                  jsonrpc: '2.0',
+                  id: requestId,
+                  error: {
+                    code: -32603,
+                    message: 'Connection closed without receiving response',
+                  },
+                })
+              );
+              responseStream.end();
+            }
+          });
+
+          // Set a timeout for the response
+          setTimeout(() => {
+            if (!responseFound) {
+              log.warn('Timeout waiting for MCP server response');
+              responseStream.write(
+                JSON.stringify({
+                  jsonrpc: '2.0',
+                  id: requestId,
+                  error: {
+                    code: -32603,
+                    message: 'Timeout waiting for MCP server response',
+                  },
+                })
+              );
+              responseStream.end();
+              socket.end();
+            }
+          }, 30000); // 30 second timeout
+        } else {
+          log.error('Failed to upgrade connection - no socket returned');
+          responseStream.write(
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: requestId,
+              error: {
+                code: -32603,
+                message: 'Failed to attach to container: no socket returned',
+              },
+            })
+          );
+          responseStream.end();
+        }
+      } catch (error) {
+        log.error('Error attaching to container:', error);
         responseStream.write(
           JSON.stringify({
             jsonrpc: '2.0',
-            id: request.id || 1,
+            id: requestId,
             error: {
               code: -32603,
-              message: `Container communication error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              data: {
-                container: this.containerName,
-                hint: 'Check container logs for more details',
-              },
+              message: error instanceof Error ? error.message : 'Failed to attach to container',
             },
           })
         );
         responseStream.end();
-      } catch (writeError) {
-        log.error(`Failed to write error response:`, writeError);
+      } finally {
+        // Clean up the agent
+        await agent.close();
       }
-
-      throw error;
+    } catch (error) {
+      log.error(`Error in streamToContainer:`, error);
+      responseStream.write(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          id: requestId,
+          error: {
+            code: -32603,
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+        })
+      );
+      responseStream.end();
     }
   }
 
   get statusSummary(): PodmanContainerStatusSummary {
     return {
-      startupPercentage: this._startupPercentage,
-      state: this._state,
-      message: this._statusMessage,
-      error: this._statusError,
+      startupPercentage: this.startupPercentage,
+      state: this.state,
+      message: this.statusMessage,
+      error: this.statusError,
     };
   }
 }

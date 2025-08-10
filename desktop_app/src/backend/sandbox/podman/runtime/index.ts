@@ -90,9 +90,9 @@ export type PodmanMachineInspectOutput = {
 export default class PodmanRuntime {
   private ARCHESTRA_MACHINE_NAME = 'archestra-ai-machine';
 
-  private _machineStartupPercentage = 0;
-  private _machineStartupMessage: string | null = null;
-  private _machineStartupError: string | null = null;
+  private machineStartupPercentage = 0;
+  private machineStartupMessage: string | null = null;
+  private machineStartupError: string | null = null;
 
   private onMachineInstallationSuccess: () => void = () => {};
   private onMachineInstallationError: (error: Error) => void = () => {};
@@ -259,11 +259,11 @@ export default class PodmanRuntime {
             const output = typeof data === 'string' ? data : JSON.stringify(data);
             // Look for "Starting machine" to indicate progress
             if (output.includes('Starting machine')) {
-              this._machineStartupPercentage = 50;
-              this._machineStartupMessage = 'Starting podman machine...';
+              this.machineStartupPercentage = 50;
+              this.machineStartupMessage = 'Starting podman machine...';
             } else if (output.includes('started successfully')) {
-              this._machineStartupPercentage = 100;
-              this._machineStartupMessage = 'Podman machine started successfully';
+              this.machineStartupPercentage = 100;
+              this.machineStartupMessage = 'Podman machine started successfully';
             }
           },
         },
@@ -272,16 +272,16 @@ export default class PodmanRuntime {
         },
         onExit: (code, signal) => {
           if (code === 0) {
-            this._machineStartupPercentage = 100;
-            this._machineStartupMessage = 'Podman machine started successfully';
+            this.machineStartupPercentage = 100;
+            this.machineStartupMessage = 'Podman machine started successfully';
 
             // Call the success callback - socket setup will happen there first
             this.onMachineInstallationSuccess();
           } else {
             const errorMessage = `Podman machine start failed with code ${code} and signal ${signal}. Error: ${stderrOutput}`;
 
-            this._machineStartupPercentage = 0;
-            this._machineStartupMessage = errorMessage;
+            this.machineStartupPercentage = 0;
+            this.machineStartupMessage = errorMessage;
 
             this.onMachineInstallationError(new Error(errorMessage));
           }
@@ -322,9 +322,9 @@ export default class PodmanRuntime {
 
   */
   private initArchestraMachine() {
-    this._machineStartupPercentage = 0;
-    this._machineStartupMessage = 'Initializing podman machine...';
-    this._machineStartupError = null;
+    this.machineStartupPercentage = 0;
+    this.machineStartupMessage = 'Initializing podman machine...';
+    this.machineStartupError = null;
 
     this.runCommand({
       command: ['machine', 'init', '--now', this.ARCHESTRA_MACHINE_NAME],
@@ -342,14 +342,14 @@ export default class PodmanRuntime {
               const total = parseFloat(extractionMatch[3]);
               const percentage = Math.round((current / total) * 100);
 
-              this._machineStartupPercentage = percentage;
-              this._machineStartupMessage = `Extracting podman machine image: ${current}MiB / ${total}MiB`;
+              this.machineStartupPercentage = percentage;
+              this.machineStartupMessage = `Extracting podman machine image: ${current}MiB / ${total}MiB`;
             } else if (output.includes('Machine init complete')) {
-              this._machineStartupPercentage = 90;
-              this._machineStartupMessage = 'Machine initialization complete';
+              this.machineStartupPercentage = 90;
+              this.machineStartupMessage = 'Machine initialization complete';
             } else if (output.includes('started successfully')) {
-              this._machineStartupPercentage = 100;
-              this._machineStartupMessage = 'Podman machine started successfully';
+              this.machineStartupPercentage = 100;
+              this.machineStartupMessage = 'Podman machine started successfully';
             }
           },
         },
@@ -360,8 +360,8 @@ export default class PodmanRuntime {
           } else {
             const errorMessage = `Podman machine init failed with code ${code} and signal ${signal}`;
 
-            this._machineStartupPercentage = 0;
-            this._machineStartupMessage = errorMessage;
+            this.machineStartupPercentage = 0;
+            this.machineStartupMessage = errorMessage;
 
             this.onMachineInstallationError(new Error(errorMessage));
           }
@@ -405,15 +405,15 @@ export default class PodmanRuntime {
               this.initArchestraMachine();
             } else if (archestraMachine.Running) {
               // We're all good to go. The archesta podman machine is installed and running.
-              this._machineStartupPercentage = 100;
-              this._machineStartupMessage = 'Podman machine is running';
+              this.machineStartupPercentage = 100;
+              this.machineStartupMessage = 'Podman machine is running';
 
               // Call the success callback - socket setup will happen there first
               this.onMachineInstallationSuccess();
             } else {
               // The archesta podman machine is installed, but not running. Let's start it.
-              this._machineStartupPercentage = 25;
-              this._machineStartupMessage = 'Podman machine is installed! Starting it...';
+              this.machineStartupPercentage = 25;
+              this.machineStartupMessage = 'Podman machine is installed! Starting it...';
 
               this.startArchestraMachine();
             }
@@ -435,9 +435,9 @@ export default class PodmanRuntime {
       pipes: {
         onExit: (code) => {
           if (code === 0) {
-            this._machineStartupPercentage = 0;
-            this._machineStartupMessage = 'Podman machine stopped successfully';
-            this._machineStartupError = null;
+            this.machineStartupPercentage = 0;
+            this.machineStartupMessage = 'Podman machine stopped successfully';
+            this.machineStartupError = null;
           }
         },
         onError: this.onMachineInstallationError,
@@ -496,9 +496,9 @@ export default class PodmanRuntime {
 
   get statusSummary(): PodmanRuntimeStatusSummary {
     return {
-      startupPercentage: this._machineStartupPercentage,
-      startupMessage: this._machineStartupMessage,
-      startupError: this._machineStartupError,
+      startupPercentage: this.machineStartupPercentage,
+      startupMessage: this.machineStartupMessage,
+      startupError: this.machineStartupError,
       baseImage: this.baseImage.statusSummary,
     };
   }

@@ -29,7 +29,9 @@ class McpServerSandboxManager {
   private podmanRuntime: InstanceType<typeof PodmanRuntime>;
   private mcpServerIdToPodmanContainerMap: Map<string, PodmanContainer> = new Map();
 
-  private _status: SandboxStatus = 'not_installed';
+  private status: SandboxStatus = 'not_installed';
+
+  private socketPath: string | null = null;
 
   onSandboxStartupSuccess: () => void = () => {};
   onSandboxStartupError: (error: Error) => void = () => {};
@@ -50,6 +52,9 @@ class McpServerSandboxManager {
       const socketPath = await this.podmanRuntime.getSocketAddress();
       log.info('Got podman socket address:', socketPath);
 
+      // Store the socket path for later use
+      this.socketPath = socketPath;
+
       // Configure the libpod client to use this socket
       setSocketPath(socketPath);
       log.info('Socket path has been updated in libpod client');
@@ -64,7 +69,7 @@ class McpServerSandboxManager {
       return;
     }
 
-    this._status = 'running';
+    this.status = 'running';
 
     const installedMcpServers = await McpServerModel.getAll();
 
@@ -98,7 +103,7 @@ class McpServerSandboxManager {
 
   private onPodmanMachineInstallationError(error: Error) {
     const errorMessage = `There was an error starting up podman machine: ${error.message}`;
-    this._status = 'error';
+    this.status = 'error';
     this.onSandboxStartupError(new Error(errorMessage));
   }
 
@@ -106,7 +111,7 @@ class McpServerSandboxManager {
     const { id, name } = mcpServer;
     log.info(`Starting MCP server: id="${id}", name="${name}"`);
 
-    const container = new PodmanContainer(mcpServer);
+    const container = new PodmanContainer(mcpServer, this.socketPath);
     await container.startOrCreateContainer();
 
     this.mcpServerIdToPodmanContainerMap.set(id, container);
@@ -129,7 +134,7 @@ class McpServerSandboxManager {
    * - Starting all installed MCP server containers
    */
   start() {
-    this._status = 'initializing';
+    this.status = 'initializing';
     this.podmanRuntime.ensureArchestraMachineIsRunning();
   }
 
@@ -137,9 +142,9 @@ class McpServerSandboxManager {
    * Stop the archestra podman machine (which will stop all installed MCP server containers)
    */
   turnOffSandbox() {
-    this._status = 'stopping';
+    this.status = 'stopping';
     this.podmanRuntime.stopArchestraMachine();
-    this._status = 'stopped';
+    this.status = 'stopped';
   }
 
   checkContainerExists(mcpServerId: string): boolean {
@@ -187,7 +192,7 @@ class McpServerSandboxManager {
 
   get statusSummary(): SandboxStatusSummary {
     return {
-      status: this._status,
+      status: this.status,
       runtime: this.podmanRuntime.statusSummary,
       containers: Object.fromEntries(
         Array.from(this.mcpServerIdToPodmanContainerMap.entries()).map(([mcpServerId, podmanContainer]) => [
