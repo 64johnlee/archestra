@@ -32,4 +32,5 @@ export type ConnectedMcpServer = McpServer &
     url: string;
     client: Client | null;
     tools: ToolWithMcpServerInfo[];
+    hasFetchedTools: boolean;
   };

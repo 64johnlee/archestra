@@ -27,10 +27,11 @@ export default function ChatPage(_props: ChatPageProps) {
     // Check if it's a cloud model
     const isCloudModel = availableCloudProviderModels.some((m) => m.id === selectedModel);
 
-    // Use OpenAI endpoint for cloud models, Ollama for local
-    const apiEndpoint = isCloudModel
-      ? `${config.archestra.apiUrl}/llm/openai/stream`
-      : `${config.archestra.apiUrl}/llm/ollama/stream`;
+    /**
+     * TODO: update this to work with ALL cloud providers..
+     * Use OpenAI endpoint for cloud models, Ollama for local
+     */
+    const apiEndpoint = `${config.archestra.chatStreamBaseUrl}/${isCloudModel ? 'openai' : 'ollama'}/stream`;
 
     return new DefaultChatTransport({
       api: apiEndpoint,

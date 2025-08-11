@@ -20,6 +20,7 @@ type WebSocketMessage = z.infer<typeof WebSocketMessageSchema>;
 
 class WebSocketService {
   private wss: WebSocketServer | null = null;
+  private sandboxStatusInterval: NodeJS.Timeout | null = null;
 
   start() {
     const { port } = config.server.websocket;
@@ -79,15 +80,28 @@ class WebSocketService {
   }
 
   stop() {
+    // Clear the interval first
+    if (this.sandboxStatusInterval) {
+      clearInterval(this.sandboxStatusInterval);
+      this.sandboxStatusInterval = null;
+      log.info('Cleared sandbox status interval');
+    }
+
+    // Close all client connections
     if (this.wss) {
-      this.wss.close();
+      this.wss.clients.forEach((client) => {
+        client.close();
+      });
+
+      this.wss.close(() => {
+        log.info('WebSocket server closed');
+      });
       this.wss = null;
-      log.info('WebSocket server stopped');
     }
   }
 
   private periodicallyEmitSandboxStatusSummaryUpdates() {
-    setInterval(() => {
+    this.sandboxStatusInterval = setInterval(() => {
       this.broadcast({ type: 'sandbox-status-update', payload: McpServerSandboxManager.statusSummary });
     }, 1000);
   }

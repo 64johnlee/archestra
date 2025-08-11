@@ -42,20 +42,46 @@ const createWindow = () => {
 };
 
 /**
- * Start the Fastify server in a separate Node.js process
+ * Start the backendin a separate Node.js process
  *
- * This function spawns the server as a child process because:
- * 1. The server needs access to native Node.js modules (better-sqlite3)
+ * This function spawns the backend as a child process because:
+ * 1. The backend needs access to native Node.js modules (better-sqlite3)
  * 2. Electron's renderer process has restrictions on native modules
  * 3. Running in a separate process allows for better error isolation
  * 4. The server can be restarted independently of the Electron app
  */
-function startFastifyServer(): void {
+async function startBackendServer(): Promise<void> {
   // server-process.js is built by Vite from src/server-process.ts
   // It's placed in the same directory as main.js after building
   const serverPath = path.join(__dirname, 'server-process.js');
 
-  if (serverProcess) serverProcess.kill();
+  // If there's an existing server process, kill it and wait for it to exit
+  if (serverProcess) {
+    await new Promise<void>((resolve) => {
+      const existingProcess = serverProcess;
+
+      // Set up a one-time listener for the exit event
+      existingProcess.once('exit', () => {
+        log.info('Previous server process has exited');
+        resolve();
+      });
+
+      // Send SIGTERM to trigger graceful shutdown
+      existingProcess.kill('SIGTERM');
+
+      // If process doesn't exit after 5 seconds, force kill it
+      setTimeout(() => {
+        if (existingProcess.killed === false) {
+          log.warn('Server process did not exit gracefully, force killing');
+          existingProcess.kill('SIGKILL');
+        }
+        resolve();
+      }, 5000);
+    });
+
+    // Wait a bit more to ensure ports are released
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
 
   // Fork creates a new Node.js process that can communicate with the parent
   // pass --transpileOnly (disable type checking) to increase startup speed
@@ -91,12 +117,12 @@ app.on('ready', async () => {
   if (process.env.NODE_ENV === 'development') {
     const serverPath = path.resolve(__dirname, '.vite/build/server-process.js');
 
-    chokidar.watch(serverPath).on('change', () => {
+    chokidar.watch(serverPath).on('change', async () => {
       log.info('Restarting server..');
-      startFastifyServer();
+      await startBackendServer();
     });
   }
-  startFastifyServer();
+  await startBackendServer();
   createWindow();
 });
 

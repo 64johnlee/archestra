@@ -14,8 +14,10 @@ import mcpServerRoutes from '@backend/server/plugins/mcpServer';
 import ollamaRoutes from '@backend/server/plugins/ollama';
 import log from '@backend/utils/logger';
 
+let app: ReturnType<typeof fastify> | null = null;
+
 export const startFastifyServer = async () => {
-  const app = fastify({
+  app = fastify({
     logger: {
       level: config.logLevel,
       serializers: {
@@ -69,16 +71,18 @@ export const startFastifyServer = async () => {
     // Exit with error code to signal failure to parent process
     process.exit(1);
   }
+};
 
-  // Handle graceful shutdown for clean process termination
-  const gracefulShutdown = async () => {
-    app.log.info('Shutdown signal received, closing server...');
-    await app.close(); // Close all connections properly
-    app.log.info('Server closed');
-    process.exit(0);
-  };
-
-  // Listen for termination signals from the parent process
-  process.on('SIGTERM', gracefulShutdown); // Standard termination signal
-  process.on('SIGINT', gracefulShutdown); // Ctrl+C signal
+export const stopFastifyServer = async () => {
+  if (app) {
+    log.info('Stopping Fastify server...');
+    try {
+      await app.close();
+      app = null;
+      log.info('Fastify server stopped successfully');
+    } catch (error) {
+      log.error('Error stopping Fastify server:', error);
+      throw error;
+    }
+  }
 };

@@ -15,7 +15,7 @@
  */
 import OllamaServer from '@backend/llms/ollama/server';
 import McpServerSandboxManager from '@backend/sandbox';
-import { startFastifyServer } from '@backend/server';
+import { startFastifyServer, stopFastifyServer } from '@backend/server';
 import log from '@backend/utils/logger';
 import WebSocketServer from '@backend/websocket';
 
@@ -41,6 +41,10 @@ const cleanup = async () => {
   log.info('Server process cleanup starting...');
 
   try {
+    // Stop the Fastify server first to free the port
+    log.info('Stopping Fastify server...');
+    await stopFastifyServer();
+
     // Stop the WebSocket server
     log.info('Stopping WebSocket server...');
     WebSocketServer.stop();

@@ -33,7 +33,6 @@ export default function McpServerWithToolsSidebarSection(_props: McpServerWithTo
   const filteredToolsGroupedByServer = getFilteredToolsGroupedByServer();
 
   const hasAllAvailableTools = Object.keys(allAvailableToolsGroupedByServer).length > 0;
-  const hasNoTools = !hasAllAvailableTools;
   const hasNoFilteredTools = Object.keys(filteredToolsGroupedByServer).length === 0;
   const toolSearchQueryIsEmpty = !toolSearchQuery.trim();
 
@@ -59,14 +58,7 @@ export default function McpServerWithToolsSidebarSection(_props: McpServerWithTo
                 <span className="text-xs text-muted-foreground">Loading...</span>
               </div>
             </SidebarMenuItem>
-          ) : hasNoTools ? (
-            <SidebarMenuItem>
-              <SidebarMenuButton size="sm" className="justify-start text-muted-foreground">
-                <Plus className="h-4 w-4" />
-                <span>Add more</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ) : hasNoFilteredTools ? (
+          ) : hasNoFilteredTools && hasAllAvailableTools ? (
             <SidebarMenuItem>
               <div className="px-2 py-1.5 text-xs text-muted-foreground">
                 No tools found matching "{toolSearchQuery}"

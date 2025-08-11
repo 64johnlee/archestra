@@ -107,6 +107,7 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
     url: config.archestra.mcpUrl,
     client: null,
     tools: [],
+    hasFetchedTools: false,
     state: 'initializing',
     startupPercentage: 0,
     message: null,
@@ -149,27 +150,25 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
   },
 
   addMcpServerToInstalledMcpServers: (mcpServer: McpServer) => {
-    set((state) => ({
-      installedMcpServers: [
-        ...state.installedMcpServers,
-        {
-          ...mcpServer,
-          tools: [],
-          url: `${config.archestra.mcpProxyUrl}/${mcpServer.id}`,
-          client: null,
-          state: 'initializing',
-          startupPercentage: 0,
-          message: null,
-          error: null,
-        },
-      ],
-    }));
+    set((state) => {
+      const newServer: ConnectedMcpServer = {
+        ...mcpServer,
+        tools: [],
+        hasFetchedTools: false,
+        url: `${config.archestra.mcpProxyUrl}/${mcpServer.id}`,
+        client: null,
+        state: 'initializing',
+        startupPercentage: 0,
+        message: null,
+        error: null,
+      };
 
-    // Connect to the newly added server
-    const newServer = get().installedMcpServers.find((s) => s.name === mcpServer.name);
-    if (newServer) {
       get().connectToMcpServer(newServer, newServer.url);
-    }
+
+      return {
+        installedMcpServers: [...state.installedMcpServers, newServer],
+      };
+    });
   },
 
   removeMcpServerFromInstalledMcpServers: (mcpServerId: string) => {
@@ -281,6 +280,7 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
               ...archestraMcpServer,
               client,
               tools,
+              hasFetchedTools: true,
               state: 'running',
               error: null,
             },
@@ -367,6 +367,7 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
       get().updateMcpServer(id, {
         client,
         tools,
+        hasFetchedTools: true,
         state: 'running',
       });
       return client;

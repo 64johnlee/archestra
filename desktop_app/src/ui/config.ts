@@ -22,8 +22,11 @@ export default {
      */
     mcpUrl: `${BASE_URL_WITH_PROTOCOL}/mcp`,
     mcpProxyUrl: `${BASE_URL_WITH_PROTOCOL}/mcp_proxy`,
+    /**
+     * TODO: chatStreamBaseUrl vs ollamaProxyUrl is unnecessarily overcomplicated... clean this up
+     */
+    chatStreamBaseUrl: `${BASE_URL_WITH_PROTOCOL}/api/llm`,
     ollamaProxyUrl: `${BASE_URL}/llm/ollama`,
-    openaiProxyUrl: `${BASE_URL}/llm/openai`,
     websocketUrl: `ws://${BASE_URL}/ws`,
     catalogUrl: 'https://www.archestra.ai/mcp-catalog/api',
   },

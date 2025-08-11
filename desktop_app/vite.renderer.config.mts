@@ -28,10 +28,6 @@ export default defineConfig({
         ws: true,
         rewriteWsOrigin: true,
       },
-      '^/llm/ollama.*': {
-        target: 'http://localhost:54589',
-        changeOrigin: true,
-      },
     },
   },
 });

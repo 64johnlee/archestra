@@ -65,6 +65,11 @@ export default class PodmanContainer {
 
   private socketPath: string | null = null;
 
+  // Connection pooling for MCP server communication
+  private mcpSocket = null;
+  private mcpSocketConnecting: boolean = false;
+  private pendingRequests: Map<string, (response: any) => void> = new Map();
+
   /*
    * TODO: Use app.getPath('logs') from Electron to get proper logs directory
    *
@@ -426,6 +431,13 @@ export default class PodmanContainer {
     this.statusMessage = 'Stopping container';
     this.statusError = null;
 
+    // Close MCP socket connection if exists
+    if (this.mcpSocket) {
+      log.info('Closing MCP socket connection');
+      this.mcpSocket.destroy();
+      this.mcpSocket = null;
+    }
+
     // Stop streaming logs before stopping container
     this.stopStreamingLogs();
 
@@ -465,6 +477,148 @@ export default class PodmanContainer {
   }
 
   /**
+   * Get or create a persistent socket connection to the MCP server container
+   */
+  private async getOrCreateMcpSocket() {
+    // If we already have a socket, return it
+    if (this.mcpSocket && !this.mcpSocket.destroyed) {
+      return this.mcpSocket;
+    }
+
+    // If we're already connecting, wait for it
+    if (this.mcpSocketConnecting) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return this.getOrCreateMcpSocket();
+    }
+
+    this.mcpSocketConnecting = true;
+
+    try {
+      log.info(`Creating new MCP socket connection to ${this.containerName}`);
+
+      // First check if container is healthy
+      const containerIsHealthy = await this.waitForHealthy();
+      if (!containerIsHealthy) {
+        throw new Error(`Container ${this.containerName} is not healthy`);
+      }
+
+      // Create an agent for the unix socket
+      const agent = new Agent({
+        connect: { socketPath: this.socketPath },
+      });
+
+      // Use undici.upgrade() for WebSocket-style upgrades
+      const { socket } = await upgrade(
+        `http://localhost/v5.0.0/libpod/containers/${this.containerName}/attach?stream=true&stdin=true&stdout=true&stderr=true`,
+        {
+          method: 'POST',
+          dispatcher: agent,
+          protocol: 'tcp',
+        }
+      );
+
+      if (!socket) {
+        throw new Error('Failed to create socket');
+      }
+
+      log.info('MCP socket connection established');
+      this.mcpSocket = socket;
+      this.mcpSocketConnecting = false;
+
+      // Set up socket data handler
+      let responseBuffer = Buffer.alloc(0);
+
+      socket.on('data', (chunk: Buffer) => {
+        responseBuffer = Buffer.concat([responseBuffer, chunk]);
+
+        // Process multiplexed stream format
+        while (responseBuffer.length >= 8) {
+          // Read the 8-byte header
+          const streamType = responseBuffer[0]; // 0=stdin, 1=stdout, 2=stderr
+          const payloadSize = responseBuffer.readUInt32BE(4);
+
+          // Check if we have the full payload
+          if (responseBuffer.length < 8 + payloadSize) {
+            break; // Wait for more data
+          }
+
+          // Extract the payload
+          const payload = responseBuffer.slice(8, 8 + payloadSize);
+          responseBuffer = responseBuffer.slice(8 + payloadSize);
+
+          // Process stdout (stream type 1)
+          if (streamType === 1) {
+            const text = payload.toString('utf-8').trim();
+            if (text && text.startsWith('{')) {
+              try {
+                const parsed = JSON.parse(text);
+                log.debug(`Received MCP message:`, { id: parsed.id, method: parsed.method });
+
+                // Handle responses with IDs
+                if (parsed.id !== undefined && this.pendingRequests.has(parsed.id.toString())) {
+                  const callback = this.pendingRequests.get(parsed.id.toString());
+                  this.pendingRequests.delete(parsed.id.toString());
+                  callback?.(parsed);
+                } else if (parsed.method) {
+                  // This is a notification - we might need to handle these differently
+                  log.debug(`MCP notification: ${parsed.method}`);
+                }
+              } catch (e) {
+                log.error(`Failed to parse MCP message: ${text}`);
+              }
+            }
+          } else if (streamType === 2) {
+            // stderr
+            const text = payload.toString('utf-8').trim();
+            if (text) {
+              log.debug(`Container stderr: ${text}`);
+            }
+          }
+        }
+      });
+
+      socket.on('error', (err: Error) => {
+        log.error('MCP socket error:', err);
+        this.mcpSocket = null;
+        // Reject all pending requests
+        for (const [id, callback] of this.pendingRequests) {
+          callback({
+            jsonrpc: '2.0',
+            id,
+            error: {
+              code: -32603,
+              message: `Socket error: ${err.message}`,
+            },
+          });
+        }
+        this.pendingRequests.clear();
+      });
+
+      socket.on('close', () => {
+        log.info('MCP socket closed');
+        this.mcpSocket = null;
+        // Reject all pending requests
+        for (const [id, callback] of this.pendingRequests) {
+          callback({
+            jsonrpc: '2.0',
+            id,
+            error: {
+              code: -32603,
+              message: 'Connection closed',
+            },
+          });
+        }
+        this.pendingRequests.clear();
+      });
+
+      return socket;
+    } catch (error) {
+      this.mcpSocketConnecting = false;
+      throw error;
+    }
+  }
+
+  /**
    * Stream bidirectional communication with the MCP server container!
    *
    * MCP servers communicate via stdin/stdout using JSON-RPC protocol.
@@ -479,252 +633,75 @@ export default class PodmanContainer {
    */
   async streamToContainer(requestBody: any, responseStream: RawReplyDefaultExpression) {
     // Log the original request
-    log.info(`Original request body:`, {
+    log.info(`MCP request:`, {
       method: requestBody.method,
       id: requestBody.id,
       idType: typeof requestBody.id,
     });
 
-    // Preserve the original request ID or assign one if missing
-    const requestId = requestBody.id !== null && requestBody.id !== undefined ? requestBody.id : uuidv4();
-
-    // Only update the request body if we generated a new ID
-    if (requestBody.id === null || requestBody.id === undefined) {
-      requestBody.id = requestId;
-    }
-
-    log.info(`Handling MCP request for container ${this.containerName}`, {
-      method: requestBody.method,
-      id: requestId,
-      originalId: requestBody.id,
-    });
+    const originalId = requestBody.id;
 
     try {
-      // First check if container is healthy
-      const containerIsHealthy = await this.waitForHealthy();
-      if (!containerIsHealthy) {
-        throw new Error(`Container ${this.containerName} is not healthy`);
+      // Get or create the socket connection
+      const socket = await this.getOrCreateMcpSocket();
+
+      // For notifications (no ID), just send and return immediately
+      if (requestBody.id === undefined && requestBody.method?.includes('notification')) {
+        const jsonRequest = JSON.stringify(requestBody) + '\n';
+        socket.write(jsonRequest);
+        log.info(`Sent notification: ${requestBody.method}`);
+
+        // Return empty success response for notifications
+        responseStream.write('{}');
+        responseStream.end();
+        return;
       }
+
+      // For requests with IDs, we need to track the response
+      const requestId = originalId !== undefined ? originalId.toString() : uuidv4();
 
       // Prepare the JSON-RPC request with newline (MCP servers expect line-delimited JSON)
       const jsonRequest = JSON.stringify(requestBody) + '\n';
+      log.info(`Sending JSON-RPC request: ${jsonRequest}`);
 
-      // Create HTTP request options for the attach endpoint
-      const options = {
-        socketPath: this.socketPath,
-        path: `/v5.0.0/libpod/containers/${this.containerName}/attach?stream=true&stdin=true&stdout=true&stderr=true`,
-        method: 'POST',
-        headers: {
-          Upgrade: 'tcp',
-          Connection: 'Upgrade',
-        },
-      };
-
-      log.info(`Attaching to container ${this.containerName} via ${this.socketPath}`);
-
-      // Create an agent for the unix socket
-      const agent = new Agent({
-        connect: { socketPath: this.socketPath },
+      // Set up response handler
+      const responsePromise = new Promise<any>((resolve) => {
+        this.pendingRequests.set(requestId, resolve);
       });
 
-      try {
-        // Use undici.upgrade() for WebSocket-style upgrades
-        // undici automatically adds the connection: upgrade header
-        const { socket, headers } = await upgrade(
-          `http://localhost/v5.0.0/libpod/containers/${this.containerName}/attach?stream=true&stdin=true&stdout=true&stderr=true`,
-          {
-            method: 'POST',
-            dispatcher: agent,
-            protocol: 'tcp',
-          }
-        );
+      // Send the request
+      socket.write(jsonRequest);
 
-        if (socket) {
-          // Connection has been upgraded - we have the raw socket
-          log.info('Connection upgraded to raw TCP socket');
-
-          // Write the JSON-RPC request to container's stdin
-          socket.write(jsonRequest);
-
-          // Handle response data
-          let responseBuffer = Buffer.alloc(0);
-          let responseFound = false;
-
-          socket.on('data', (chunk: Buffer) => {
-            responseBuffer = Buffer.concat([responseBuffer, chunk]);
-
-            // Process multiplexed stream format
-            while (responseBuffer.length >= 8) {
-              // Read the 8-byte header
-              const streamType = responseBuffer[0]; // 0=stdin, 1=stdout, 2=stderr
-              const payloadSize = responseBuffer.readUInt32BE(4);
-
-              // Check if we have the full payload
-              if (responseBuffer.length < 8 + payloadSize) {
-                break; // Wait for more data
-              }
-
-              // Extract the payload
-              const payload = responseBuffer.slice(8, 8 + payloadSize);
-              responseBuffer = responseBuffer.slice(8 + payloadSize);
-
-              // Process stdout (stream type 1)
-              if (streamType === 1) {
-                const text = payload.toString('utf-8').trim();
-
-                if (text) {
-                  log.debug(`Container stdout (stream type ${streamType}): ${text}`);
-
-                  if (text.startsWith('{')) {
-                    try {
-                      const parsed = JSON.parse(text);
-                      log.debug(`Parsed JSON - id: ${parsed.id}, requestId: ${requestId}, method: ${parsed.method}`);
-
-                      // Check if this is our response (need to handle numeric/string ID comparison)
-                      const idMatches =
-                        parsed.id !== undefined &&
-                        (parsed.id === requestId || parsed.id.toString() === requestId.toString());
-
-                      if (
-                        parsed.jsonrpc === '2.0' &&
-                        idMatches &&
-                        (parsed.result !== undefined || parsed.error !== undefined) &&
-                        !responseFound
-                      ) {
-                        // Found our response!
-                        log.info('Received JSON-RPC response from MCP server', {
-                          parsedId: parsed.id,
-                          parsedIdType: typeof parsed.id,
-                          requestId: requestId,
-                          requestIdType: typeof requestId,
-                          hasResult: parsed.result !== undefined,
-                          hasError: parsed.error !== undefined,
-                        });
-                        responseFound = true;
-                        const responseJson = JSON.stringify(parsed);
-                        log.info(`Writing response to stream: ${responseJson.substring(0, 100)}...`);
-                        responseStream.write(responseJson);
-                        responseStream.end();
-                        socket.end();
-                        log.info(`Response sent and socket closed`);
-                        return;
-                      } else if (parsed.method) {
-                        // This is a notification, not our response
-                        log.debug(`MCP notification: ${parsed.method}`);
-                      } else if (parsed.id !== undefined) {
-                        // This might be a response but doesn't match our criteria
-                        log.warn(`Received JSON with id but not recognized as response:`, {
-                          parsedId: parsed.id,
-                          requestId: requestId,
-                          hasResult: parsed.result !== undefined,
-                          hasError: parsed.error !== undefined,
-                          jsonrpc: parsed.jsonrpc,
-                        });
-                      }
-                    } catch (e) {
-                      log.debug(`Failed to parse JSON from container: ${text}`);
-                    }
-                  }
-                }
-              } else if (streamType === 2) {
-                // stderr
-                const text = payload.toString('utf-8').trim();
-                if (text) {
-                  log.debug(`Container stderr: ${text}`);
-                }
-              }
-            }
-          });
-
-          socket.on('error', (err: Error) => {
-            log.error('Socket error:', err);
-            if (!responseFound) {
-              responseStream.write(
-                JSON.stringify({
-                  jsonrpc: '2.0',
-                  id: requestId,
-                  error: {
-                    code: -32603,
-                    message: `Socket error: ${err.message}`,
-                  },
-                })
-              );
-              responseStream.end();
-            }
-          });
-
-          socket.on('close', () => {
-            log.info('Socket closed');
-            if (!responseFound) {
-              responseStream.write(
-                JSON.stringify({
-                  jsonrpc: '2.0',
-                  id: requestId,
-                  error: {
-                    code: -32603,
-                    message: 'Connection closed without receiving response',
-                  },
-                })
-              );
-              responseStream.end();
-            }
-          });
-
-          // Set a timeout for the response
-          setTimeout(() => {
-            if (!responseFound) {
-              log.warn('Timeout waiting for MCP server response');
-              responseStream.write(
-                JSON.stringify({
-                  jsonrpc: '2.0',
-                  id: requestId,
-                  error: {
-                    code: -32603,
-                    message: 'Timeout waiting for MCP server response',
-                  },
-                })
-              );
-              responseStream.end();
-              socket.end();
-            }
-          }, 30000); // 30 second timeout
-        } else {
-          log.error('Failed to upgrade connection - no socket returned');
-          responseStream.write(
-            JSON.stringify({
-              jsonrpc: '2.0',
-              id: requestId,
-              error: {
-                code: -32603,
-                message: 'Failed to attach to container: no socket returned',
-              },
-            })
-          );
-          responseStream.end();
-        }
-      } catch (error) {
-        log.error('Error attaching to container:', error);
-        responseStream.write(
-          JSON.stringify({
+      // Wait for response with timeout
+      const timeoutPromise = new Promise<any>((resolve) => {
+        setTimeout(() => {
+          resolve({
             jsonrpc: '2.0',
-            id: requestId,
+            id: originalId,
             error: {
               code: -32603,
-              message: error instanceof Error ? error.message : 'Failed to attach to container',
+              message: 'Timeout waiting for MCP server response',
             },
-          })
-        );
-        responseStream.end();
-      } finally {
-        // Clean up the agent
-        await agent.close();
-      }
+          });
+        }, 30000); // 30 second timeout
+      });
+
+      const response = await Promise.race([responsePromise, timeoutPromise]);
+
+      // Clean up pending request if it's still there
+      this.pendingRequests.delete(requestId);
+
+      // Send response back to client
+      const responseJson = JSON.stringify(response);
+      log.info(`Sending response back to client: ${responseJson.substring(0, 100)}...`);
+      responseStream.write(responseJson);
+      responseStream.end();
     } catch (error) {
       log.error(`Error in streamToContainer:`, error);
       responseStream.write(
         JSON.stringify({
           jsonrpc: '2.0',
-          id: requestId,
+          id: originalId,
           error: {
             code: -32603,
             message: error instanceof Error ? error.message : 'Unknown error',
