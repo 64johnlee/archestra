@@ -4,6 +4,7 @@
   "changelog-type": "default",
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
+  "pull-request-footer": "",
   "changelog-sections": [
     {
       "section": "Features",
