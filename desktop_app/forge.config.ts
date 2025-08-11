@@ -163,15 +163,9 @@ const forgeConfig: ForgeConfig = {
          * are configured in `.github/release-please/release-please-config.json`. release-please will be
          * responsible for actually creating the release, and this "publisher" will simply "attach" the various
          * platform-specific binaries to the release.
-         *
-         * Publish the release as a draft. Will allow us to see the release with its generated
-         * artifacts without actually publishing it to end users.
-         *
-         * We can then manually publish the release via GitHub after writing release-notes and double-checking
-         * that distributables work.
          */
-        // prerelease: false,
-        // draft: true,
+        // prerelease: true,
+        // draft: false,
       } as PublisherGitHubConfig,
     },
   ],
