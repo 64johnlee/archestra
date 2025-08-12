@@ -96,6 +96,7 @@ const forgeConfig: ForgeConfig = {
         name: productName,
         productName,
         description,
+        revision: '',
       },
     }),
     new MakerDeb({
