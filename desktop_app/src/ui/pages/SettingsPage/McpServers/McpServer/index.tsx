@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, Loader2, Trash2, Wrench } from 'lucide-react';
+import { AlertCircle, CheckCircle, FileText, Loader2, Trash2, Wrench } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@ui/components/ui/badge';
@@ -9,13 +9,17 @@ import { Progress } from '@ui/components/ui/progress';
 import { useMcpServersStore } from '@ui/stores';
 import { ConnectedMcpServer } from '@ui/types';
 
+import LogViewerDialog from './LogViewerDialog';
+
 interface McpServerProps {
   mcpServer: ConnectedMcpServer;
 }
 
 export default function McpServer({ mcpServer }: McpServerProps) {
-  const { name, state, tools, url, error, startupPercentage, hasFetchedTools, message } = mcpServer;
+  const { id, name, state, tools, url, error, startupPercentage, hasFetchedTools, message } = mcpServer;
   const isRunning = state === 'running';
+
+  const [showLogs, setShowLogs] = useState(false);
   const [showUninstallDialog, setShowUninstallDialog] = useState(false);
   const { uninstallMcpServer, uninstallingMcpServerId } = useMcpServersStore();
   const isUninstalling = uninstallingMcpServerId === mcpServer.id;
@@ -110,14 +114,27 @@ export default function McpServer({ mcpServer }: McpServerProps) {
                   {tools.length} tool
                   {tools.length !== 1 ? 's' : ''}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 cursor-pointer"
-                  onClick={() => setShowUninstallDialog(true)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                {state === 'running' && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setShowLogs(true)}
+                      title="View container logs"
+                    >
+                      <FileText className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 cursor-pointer"
+                      onClick={() => setShowUninstallDialog(true)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -190,6 +207,8 @@ export default function McpServer({ mcpServer }: McpServerProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <LogViewerDialog open={showLogs} onOpenChange={setShowLogs} mcpServerId={id} mcpServerName={name} />
     </>
   );
 }
