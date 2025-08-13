@@ -23,6 +23,8 @@
 
 Archestra is an enterprise-grade platform that enables non-technical users to safely leverage AI agents and MCP (Model Context Protocol) servers. Built as a privacy-focused desktop application, Archestra provides a secure runtime environment for AI interactions with sandboxing, resource controls, and prompt injection prevention.
 
+![Archestra Screenshot](desktop_app/public/images/screenshot.png)
+
 ### Key Features
 
 - 🔒 **Secure Runtime** - Isolated execution environment for AI agents with sandboxing and resource controls
