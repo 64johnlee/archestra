@@ -12,6 +12,16 @@ interface StreamRequestBody {
   provider?: string;
 }
 
+// Helper function to escape content for JSON
+function escapeJsonString(str: string): string {
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t');
+}
+
 export async function handleOllamaStream(
   fastify: any,
   request: FastifyRequest<{ Body: StreamRequestBody }>,
@@ -115,6 +125,7 @@ export async function handleOllamaStream(
   let accumulatedToolArgs: { [key: string]: string } = {};
   let hasStartedText = false;
   let isProcessingToolCall = false;
+  let accumulatedThinkContent = '';
 
   try {
     // Start streaming
@@ -148,18 +159,17 @@ export async function handleOllamaStream(
 
     // Process the stream
     for await (const chunk of response) {
-      // Handle tool calls first to set the flag
-      if (chunk.message?.tool_calls && chunk.message.tool_calls.length > 0) {
-        isProcessingToolCall = true;
-        for (const toolCall of chunk.message.tool_calls) {
-          const toolCallId = generateId();
+      // Check if this chunk contains tool calls
+      const hasToolCallsInChunk = chunk.message?.tool_calls && chunk.message.tool_calls.length > 0;
 
+      // Handle tool calls - accumulate them but don't send events yet
+      if (hasToolCallsInChunk) {
+        isProcessingToolCall = true;
+
+        for (const toolCall of chunk.message.tool_calls) {
           // Check if this is a new tool call or continuation
           if (toolCall.function?.name) {
-            // New tool call - send tool-input-start
-            reply.raw.write(
-              `data: {"type":"tool-input-start","toolCallId":"${toolCallId}","toolName":"${toolCall.function.name}"}\n\n`
-            );
+            const toolCallId = generateId();
 
             // Initialize accumulator for this tool call
             const argsString =
@@ -168,15 +178,7 @@ export async function handleOllamaStream(
                 : toolCall.function.arguments || '';
             accumulatedToolArgs[toolCallId] = argsString;
 
-            // Send the arguments as delta if present
-            if (argsString) {
-              const escapedArgs = argsString.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-              reply.raw.write(
-                `data: {"type":"tool-input-delta","toolCallId":"${toolCallId}","inputTextDelta":"${escapedArgs}"}\n\n`
-              );
-            }
-
-            // Store tool call info
+            // Store tool call info (don't send events yet)
             currentToolCalls.push({
               toolCallId,
               toolName: toolCall.function.name,
@@ -186,56 +188,81 @@ export async function handleOllamaStream(
           } else if (toolCall.function?.arguments && currentToolCalls.length > 0) {
             // Continuation of arguments for the last tool call
             const lastToolCall = currentToolCalls[currentToolCalls.length - 1];
-            accumulatedToolArgs[lastToolCall.toolCallId] += toolCall.function.arguments;
-
-            const escapedArgs = toolCall.function.arguments
-              .replace(/\\/g, '\\\\')
-              .replace(/"/g, '\\"')
-              .replace(/\n/g, '\\n');
-            reply.raw.write(
-              `data: {"type":"tool-input-delta","toolCallId":"${lastToolCall.toolCallId}","inputTextDelta":"${escapedArgs}"}\n\n`
-            );
+            const argsString =
+              typeof toolCall.function.arguments === 'string'
+                ? toolCall.function.arguments
+                : JSON.stringify(toolCall.function.arguments);
+            accumulatedToolArgs[lastToolCall.toolCallId] =
+              (accumulatedToolArgs[lastToolCall.toolCallId] || '') + argsString;
           }
         }
       }
 
       // Handle text content - but skip if we're processing tool calls
       if (chunk.message?.content && !isProcessingToolCall) {
-        // Send text-start on first text chunk
-        if (!hasStartedText) {
+        const content = chunk.message.content;
+
+        // Only start text stream if we have non-whitespace content
+        if (!hasStartedText && content.trim()) {
+          // Send start-step event before text
+          reply.raw.write(`data: {"type":"start-step"}\n\n`);
           reply.raw.write(`data: {"type":"text-start","id":"${messageId}"}\n\n`);
           hasStartedText = true;
           isFirstChunk = false;
         }
 
-        fullContent += chunk.message.content;
+        // If text has started, send all content including whitespace
+        if (hasStartedText) {
+          fullContent += content;
 
-        // Escape the content properly for JSON
-        const escapedContent = chunk.message.content
-          .replace(/\\/g, '\\\\')
-          .replace(/"/g, '\\"')
-          .replace(/\n/g, '\\n')
-          .replace(/\r/g, '\\r')
-          .replace(/\t/g, '\\t');
+          // Keep track of think content for later processing if needed
+          if (content.includes('<think>') || content.includes('</think>')) {
+            accumulatedThinkContent += content;
+          }
 
-        // Send text delta with id
-        reply.raw.write(`data: {"type":"text-delta","id":"${messageId}","delta":"${escapedContent}"}\n\n`);
+          // Send the content as-is (including think blocks)
+          // The frontend will parse and display them appropriately
+          const escapedContent = escapeJsonString(content);
+          reply.raw.write(`data: {"type":"text-delta","id":"${messageId}","delta":"${escapedContent}"}\n\n`);
+        }
       }
 
       // Check if this is the end of a tool call
       if (chunk.done && currentToolCalls.length > 0) {
-        // Start text if not already started (for tool-only responses)
-        if (!hasStartedText) {
-          reply.raw.write(`data: {"type":"text-start","id":"${messageId}"}\n\n`);
-          hasStartedText = true;
+        // If we were outputting text, close it before executing tool calls
+        if (hasStartedText) {
+          reply.raw.write(`data: {"type":"text-end","id":"${messageId}"}\n\n`);
+          // Send finish-step event after text
+          reply.raw.write(`data: {"type":"finish-step"}\n\n`);
+          hasStartedText = false;
         }
 
-        // Parse and execute tool calls
+        // Now send tool events and execute tool calls
         for (const toolCall of currentToolCalls) {
           try {
+            // Send start-step event before tool events
+            reply.raw.write(`data: {"type":"start-step"}\n\n`);
+
+            // Send tool-input-start event
+            reply.raw.write(
+              `data: {"type":"tool-input-start","toolCallId":"${toolCall.toolCallId}","toolName":"${toolCall.toolName}"}\n\n`
+            );
+
+            // Send tool-input-delta event with accumulated arguments
+            const argsString = accumulatedToolArgs[toolCall.toolCallId] || '{}';
+            const escapedArgsDelta = escapeJsonString(argsString);
+            reply.raw.write(
+              `data: {"type":"tool-input-delta","toolCallId":"${toolCall.toolCallId}","inputTextDelta":"${escapedArgsDelta}"}\n\n`
+            );
+
             // Parse the accumulated arguments
-            const args = JSON.parse(accumulatedToolArgs[toolCall.toolCallId] || '{}');
+            const args = JSON.parse(argsString);
             toolCall.args = args;
+
+            // Send tool-input-available event
+            reply.raw.write(
+              `data: {"type":"tool-input-available","toolCallId":"${toolCall.toolCallId}","toolName":"${toolCall.toolName}","input":${JSON.stringify(args)}}\n\n`
+            );
 
             // Execute the tool
             if (mcpTools && mcpTools[toolCall.toolName]) {
@@ -257,61 +284,56 @@ export async function handleOllamaStream(
                   formattedOutput = JSON.stringify(result, null, 2);
                 }
 
-                // Send tool result as formatted text message
-                const toolResultMessage = `\n\n**Tool ${toolCall.toolName} executed successfully:**\n\`\`\`json\n${formattedOutput}\n\`\`\``;
-                const escapedToolResult = toolResultMessage
-                  .replace(/\\/g, '\\\\')
-                  .replace(/"/g, '\\"')
-                  .replace(/\n/g, '\\n')
-                  .replace(/\r/g, '\\r')
-                  .replace(/\t/g, '\\t');
+                // Send tool output available event
+                reply.raw.write(
+                  `data: {"type":"tool-output-available","toolCallId":"${toolCall.toolCallId}","output":${JSON.stringify(result)}}\n\n`
+                );
 
-                // Send as text delta to be compatible with Vercel AI SDK
-                reply.raw.write(`data: {"type":"text-delta","id":"${messageId}","delta":"${escapedToolResult}"}\n\n`);
+                // Send finish-step event after tool output
+                reply.raw.write(`data: {"type":"finish-step"}\n\n`);
               } catch (toolError) {
                 // Store error in tool call
                 toolCall.error = toolError instanceof Error ? toolError.message : 'Tool execution failed';
 
-                // Send tool error as text message
+                // Send tool error event
                 const errorMsg = toolError instanceof Error ? toolError.message : 'Tool execution failed';
-                const errorMessage = `\n\nTool ${toolCall.toolName} failed: ${errorMsg}`;
-                const escapedError = errorMessage
-                  .replace(/\\/g, '\\\\')
-                  .replace(/"/g, '\\"')
-                  .replace(/\n/g, '\\n')
-                  .replace(/\r/g, '\\r')
-                  .replace(/\t/g, '\\t');
-                reply.raw.write(`data: {"type":"text-delta","id":"${messageId}","delta":"${escapedError}"}\n\n`);
+                const escapedError = escapeJsonString(errorMsg);
+                reply.raw.write(
+                  `data: {"type":"tool-output-error","toolCallId":"${toolCall.toolCallId}","errorText":"${escapedError}"}\n\n`
+                );
+
+                // Send finish-step event after tool error
+                reply.raw.write(`data: {"type":"finish-step"}\n\n`);
               }
             } else {
-              // Tool not found - send as text message
-              const notFoundMessage = `\n\nTool ${toolCall.toolName} not found`;
-              const escapedNotFound = notFoundMessage
-                .replace(/\\/g, '\\\\')
-                .replace(/"/g, '\\"')
-                .replace(/\n/g, '\\n')
-                .replace(/\r/g, '\\r')
-                .replace(/\t/g, '\\t');
-              reply.raw.write(`data: {"type":"text-delta","id":"${messageId}","delta":"${escapedNotFound}"}\n\n`);
+              // Tool not found - send error event
+              const escapedError = escapeJsonString(`Tool ${toolCall.toolName} not found`);
+              reply.raw.write(
+                `data: {"type":"tool-output-error","toolCallId":"${toolCall.toolCallId}","errorText":"${escapedError}"}\n\n`
+              );
+
+              // Send finish-step event after tool error
+              reply.raw.write(`data: {"type":"finish-step"}\n\n`);
             }
           } catch (parseError) {
-            // Failed to parse arguments - send as text message
-            const parseErrorMessage = `\n\nTool ${toolCall.toolCallId} failed: Invalid tool arguments`;
-            const escapedParseError = parseErrorMessage
-              .replace(/\\/g, '\\\\')
-              .replace(/"/g, '\\"')
-              .replace(/\n/g, '\\n')
-              .replace(/\r/g, '\\r')
-              .replace(/\t/g, '\\t');
-            reply.raw.write(`data: {"type":"text-delta","id":"${messageId}","delta":"${escapedParseError}"}\n\n`);
+            // Failed to parse arguments - send error event
+            const escapedError = escapeJsonString('Invalid tool arguments');
+            reply.raw.write(
+              `data: {"type":"tool-output-error","toolCallId":"${toolCall.toolCallId}","errorText":"${escapedError}"}\n\n`
+            );
+
+            // Send finish-step event after parse error
+            reply.raw.write(`data: {"type":"finish-step"}\n\n`);
           }
         }
       }
     }
 
-    // Send text-end if we started text
+    // Send text-end if we started text and haven't closed it yet
     if (hasStartedText) {
       reply.raw.write(`data: {"type":"text-end","id":"${messageId}"}\n\n`);
+      // Send finish-step event after text
+      reply.raw.write(`data: {"type":"finish-step"}\n\n`);
     }
 
     // Save messages before finishing
@@ -383,12 +405,7 @@ export async function handleOllamaStream(
     } else {
       // If already hijacked, try to send error in SSE format
       try {
-        const escapedErrorMessage = errorMessage
-          .replace(/\\/g, '\\\\')
-          .replace(/"/g, '\\"')
-          .replace(/\n/g, '\\n')
-          .replace(/\r/g, '\\r')
-          .replace(/\t/g, '\\t');
+        const escapedErrorMessage = escapeJsonString(errorMessage);
         reply.raw.write(`data: {"type":"error","errorText":"${escapedErrorMessage}"}\n\n`);
         reply.raw.end();
       } catch (writeError) {
