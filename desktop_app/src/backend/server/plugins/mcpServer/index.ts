@@ -26,6 +26,18 @@ z.globalRegistry.add(McpServerSchema, { id: 'McpServer' });
 z.globalRegistry.add(McpServerContainerLogsSchema, { id: 'McpServerContainerLogs' });
 z.globalRegistry.add(AvailableToolSchema, { id: 'AvailableTool' });
 
+// Helper function to make schema JSON-serializable by removing symbols
+const cleanSchema = (schema: any): any => {
+  if (!schema) return undefined;
+
+  try {
+    // JSON.parse(JSON.stringify()) removes non-serializable properties like symbols
+    return JSON.parse(JSON.stringify(schema));
+  } catch {
+    return undefined;
+  }
+};
+
 const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get(
     '/api/mcp_server',
@@ -378,9 +390,9 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
         return {
           id,
-          name: tool.name || sanitizedToolName || id,
+          name: sanitizedToolName || id,
           description: tool.description,
-          inputSchema: tool.inputSchema,
+          inputSchema: cleanSchema(tool.inputSchema),
           mcpServerId: server?.id || sanitizedServerId,
           mcpServerName: server?.name || 'Unknown',
         };
