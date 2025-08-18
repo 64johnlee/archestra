@@ -200,9 +200,15 @@ export const useMcpServersStore = create<McpServersStore>((set, get) => ({
           body: { catalogName: id || '' },
         });
 
-        if (data) {
-          // For OAuth connectors, the backend will handle the installation after successful auth
-          alert(`OAuth setup started for ${name}. Please complete the authentication in your browser.`);
+        if (data?.authUrl) {
+          // Open the OAuth URL in the default browser
+          console.log('Opening OAuth URL:', data.authUrl);
+          window.electronAPI.openExternal(data.authUrl);
+
+          // Show user feedback
+          alert(
+            `OAuth setup started for ${installData.displayName || id}. Please complete the authentication in your browser.`
+          );
         }
       } else {
         const { data: newlyInstalledMcpServer, error } = await installMcpServer({ body: installData });

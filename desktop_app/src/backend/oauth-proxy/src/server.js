@@ -81,9 +81,18 @@ app.get('/auth/:service', async (req, res) => {
     const authUrl = await serviceHandler.generateAuthUrl(state);
 
     console.log('Generated auth URL:', authUrl);
-    console.log('Sending response:', { auth_url: authUrl, state });
 
-    res.json({ auth_url: authUrl, state });
+    // Check if this is a browser request (not an API call)
+    // If Accept header includes text/html, redirect to Google OAuth
+    const acceptHeader = req.headers.accept || '';
+    if (acceptHeader.includes('text/html')) {
+      console.log('Browser request detected, redirecting to:', authUrl);
+      res.redirect(authUrl);
+    } else {
+      // API request - return JSON
+      console.log('API request detected, sending JSON response:', { auth_url: authUrl, state });
+      res.json({ auth_url: authUrl, state });
+    }
   } catch (error) {
     console.error(`Error in /auth/${service}:`, error);
     res.status(500).json({ error: error.message });
