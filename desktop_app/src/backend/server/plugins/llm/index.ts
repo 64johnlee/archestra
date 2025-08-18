@@ -4,12 +4,12 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI, openai } from '@ai-sdk/openai';
 import { convertToModelMessages, stepCountIs, streamText } from 'ai';
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import { createOllama } from 'ollama-ai-provider-v2';
 
+import config from '@backend/config';
 import Chat from '@backend/models/chat';
 import CloudProviderModel from '@backend/models/cloudProvider';
 import McpServerSandboxManager from '@backend/sandbox/manager';
-
-import { handleOllamaStream } from './ollama-stream-handler';
 
 interface StreamRequestBody {
   model: string;
@@ -19,6 +19,36 @@ interface StreamRequestBody {
   requestedTools?: string[]; // Tool IDs requested by frontend
   toolChoice?: 'auto' | 'none' | 'required' | { type: 'tool'; toolName: string };
 }
+
+const createModelInstance = async (model: string, provider?: string) => {
+  if (provider === 'ollama') {
+    const baseUrl = config.ollama.server.host + '/api';
+    const ollamaClient = createOllama({ baseURL: baseUrl });
+    return ollamaClient(model);
+  }
+
+  const providerConfig = await CloudProviderModel.getProviderConfigForModel(model);
+
+  if (!providerConfig) {
+    return openai(model);
+  }
+
+  const { apiKey, provider: providerData } = providerConfig;
+  const { type, baseUrl, headers } = providerData;
+
+  const clientFactories = {
+    anthropic: () => createAnthropic({ apiKey, baseURL: baseUrl }),
+    openai: () => createOpenAI({ apiKey, baseURL: baseUrl, headers }),
+    deepseek: () => createDeepSeek({ apiKey, baseURL: baseUrl || 'https://api.deepseek.com/v1' }),
+    gemini: () => createGoogleGenerativeAI({ apiKey, baseURL: baseUrl }),
+    ollama: () => createOllama({ baseURL: baseUrl }),
+  };
+
+  const createClient = clientFactories[type] || (() => createOpenAI({ apiKey, baseURL: baseUrl, headers }));
+  const client = createClient();
+
+  return client(model);
+};
 
 const llmRoutes: FastifyPluginAsync = async (fastify) => {
   // Note: MCP connections are now managed by McpServerSandboxManager
@@ -44,50 +74,7 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
           tools = McpServerSandboxManager.getAllTools();
         }
 
-        // Handle Ollama provider separately
-        if (provider === 'ollama') {
-          return handleOllamaStream(fastify, request, reply, tools);
-        }
-        // Check if it's a cloud provider model
-        const providerConfig = await CloudProviderModel.getProviderConfigForModel(model);
-
-        let modelInstance;
-        if (providerConfig) {
-          // Check provider type and use appropriate client
-          if (providerConfig.provider.type === 'gemini') {
-            // Use Google Generative AI client for Gemini
-            const googleClient = createGoogleGenerativeAI({
-              apiKey: providerConfig.apiKey,
-              baseURL: providerConfig.provider.baseUrl,
-            });
-            modelInstance = googleClient(model);
-          } else if (providerConfig.provider.type === 'anthropic') {
-            // Use Anthropic client for Claude
-            const anthropicClient = createAnthropic({
-              apiKey: providerConfig.apiKey,
-              baseURL: providerConfig.provider.baseUrl,
-            });
-            modelInstance = anthropicClient(model);
-          } else if (providerConfig.provider.type === 'deepseek') {
-            const deepseekClient = createDeepSeek({
-              apiKey: providerConfig.apiKey,
-              baseURL: providerConfig.provider.baseUrl || 'https://api.deepseek.com/v1',
-              // headers: providerConfig.provider.headers,
-            });
-            modelInstance = deepseekClient(model);
-          } else {
-            // Use OpenAI-compatible client for other providers
-            const openaiClient = createOpenAI({
-              apiKey: providerConfig.apiKey,
-              baseURL: providerConfig.provider.baseUrl,
-              headers: providerConfig.provider.headers,
-            });
-            modelInstance = openaiClient(model);
-          }
-        } else {
-          // Default OpenAI client (for backward compatibility)
-          modelInstance = openai(model);
-        }
+        const modelInstance = await createModelInstance(model, provider);
 
         // Create the stream with the appropriate model
         const hasTools = Object.keys(tools).length > 0;
@@ -106,7 +93,13 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
 
         // Only add tools and toolChoice if tools are available
         if (hasTools) {
-          streamConfig.tools = tools;
+          // Convert tool IDs from serverId:toolName to serverId__toolName for LLM compatibility
+          const convertedTools: Record<string, any> = {};
+          for (const [toolId, tool] of Object.entries(tools)) {
+            const convertedId = toolId.replace(':', '__');
+            convertedTools[convertedId] = tool;
+          }
+          streamConfig.tools = convertedTools;
           streamConfig.toolChoice = toolChoice || 'auto';
         }
 

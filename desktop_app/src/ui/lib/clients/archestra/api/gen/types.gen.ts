@@ -82,7 +82,7 @@ export type CloudProviderWithConfigInput = {
   validatedAt: string | null;
 };
 
-export type SupportedCloudProvidersInput = 'anthropic' | 'openai' | 'deepseek' | 'gemini';
+export type SupportedCloudProvidersInput = 'anthropic' | 'openai' | 'deepseek' | 'gemini' | 'ollama';
 
 export type SupportedCloudProviderModelInput = {
   id: string;
@@ -285,7 +285,7 @@ export type CloudProviderWithConfig = {
   validatedAt: string | null;
 };
 
-export type SupportedCloudProviders = 'anthropic' | 'openai' | 'deepseek' | 'gemini';
+export type SupportedCloudProviders = 'anthropic' | 'openai' | 'deepseek' | 'gemini' | 'ollama';
 
 export type SupportedCloudProviderModel = {
   id: string;
