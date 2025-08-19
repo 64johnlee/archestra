@@ -56,6 +56,10 @@ COPY --from=python-builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
+# Install uv in the final image for uvx command support
+RUN pip3 install --no-cache-dir uv
+ENV PATH="/root/.local/bin:$PATH"
+
 # Copy Node.js global modules from builder
 COPY --from=node-builder /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=node-builder /usr/local/bin /usr/local/bin
