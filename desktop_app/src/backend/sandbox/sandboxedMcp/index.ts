@@ -66,26 +66,30 @@ export default class SandboxedMcpServer {
     this.podmanContainer = new PodmanContainer(mcpServer, podmanSocketPath);
   }
 
-  private async connectMcpClient() {
+  /**
+   * Fetchs tools from the sandboxed MCP server's container and slightly transforms their "ids" to be in the format of
+   * `<mcp_server_id>${TOOL_ID_SEPARATOR}<tool_name>`
+   */
+  private async fetchTools() {
+    log.info(`Fetching tools for ${this.mcpServerId}...`);
+
+    const tools = await this.mcpClient.tools();
+    for (const [toolName, tool] of Object.entries(tools)) {
+      const toolId = `${this.mcpServerId}${TOOL_ID_SEPARATOR}${toolName}`;
+      this.tools[toolId] = tool;
+    }
+
+    log.info(`Fetched ${Object.keys(this.tools).length} tools for ${this.mcpServerId}`);
+  }
+
+  private async createMcpClient() {
+    if (this.mcpClient) {
+      return;
+    }
+
     try {
-      log.info(`Attempting to connect MCP client to ${this.mcpServerProxyUrl}.`);
-
-      if (!this.mcpClient) {
-        const transport = new StreamableHTTPClientTransport(new URL(this.mcpServerProxyUrl));
-        this.mcpClient = await experimental_createMCPClient({ transport: transport as any });
-      }
-
-      /**
-       * Fetch tools and slightly transform their "ids" to be in the format of
-       * `<mcp_server_id>${TOOL_ID_SEPARATOR}<tool_name>`
-       */
-      const tools = await this.mcpClient.tools();
-      for (const [toolName, tool] of Object.entries(tools)) {
-        const toolId = `${this.mcpServerId}${TOOL_ID_SEPARATOR}${toolName}`;
-        this.tools[toolId] = tool;
-      }
-
-      log.info(`Connected MCP client for ${this.mcpServerId}, found ${this.tools.length} tools`);
+      const transport = new StreamableHTTPClientTransport(new URL(this.mcpServerProxyUrl));
+      this.mcpClient = await experimental_createMCPClient({ transport: transport as any });
     } catch (error) {
       log.error(`Failed to connect MCP client for ${this.mcpServerId}:`, error);
     }
@@ -135,7 +139,8 @@ export default class SandboxedMcpServer {
 
     await this.podmanContainer.startOrCreateContainer();
     await this.pingMcpServerContainerUntilHealthy();
-    await this.connectMcpClient();
+    await this.createMcpClient();
+    await this.fetchTools();
   }
 
   async stop() {
