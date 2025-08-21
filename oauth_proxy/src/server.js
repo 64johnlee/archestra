@@ -68,14 +68,16 @@ app.get('/auth/:service', async (req, res) => {
   try {
     const serviceHandler = getServiceHandler(service);
 
-    const state = generateState();
+    // Use state from query parameter if provided (from the app), otherwise generate one
+    const appState = req.query.state;
+    const state = appState || generateState();
     const userId = req.query.userId || 'default';
 
-    console.log('Generated state:', state);
+    console.log('State:', state, 'App state:', appState);
     console.log(`Initiating ${service} OAuth flow`);
 
-    // Store state for verification
-    storeState(state, { userId, service });
+    // Store state for verification (include app state if provided)
+    storeState(state, { userId, service, appState });
 
     // Delegate to service-specific handler
     const authUrl = await serviceHandler.generateAuthUrl(state);
@@ -138,11 +140,14 @@ app.get('/oauth-callback/:service', async (req, res) => {
     // Exchange code for tokens using service-specific handler
     const tokens = await serviceHandler.exchangeCodeForTokens(code);
 
+    // Get the app state if it was provided
+    const appState = storedState.appState || state;
+
     // Clean up state
     removeState(state);
 
-    // Redirect to the callback page with tokens and service info
-    const redirectUrl = `/oauth-callback.html?service=${service}&access_token=${tokens.access_token}&refresh_token=${tokens.refresh_token}&expiry_date=${tokens.expiry_date}`;
+    // Redirect to the callback page with tokens and service info (use app state if available)
+    const redirectUrl = `/oauth-callback.html?service=${service}&access_token=${tokens.access_token}&refresh_token=${tokens.refresh_token}&expiry_date=${tokens.expiry_date}&state=${appState}`;
 
     res.redirect(redirectUrl);
   } catch (error) {
