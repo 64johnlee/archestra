@@ -10,6 +10,9 @@ dotenv.config();
 const app = express();
 const PORT_LOCALHOST = process.env.PORT;
 
+// Serve static files FIRST (before other routes)
+app.use(express.static('public'));
+
 app.use(express.json());
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -161,9 +164,6 @@ app.get('/oauth-callback/:service', async (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-
-// Serve static files
-app.use(express.static('public'));
 
 // Start server
 app.listen(PORT_LOCALHOST, () => {
