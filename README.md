@@ -4,6 +4,11 @@
   
   **Enterprise MCP Platform for AI Agents**
   
+  ### 🎯 Meet us at KubeCon + CloudNativeCon North America 2025!
+  **[📅 Schedule a meeting with us](https://calendly.com/archestra/kubecon)**
+  
+  <br />
+  
   [![License](https://img.shields.io/github/license/archestra-ai/archestra)](LICENSE)
   [![Contributors](https://img.shields.io/github/contributors/archestra-ai/archestra)](https://github.com/archestra-ai/archestra/graphs/contributors)
   [![Slack](https://img.shields.io/badge/Slack-Join%20Community-4A154B?logo=slack)](https://join.slack.com/t/archestracommunity/shared_invite/zt-39yk4skox-zBF1NoJ9u4t59OU8XxQChg)
