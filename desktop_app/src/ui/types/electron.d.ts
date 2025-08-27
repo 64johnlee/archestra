@@ -5,10 +5,13 @@ declare global {
       websocketPort: number;
       ollamaPort: number;
       openExternal: (url: string) => Promise<void>;
-      slackAuth: () => Promise<{
-        slack_mcp_xoxc_token: string;
-        slack_mcp_xoxd_token: string;
-      }>;
+
+      // Generic provider browser auth
+      providerBrowserAuth: (provider: string) => Promise<Record<string, string>>;
+
+      // OAuth callback methods
+      onOAuthCallback: (callback: (params: any) => void) => void;
+      removeOAuthCallbackListener: () => void;
     };
   }
 }

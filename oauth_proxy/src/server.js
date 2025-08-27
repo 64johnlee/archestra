@@ -1,178 +1,43 @@
-const express = require('express');
-const path = require('path');
-const dotenv = require('dotenv');
+import { config, validateConfig } from './config/index.js';
+import { buildApp } from './app.js';
 
-// Import service handlers
-const gmailService = require('./gmail');
+async function start() {
+  // Validate configuration
+  validateConfig();
 
-dotenv.config();
-
-const app = express();
-const PORT_LOCALHOST = process.env.PORT;
-
-// Serve static files FIRST (before other routes)
-app.use(express.static('public'));
-
-app.use(express.json());
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
-
-// Store temporary auth states (in production, use Redis or database)
-const authStates = new Map();
-
-// Generic OAuth state management
-function generateState() {
-  return Math.random().toString(36).substring(7);
-}
-
-function storeState(state, data) {
-  authStates.set(state, { ...data, timestamp: Date.now() });
-
-  // Clean up old states (older than 10 minutes)
-  const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
-  for (const [key, value] of authStates.entries()) {
-    if (value.timestamp < tenMinutesAgo) {
-      authStates.delete(key);
-    }
-  }
-}
-
-function getStoredState(state) {
-  return authStates.get(state);
-}
-
-function removeState(state) {
-  authStates.delete(state);
-}
-
-// Service routing function
-function getServiceHandler(service) {
-  switch (service.toLowerCase()) {
-    case 'gmail':
-      return gmailService;
-    default:
-      throw new Error(`Unsupported OAuth service: ${service}`);
-  }
-}
-
-// Routes
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
-
-// Generic OAuth initiation endpoint
-app.get('/auth/:service', async (req, res) => {
-  const { service } = req.params;
-
-  console.log(`Received /auth/${service} request`);
+  // Build the Fastify app
+  const app = await buildApp();
 
   try {
-    const serviceHandler = getServiceHandler(service);
-
-    // Use state from query parameter if provided (from the app), otherwise generate one
-    const appState = req.query.state;
-    const state = appState || generateState();
-    const userId = req.query.userId || 'default';
-
-    console.log('State:', state, 'App state:', appState);
-    console.log(`Initiating ${service} OAuth flow`);
-
-    // Store state for verification (include app state if provided)
-    storeState(state, { userId, service, appState });
-
-    // Delegate to service-specific handler
-    const authUrl = await serviceHandler.generateAuthUrl(state);
-
-    console.log('Generated auth URL:', authUrl);
-
-    // Check if this is a browser request (not an API call)
-    // If Accept header includes text/html, redirect to Google OAuth
-    const acceptHeader = req.headers.accept || '';
-    if (acceptHeader.includes('text/html')) {
-      console.log('Browser request detected, redirecting to:', authUrl);
-      res.redirect(authUrl);
-    } else {
-      // API request - return JSON
-      console.log('API request detected, sending JSON response:', { auth_url: authUrl, state });
-      res.json({ auth_url: authUrl, state });
-    }
-  } catch (error) {
-    console.error(`Error in /auth/${service}:`, error);
-    res.status(500).json({ error: error.message });
+    // Start the server
+    await app.listen({
+      port: config.server.port,
+      host: config.server.host,
+    });
+    
+    const baseUrl = `http://localhost:${config.server.port}`;
+    
+    console.log('\n🚀 OAuth Proxy Server is running');
+    console.log(`📍 ${baseUrl}`);
+    console.log(`📍 Health check: ${baseUrl}/health`);
+    console.log(`📍 API docs: ${baseUrl}/`);
+    
+  } catch (err) {
+    app.log.error(err);
+    process.exit(1);
   }
+}
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  process.exit(0);
 });
 
-// Service-specific OAuth callback endpoint
-app.get('/oauth-callback/:service', async (req, res) => {
-  const { service } = req.params;
-  const { code, state } = req.query;
-
-  console.log(`OAuth callback received for ${service}:`, {
-    code: code ? 'present' : 'missing',
-    state: state || 'missing',
-  });
-
-  if (!code || !state) {
-    console.log('Missing code or state, redirecting to error');
-    return res.redirect(
-      `/oauth-callback.html?service=${service}&error=${encodeURIComponent('Missing authorization code or state')}`
-    );
-  }
-
-  // Verify state
-  const storedState = getStoredState(state);
-
-  if (!storedState) {
-    console.log('Invalid or expired state, redirecting to error');
-    return res.redirect(
-      `/oauth-callback.html?service=${service}&error=${encodeURIComponent('Invalid or expired state')}`
-    );
-  }
-
-  // Verify service matches
-  if (storedState.service !== service) {
-    console.log('Service mismatch, redirecting to error');
-    return res.redirect(`/oauth-callback.html?service=${service}&error=${encodeURIComponent('Service mismatch')}`);
-  }
-
-  try {
-    const serviceHandler = getServiceHandler(service);
-
-    // Exchange code for tokens using service-specific handler
-    const tokens = await serviceHandler.exchangeCodeForTokens(code);
-
-    // Get the app state if it was provided
-    const appState = storedState.appState || state;
-
-    // Clean up state
-    removeState(state);
-
-    // Redirect to the callback page with tokens and service info (use app state if available)
-    const redirectUrl = `/oauth-callback.html?service=${service}&access_token=${tokens.access_token}&refresh_token=${tokens.refresh_token}&expiry_date=${tokens.expiry_date}&state=${appState}`;
-
-    res.redirect(redirectUrl);
-  } catch (error) {
-    console.error('Token exchange error:', error);
-    const errorUrl = `/oauth-callback.html?service=${service}&error=${encodeURIComponent(error.message)}`;
-    res.redirect(errorUrl);
-  }
+process.on('SIGINT', async () => {
+  console.log('\nSIGINT received, shutting down gracefully...');
+  process.exit(0);
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Start server
-app.listen(PORT_LOCALHOST, () => {
-  const baseUrl = process.env.REDIRECT_URL
-    ? process.env.REDIRECT_URL.replace(/\/oauth-callback.*/, '')
-    : `http://localhost:${PORT_LOCALHOST}`;
-  console.log(`OAuth proxy server running on port ${PORT_LOCALHOST}`);
-  console.log(`Health check URL: ${baseUrl}/health`);
-  console.log(`Supported services: gmail`);
-  console.log(`Auth URL pattern: ${baseUrl}/auth/<service>`);
-  console.log(`Callback URL pattern: ${baseUrl}/oauth-callback/<service>`);
-});
+// Start the server
+start();

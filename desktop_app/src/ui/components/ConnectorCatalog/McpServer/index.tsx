@@ -28,10 +28,18 @@ import McpServerDetailsDialog from './McpServerDetailsDialog';
 interface McpServerProps {
   server: ArchestraMcpServerManifest;
   onInstallClick: (server: ArchestraMcpServerManifest) => void;
+  onOAuthInstallClick?: (server: ArchestraMcpServerManifest) => void;
+  onBrowserInstallClick?: (server: ArchestraMcpServerManifest) => void;
   onUninstallClick: (serverId: string) => void;
 }
 
-export default function McpServer({ server, onInstallClick, onUninstallClick }: McpServerProps) {
+export default function McpServer({
+  server,
+  onInstallClick,
+  onOAuthInstallClick,
+  onBrowserInstallClick,
+  onUninstallClick,
+}: McpServerProps) {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const { installedMcpServers, installingMcpServerId, uninstallingMcpServerId } = useMcpServersStore();
   const { isRunning: sandboxIsRunning } = useSandboxStore();
@@ -44,6 +52,7 @@ export default function McpServer({ server, onInstallClick, onUninstallClick }: 
     category,
     archestra_config: {
       oauth: { required: requiresOAuthSetup },
+      browser_based: { required: requiresBrowserBasedSetup } = {},
     },
     programming_language: programmingLanguage,
     quality_score: qualityScore,
@@ -195,7 +204,7 @@ export default function McpServer({ server, onInstallClick, onUninstallClick }: 
           <Separator />
 
           {/* Actions */}
-          <div className="flex justify-between items-center">
+          <div className="space-y-2">
             <div className="text-xs text-muted-foreground">v{server.version}</div>
             <div>
               {!sandboxIsRunning ? (
@@ -220,27 +229,51 @@ export default function McpServer({ server, onInstallClick, onUninstallClick }: 
                     'Uninstall'
                   )}
                 </Button>
+              ) : isInstalling ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  <span className="text-sm">Installing...</span>
+                </div>
               ) : (
-                <Button
-                  size="sm"
-                  onClick={() => onInstallClick(server)}
-                  disabled={isInstalling}
-                  className="cursor-pointer"
-                >
-                  {isInstalling ? (
-                    <>
-                      <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
-                      Installing...
-                    </>
-                  ) : requiresOAuthSetup ? (
-                    <>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Setup & Install
-                    </>
-                  ) : (
-                    'Install'
+                <div className="flex flex-wrap gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onInstallClick(server)}
+                    disabled={isInstalling}
+                    className="cursor-pointer text-xs px-2 h-7"
+                  >
+                    Install
+                  </Button>
+                  {requiresOAuthSetup && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onOAuthInstallClick?.(server)}
+                      disabled={isInstalling}
+                      className="cursor-pointer text-xs px-2 h-7"
+                    >
+                      Install (OAuth)
+                    </Button>
                   )}
-                </Button>
+                  {requiresBrowserBasedSetup && (
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => {
+                        if (onBrowserInstallClick) {
+                          onBrowserInstallClick(server);
+                        } else {
+                          onInstallClick(server);
+                        }
+                      }}
+                      disabled={isInstalling}
+                      className="cursor-pointer text-xs px-2 h-7"
+                    >
+                      Install (Browser)
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </div>
