@@ -2,6 +2,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { z } from 'zod';
 
 import config from '@backend/config';
+import toolAggregator from '@backend/llms/toolAggregator';
 import McpServerSandboxManager from '@backend/sandbox/manager';
 import { SandboxStatusSummarySchema } from '@backend/sandbox/schemas';
 import log from '@backend/utils/logger';
@@ -18,6 +19,18 @@ const ChatTitleUpdatedPayloadSchema = z.object({
   title: z.string(),
 });
 
+const MemoryUpdatedPayloadSchema = z.object({
+  memories: z.array(
+    z.object({
+      id: z.number(),
+      name: z.string(),
+      value: z.string(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    })
+  ),
+});
+
 export const WebSocketMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('chat-title-updated'), payload: ChatTitleUpdatedPayloadSchema }),
   z.object({ type: z.literal('sandbox-status-update'), payload: SandboxStatusSummarySchema }),
@@ -25,6 +38,7 @@ export const WebSocketMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('ollama-model-download-progress'),
     payload: OllamaModelDownloadProgressWebsocketPayloadSchema,
   }),
+  z.object({ type: z.literal('memory-updated'), payload: MemoryUpdatedPayloadSchema }),
 ]);
 
 // type ChatTitleUpdatedPayload = z.infer<typeof ChatTitleUpdatedPayloadSchema>;
@@ -122,7 +136,21 @@ class WebSocketService {
 
   private periodicallyEmitSandboxStatusSummaryUpdates() {
     this.sandboxStatusInterval = setInterval(() => {
-      this.broadcast({ type: 'sandbox-status-update', payload: McpServerSandboxManager.statusSummary });
+      // Get the base status summary from sandbox manager
+      const statusSummary = McpServerSandboxManager.statusSummary;
+
+      // Get all aggregated tools (includes both sandboxed and Archestra tools)
+      const allTools = toolAggregator.getAllAvailableTools();
+
+      // Create an enhanced payload that includes all tools
+      // We'll add a new field for all aggregated tools while keeping the existing structure
+      const enhancedPayload = {
+        ...statusSummary,
+        // Add all aggregated tools as a separate field
+        allAvailableTools: allTools,
+      };
+
+      this.broadcast({ type: 'sandbox-status-update', payload: enhancedPayload as any });
     }, 1000);
   }
 }
