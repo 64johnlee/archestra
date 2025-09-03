@@ -36,7 +36,7 @@ const forgeConfig: ForgeConfig = {
      */
     extraResource:
       process.platform === 'darwin'
-        ? [`./resources/bin/mac/${process.arch}`]
+        ? [`./resources/bin/mac/${process.arch === 'x64' ? 'x86_64' : process.arch}`]
         : process.platform === 'win32'
           ? [`./resources/bin/windows/${process.arch === 'x64' ? 'x86_64' : process.arch}`]
           : [`./resources/bin/linux/${process.arch === 'x64' ? 'x86_64' : process.arch}`],
