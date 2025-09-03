@@ -45,6 +45,8 @@ const forgeConfig: ForgeConfig = {
     appBundleId,
 
     /**
+     * Only enable signing/notarization in CI or when explicitly requested
+     *
      * For the full list of configuration options for `osxSign`, see the following resources:
      * https://js.electronforge.io/modules/_electron_forge_shared_types.InternalOptions.html#OsxSignOptions
      * https://github.com/electron/osx-sign
@@ -59,30 +61,34 @@ const forgeConfig: ForgeConfig = {
      * https://developer.apple.com/documentation/bundleresources/entitlements
      * https://developer.apple.com/documentation/security/hardened_runtime
      */
-    osxSign: {},
-    /**
-     * We are currently using the "app-specific password" method for "notarizing" the macOS app
-     *
-     * https://www.electronforge.io/guides/code-signing/code-signing-macos#option-1-using-an-app-specific-password
-     */
-    osxNotarize: {
-      /**
-       * Apple ID associated with your Apple Developer account
-       * (aka the email address you used to create your Apple account)
-       */
-      appleId: process.env.APPLE_ID || '',
-      /**
-       * App-specific password
-       *
-       * Was generated following the instructions here https://support.apple.com/en-us/102654
-       */
-      appleIdPassword: process.env.APPLE_PASSWORD || '',
-      /**
-       * The Apple Team ID you want to notarize under. You can find Team IDs for team you belong to by going to
-       * https://developer.apple.com/account/#/membership
-       */
-      teamId: process.env.APPLE_TEAM_ID || '',
-    },
+    ...(process.env.CI || process.env.ENABLE_CODESIGNING
+      ? {
+          osxSign: {},
+          /**
+           * We are currently using the "app-specific password" method for "notarizing" the macOS app
+           *
+           * https://www.electronforge.io/guides/code-signing/code-signing-macos#option-1-using-an-app-specific-password
+           */
+          osxNotarize: {
+            /**
+             * Apple ID associated with your Apple Developer account
+             * (aka the email address you used to create your Apple account)
+             */
+            appleId: process.env.APPLE_ID || '',
+            /**
+             * App-specific password
+             *
+             * Was generated following the instructions here https://support.apple.com/en-us/102654
+             */
+            appleIdPassword: process.env.APPLE_PASSWORD || '',
+            /**
+             * The Apple Team ID you want to notarize under. You can find Team IDs for team you belong to by going to
+             * https://developer.apple.com/account/#/membership
+             */
+            teamId: process.env.APPLE_TEAM_ID || '',
+          },
+        }
+      : {}),
   },
   // https://github.com/WiseLibs/better-sqlite3/issues/1171#issuecomment-2186895668
   rebuildConfig: {
