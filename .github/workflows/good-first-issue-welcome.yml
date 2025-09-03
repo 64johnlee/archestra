@@ -22,10 +22,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `This issue is a great starting point for new contributors! 
-
-Read here how to run the project: https://www.archestra.ai/docs/developer-quickstart
-And here how to contribute: https://www.archestra.ai/docs/contributing
-
-Good luck and welcome to the contributing team! Please don't hesitate to ask questions if you need any help right here in the comments.`
+              body: 'This issue is a great starting point for new contributors!\n\nRead here how to run the project: https://www.archestra.ai/docs/developer-quickstart\nAnd here how to contribute: https://www.archestra.ai/docs/contributing\n\nGood luck and welcome to the contributing team! Please don\'t hesitate to ask questions if you need any help right here in the comments.'
             });
