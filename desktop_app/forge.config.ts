@@ -187,7 +187,7 @@ const forgeConfig: ForgeConfig = {
         },
 
         /**
-         * The desktop app release-please generated GitHub releases have a tag prefix of `desktop_app: v<version>`,
+         * The desktop app release-please generated GitHub releases have a tag prefix of `desktop_app-v<version>`,
          * so we need to match that here.
          *
          * Otherwise, the electron-forge publisher will try to create a release with a tag of `v<version>` and the
@@ -197,7 +197,7 @@ const forgeConfig: ForgeConfig = {
          * (specifically for the "desktop_app" 'component') but there is a bug that we ran into with release-please
          * that was causing issues (https://github.com/googleapis/release-please/issues/2214)
          */
-        tagPrefix: 'desktop_app: v',
+        tagPrefix: 'desktop_app-v',
         prerelease: true,
         draft: false,
       } as PublisherGitHubConfig,
