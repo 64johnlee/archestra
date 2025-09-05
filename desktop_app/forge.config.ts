@@ -185,14 +185,6 @@ const forgeConfig: ForgeConfig = {
           owner: github.owner,
           name: github.repoName,
         },
-        /**
-         * NOTE: because we use release-please, the following settings for the desktop app's GitHub release
-         * are configured in `.github/release-please/release-please-config.json`. release-please will be
-         * responsible for actually creating the release, and this "publisher" will simply "attach" the various
-         * platform-specific binaries to the release.
-         */
-        // prerelease: true,
-        // draft: false,
 
         /**
          * The desktop app release-please generated GitHub releases have a tag prefix of `desktop_app: v<version>`,
@@ -206,6 +198,8 @@ const forgeConfig: ForgeConfig = {
          * that was causing issues (https://github.com/googleapis/release-please/issues/2214)
          */
         tagPrefix: 'desktop_app: v',
+        prerelease: true,
+        draft: false,
       } as PublisherGitHubConfig,
     },
   ],

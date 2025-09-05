@@ -6,8 +6,7 @@
   "bump-patch-for-minor-pre-major": true,
   "pull-request-footer": "",
   "include-v-in-tag": true,
-  "prerelease": true,
-  "prerelease-type": "alpha",
+  "draft": false,
   "changelog-sections": [
     {
       "section": "Features",
@@ -63,11 +62,13 @@
   "packages": {
     "desktop_app": {
       "component": "desktop_app",
-      "release-type": "node"
+      "release-type": "node",
+      "prerelease": true
     },
     "mcp_server_docker_image": {
       "component": "mcp_server_docker_image",
-      "release-type": "simple"
+      "release-type": "simple",
+      "prerelease": false
     }
   },
   "plugins": [],
