@@ -63,7 +63,6 @@
   "packages": {
     "desktop_app": {
       "component": "desktop_app",
-      "include-component-in-tag": false,
       "release-type": "node"
     },
     "mcp_server_docker_image": {
