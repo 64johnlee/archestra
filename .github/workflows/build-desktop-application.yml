@@ -35,10 +35,10 @@ jobs:
       matrix:
         # https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job#standard-github-hosted-runners-for-public-repositories
         include:
-          - platform: macos-latest
+          - platform: macos-latest # M1 (arm64)
             os: macos
             arch: arm64
-          - platform: macos-latest
+          - platform: macos-13 # Intel (x64)
             os: macos
             arch: x64
           - platform: windows-11-arm
