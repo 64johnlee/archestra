@@ -18,6 +18,7 @@ import {
 import { useState } from 'react';
 
 import { type LocalMcpServerManifest } from '@ui/catalog_local';
+import ReportIssueWithCatalogEntry from '@ui/components/ReportIssueWithCatalogEntry';
 import { Badge } from '@ui/components/ui/badge';
 import { Button } from '@ui/components/ui/button';
 import { Card, CardContent, CardHeader } from '@ui/components/ui/card';
@@ -134,6 +135,7 @@ export default function McpServer({
               >
                 <Info className="h-4 w-4" />
               </Button>
+              <ReportIssueWithCatalogEntry catalogId={name} />
               {isInstalled && <CheckCircle className="h-5 w-5 text-green-500" />}
             </div>
           </div>
