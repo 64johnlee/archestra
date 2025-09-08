@@ -19,23 +19,10 @@ export type ArchestraMcpServerManifest = {
   icon?: string;
   screenshots?: Array<string>;
   server: {
-    type: 'python' | 'node' | 'binary';
-    entry_point: string;
-    mcp_config: {
-      command: string;
-      args?: Array<string>;
-      env?: {
-        [key: string]: string;
-      };
-      platform_overrides?: {
-        [key: string]: {
-          command?: string;
-          args?: Array<string>;
-          env?: {
-            [key: string]: string;
-          };
-        };
-      };
+    command: string;
+    args?: Array<string>;
+    env?: {
+      [key: string]: string;
     };
   };
   tools?: Array<{
@@ -116,13 +103,11 @@ export type ArchestraMcpServerManifest = {
   quality_score: number | null;
   archestra_config?: {
     client_config_permutations: {
-      mcpServers: {
-        [key: string]: {
-          command: string;
-          args?: Array<string>;
-          env?: {
-            [key: string]: string;
-          };
+      [key: string]: {
+        command: string;
+        args?: Array<string>;
+        env?: {
+          [key: string]: string;
         };
       };
     } | null;
@@ -168,23 +153,10 @@ export type ArchestraMcpServerManifest = {
   }>;
   raw_dependencies: string | null;
   server_overridden?: {
-    type: 'python' | 'node' | 'binary';
-    entry_point: string;
-    mcp_config: {
-      command: string;
-      args?: Array<string>;
-      env?: {
-        [key: string]: string;
-      };
-      platform_overrides?: {
-        [key: string]: {
-          command?: string;
-          args?: Array<string>;
-          env?: {
-            [key: string]: string;
-          };
-        };
-      };
+    command: string;
+    args?: Array<string>;
+    env?: {
+      [key: string]: string;
     };
   };
   server_docker?: unknown;
@@ -222,23 +194,10 @@ export type ArchestraMcpServerManifestWithScoreBreakdown = {
   icon?: string;
   screenshots?: Array<string>;
   server: {
-    type: 'python' | 'node' | 'binary';
-    entry_point: string;
-    mcp_config: {
-      command: string;
-      args?: Array<string>;
-      env?: {
-        [key: string]: string;
-      };
-      platform_overrides?: {
-        [key: string]: {
-          command?: string;
-          args?: Array<string>;
-          env?: {
-            [key: string]: string;
-          };
-        };
-      };
+    command: string;
+    args?: Array<string>;
+    env?: {
+      [key: string]: string;
     };
   };
   tools?: Array<{
@@ -319,13 +278,11 @@ export type ArchestraMcpServerManifestWithScoreBreakdown = {
   quality_score: number | null;
   archestra_config?: {
     client_config_permutations: {
-      mcpServers: {
-        [key: string]: {
-          command: string;
-          args?: Array<string>;
-          env?: {
-            [key: string]: string;
-          };
+      [key: string]: {
+        command: string;
+        args?: Array<string>;
+        env?: {
+          [key: string]: string;
         };
       };
     } | null;
@@ -371,23 +328,10 @@ export type ArchestraMcpServerManifestWithScoreBreakdown = {
   }>;
   raw_dependencies: string | null;
   server_overridden?: {
-    type: 'python' | 'node' | 'binary';
-    entry_point: string;
-    mcp_config: {
-      command: string;
-      args?: Array<string>;
-      env?: {
-        [key: string]: string;
-      };
-      platform_overrides?: {
-        [key: string]: {
-          command?: string;
-          args?: Array<string>;
-          env?: {
-            [key: string]: string;
-          };
-        };
-      };
+    command: string;
+    args?: Array<string>;
+    env?: {
+      [key: string]: string;
     };
   };
   server_docker?: unknown;

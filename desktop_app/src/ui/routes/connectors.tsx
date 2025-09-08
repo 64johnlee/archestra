@@ -55,14 +55,14 @@ function ConnectorCatalogPage() {
        *
        * https://github.com/anthropics/dxt/blob/main/MANIFEST.md#server-configuration
        */
-      // Prefer server_docker over server.mcp_config when available
-      serverConfig: mcpServer.server_docker || mcpServer.server.mcp_config,
+      // Prefer server_docker over server when available
+      serverConfig: mcpServer.server_docker || mcpServer.server,
       userConfigValues: userConfigValues || {},
       // If using browser auth, append -browser to the provider name
       oauthProvider:
-        useBrowserAuth && mcpServer.archestra_config.oauth?.provider
+        useBrowserAuth && mcpServer.archestra_config?.oauth?.provider
           ? `${mcpServer.archestra_config.oauth.provider}-browser`
-          : mcpServer.archestra_config.oauth?.provider,
+          : mcpServer.archestra_config?.oauth?.provider,
     };
 
     // Add useBrowserAuth flag for internal handling
@@ -70,7 +70,7 @@ function ConnectorCatalogPage() {
       installData.useBrowserAuth = true;
     }
 
-    _installMcpServer(mcpServer.archestra_config.oauth?.required || false, installData);
+    _installMcpServer(mcpServer.archestra_config?.oauth?.required || false, installData);
   };
 
   const handleInstallClick = (mcpServer: ArchestraMcpServerManifest | LocalMcpServerManifest) => {
