@@ -8,11 +8,6 @@
     "name": "iskhakov"
   },
   "server": {
-    "command": "unknown",
-    "args": [],
-    "env": {}
-  },
-  "server_overridden": {
     "command": "uvx",
     "args": ["--from", "git+https://github.com/iskhakov/google_workspace_mcp", "workspace-mcp"],
     "env": {}

@@ -152,27 +152,6 @@ export type ArchestraMcpServerManifest = {
     importance: number;
   }>;
   raw_dependencies: string | null;
-  server_overridden?: {
-    command: string;
-    args?: Array<string>;
-    env?: {
-      [key: string]: string;
-    };
-  };
-  server_docker?: unknown;
-  user_config_overridden?: {
-    [key: string]: {
-      type: 'string' | 'number' | 'boolean' | 'directory' | 'file';
-      title: string;
-      description: string;
-      required?: boolean;
-      default?: string | number | boolean | Array<string>;
-      multiple?: boolean;
-      sensitive?: boolean;
-      min?: number;
-      max?: number;
-    };
-  };
 };
 
 export type ArchestraMcpServerManifestWithScoreBreakdown = {
@@ -327,27 +306,6 @@ export type ArchestraMcpServerManifestWithScoreBreakdown = {
     importance: number;
   }>;
   raw_dependencies: string | null;
-  server_overridden?: {
-    command: string;
-    args?: Array<string>;
-    env?: {
-      [key: string]: string;
-    };
-  };
-  server_docker?: unknown;
-  user_config_overridden?: {
-    [key: string]: {
-      type: 'string' | 'number' | 'boolean' | 'directory' | 'file';
-      title: string;
-      description: string;
-      required?: boolean;
-      default?: string | number | boolean | Array<string>;
-      multiple?: boolean;
-      sensitive?: boolean;
-      min?: number;
-      max?: number;
-    };
-  };
   score_breakdown: {
     mcp_protocol: number;
     github_metrics: number;

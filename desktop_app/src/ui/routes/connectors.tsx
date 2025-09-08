@@ -55,8 +55,7 @@ function ConnectorCatalogPage() {
        *
        * https://github.com/anthropics/dxt/blob/main/MANIFEST.md#server-configuration
        */
-      // Prefer server_docker over server when available
-      serverConfig: mcpServer.server_docker || mcpServer.server,
+      serverConfig: mcpServer.server,
       userConfigValues: userConfigValues || {},
       // If using browser auth, append -browser to the provider name
       oauthProvider:
