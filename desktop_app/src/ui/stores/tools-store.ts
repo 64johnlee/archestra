@@ -40,16 +40,16 @@ export const useToolsStore = create<ToolsStore>((set, get) => ({
   // Actions
   addSelectedTool: (toolId: string) => {
     set(({ selectedToolIds }) => ({
-      selectedToolIds: selectedToolIds.add(toolId),
+      selectedToolIds: new Set(selectedToolIds).add(toolId),
     }));
   },
 
   removeSelectedTool: (toolId: string) => {
     set(({ selectedToolIds }) => {
-      selectedToolIds.delete(toolId);
-
+      const newSelectedToolIds = new Set(selectedToolIds);
+      newSelectedToolIds.delete(toolId);
       return {
-        selectedToolIds,
+        selectedToolIds: newSelectedToolIds,
       };
     });
   },
@@ -64,11 +64,16 @@ export const useToolsStore = create<ToolsStore>((set, get) => ({
     try {
       const { data } = await getAvailableTools();
       if (data) {
-        // Select all tools by default
-        const allToolIds = new Set(data.map((tool) => tool.id));
+        const { selectedToolIds: currentSelection } = get();
+        // Only auto-select tools if no tools are currently selected
+        const shouldAutoSelectAll = currentSelection.size === 0;
+        const selectedToolIds = shouldAutoSelectAll
+          ? new Set(data.map((tool) => tool.id))
+          : new Set([...currentSelection].filter((id) => data.some((tool) => tool.id === id)));
+
         set({
           availableTools: data,
-          selectedToolIds: allToolIds,
+          selectedToolIds,
         });
       }
     } catch {
@@ -79,11 +84,16 @@ export const useToolsStore = create<ToolsStore>((set, get) => ({
   },
 
   setAvailableTools: (tools: Tool[]) => {
-    // Select all tools by default
-    const allToolIds = new Set(tools.map((tool) => tool.id));
+    const { selectedToolIds: currentSelection } = get();
+    // Only auto-select tools if no tools are currently selected
+    const shouldAutoSelectAll = currentSelection.size === 0;
+    const selectedToolIds = shouldAutoSelectAll
+      ? new Set(tools.map((tool) => tool.id))
+      : new Set([...currentSelection].filter((id) => tools.some((tool) => tool.id === id)));
+
     set({
       availableTools: tools,
-      selectedToolIds: allToolIds,
+      selectedToolIds,
     });
   },
 
