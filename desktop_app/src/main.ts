@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/electron/main';
 import { config as dotenvConfig } from 'dotenv';
-import { BrowserWindow, NativeImage, app, ipcMain, nativeImage, shell } from 'electron';
+import { BrowserWindow, NativeImage, app, dialog, ipcMain, nativeImage, shell } from 'electron';
 import started from 'electron-squirrel-startup';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -211,6 +211,13 @@ ipcMain.handle('get-app-info', () => {
     isPackaged: app.isPackaged,
   };
 });
+
+ipcMain.handle(
+  'show-open-dialog',
+  async (_event, options: { properties: Array<'openDirectory' | 'openFile' | 'multiSelections'> }) => {
+    return dialog.showOpenDialog(mainWindow!, options);
+  }
+);
 
 ipcMain.handle('get-system-info', () => {
   const os = require('os');
