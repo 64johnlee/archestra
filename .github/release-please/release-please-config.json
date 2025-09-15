@@ -7,6 +7,7 @@
   "pull-request-footer": "",
   "include-v-in-tag": true,
   "draft": false,
+  "separate-pull-requests": true,
   "changelog-sections": [
     {
       "section": "Features",
@@ -63,7 +64,8 @@
     "desktop_app": {
       "component": "desktop_app",
       "release-type": "node",
-      "prerelease": true
+      "prerelease": true,
+      "include-component-in-tag": false
     },
     "mcp_server_docker_image": {
       "component": "mcp_server_docker_image",
