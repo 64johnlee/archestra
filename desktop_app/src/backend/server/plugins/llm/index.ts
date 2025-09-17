@@ -2,16 +2,25 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createDeepSeek } from '@ai-sdk/deepseek';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI, openai } from '@ai-sdk/openai';
-import { convertToModelMessages, stepCountIs, streamText } from 'ai';
+import {
+  type FinishReason,
+  type LanguageModelUsage,
+  type StepResult,
+  convertToModelMessages,
+  stepCountIs,
+  streamText,
+} from 'ai';
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { createOllama } from 'ollama-ai-provider-v2';
 
 import { type McpTools } from '@backend/archestraMcp';
 import ArchestraMcpContext from '@backend/archestraMcp/context';
 import config from '@backend/config';
+import { getModelContextWindow } from '@backend/llms/modelContextWindows';
 import toolAggregator from '@backend/llms/toolAggregator';
 import Chat from '@backend/models/chat';
 import CloudProviderModel from '@backend/models/cloudProvider';
+import ollamaClient from '@backend/ollama/client';
 
 interface StreamRequestBody {
   model: string;
@@ -117,8 +126,40 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
           //   delayInMs: 20, // optional: defaults to 10ms
           //   chunking: 'line', // optional: defaults to 'word'
           // }),
-          // onError({ error }) {
-          // },
+          onFinish: async ({
+            usage,
+            text,
+            finishReason,
+          }: {
+            usage: LanguageModelUsage;
+            text: string;
+            finishReason: FinishReason;
+          }) => {
+            // Save token usage directly to the chat
+            if (usage && sessionId) {
+              let contextWindow: number;
+
+              // Get context window dynamically for Ollama, use hardcoded for others
+              if (provider === 'ollama') {
+                contextWindow = await ollamaClient.getModelContextWindow(model);
+              } else {
+                contextWindow = getModelContextWindow(model);
+              }
+
+              const tokenUsage = {
+                promptTokens: usage.inputTokens,
+                completionTokens: usage.outputTokens,
+                totalTokens: usage.totalTokens,
+                model: model,
+                contextWindow: contextWindow,
+              };
+
+              // Save token usage directly to the chat
+              await Chat.updateTokenUsage(sessionId, tokenUsage);
+
+              fastify.log.info(`Token usage saved for chat: ${JSON.stringify(tokenUsage)}`);
+            }
+          },
         };
 
         // Add OpenAI prompt caching configuration if using OpenAI provider
@@ -148,6 +189,28 @@ const llmRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.send(
           result.toUIMessageStreamResponse({
             originalMessages: messages,
+            onError: (error) => {
+              if (error == null) {
+                return 'unknown error';
+              }
+              if (typeof error === 'string') {
+                return error;
+              }
+              if (error instanceof Error) {
+                if ('responseBody' in error && error.responseBody) {
+                  if (typeof error.responseBody === 'string') {
+                    try {
+                      const parsed = JSON.parse(error.responseBody);
+                      return parsed.error || error.message;
+                    } catch {
+                      return error.message;
+                    }
+                  }
+                }
+                return error.message;
+              }
+              return 'An unexpected error occurred';
+            },
             onFinish: (result) => {
               if (sessionId) {
                 Chat.saveMessages(sessionId, result.messages);
