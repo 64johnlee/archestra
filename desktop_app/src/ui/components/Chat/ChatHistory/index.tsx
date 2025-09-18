@@ -1,13 +1,11 @@
 import { UIMessage } from 'ai';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import RunningInBackgroundMessage from '@ui/components/Chat/ChatHistory/Messages/RunningInBackgroundMessage';
 import { ScrollArea } from '@ui/components/ui/scroll-area';
 import config from '@ui/config';
 import { cn } from '@ui/lib/utils/tailwind';
 
 import { AssistantMessage, ErrorMessage, MemoriesMessage, OtherMessage, UserMessage } from './Messages';
-import SubmissionLoadingMessage from './Messages/SubmissionLoadingMessage';
 
 const CHAT_SCROLL_AREA_ID = 'chat-scroll-area';
 const CHAT_SCROLL_AREA_SELECTOR = `#${CHAT_SCROLL_AREA_ID} [data-radix-scroll-area-viewport]`;
@@ -17,7 +15,6 @@ const { systemMemoriesMessageId } = config.chat;
 interface ChatHistoryProps {
   messages: UIMessage[];
   chatId: number;
-  pendingPrompt: string | undefined;
   sessionId: string;
   editingMessageId: string | null;
   editingContent: string;
@@ -30,7 +27,6 @@ interface ChatHistoryProps {
   isRegenerating?: boolean;
   regeneratingIndex?: number | null;
   isSubmitting?: boolean;
-  submissionStartTime?: number;
 }
 
 interface MessageProps {
@@ -127,8 +123,6 @@ const getMessageClassName = (role: string) => {
 
 export default function ChatHistory({
   messages,
-  pendingPrompt,
-  chatId,
   editingMessageId,
   editingContent,
   onEditStart,
@@ -140,7 +134,6 @@ export default function ChatHistory({
   isRegenerating,
   regeneratingIndex,
   isSubmitting,
-  submissionStartTime,
 }: ChatHistoryProps) {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const scrollAreaRef = useRef<HTMLElement | null>(null);
@@ -213,10 +206,6 @@ export default function ChatHistory({
     return () => clearTimeout(timeoutId);
   }, [messages, isSubmitting, scrollToBottom]);
 
-  const hasSamePromptInMessages = messages.some(
-    (message) => message.parts?.[0]?.type === 'text' && message.parts?.[0]?.text === pendingPrompt
-  );
-
   return (
     <ScrollArea id={CHAT_SCROLL_AREA_ID} className="h-full w-full border rounded-lg overflow-hidden">
       <div className="p-4 space-y-4 max-w-full overflow-hidden">
@@ -251,43 +240,6 @@ export default function ChatHistory({
             </div>
           </div>
         ))}
-
-        {pendingPrompt && !hasSamePromptInMessages && (
-          <div className={cn('p-3 rounded-lg overflow-hidden min-w-0', getMessageClassName('user'))}>
-            <div className="text-xs font-medium mb-1 opacity-70 capitalize">user</div>
-            <div className="overflow-hidden min-w-0">
-              <UserMessage
-                message={
-                  { id: 'pending-prompt', role: 'user', parts: [{ type: 'text', text: pendingPrompt }] } as UIMessage
-                }
-              />
-            </div>
-          </div>
-        )}
-
-        {pendingPrompt && !hasSamePromptInMessages && (
-          <div className="p-3 rounded-lg overflow-hidden min-w-0 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/30 mr-8">
-            <div className="text-xs font-medium mb-1 opacity-70 capitalize text-orange-600 dark:text-orange-400">
-              system
-            </div>
-
-            <div className="overflow-hidden min-w-0">
-              <RunningInBackgroundMessage chatId={chatId} />
-            </div>
-          </div>
-        )}
-
-        {isSubmitting && !isRegenerating && (
-          <div className="p-3 rounded-lg overflow-hidden min-w-0 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/30 mr-8">
-            <div className="text-xs font-medium mb-1 opacity-70 capitalize text-blue-600 dark:text-blue-400">
-              system
-            </div>
-
-            <div className="overflow-hidden min-w-0">
-              <SubmissionLoadingMessage startTime={submissionStartTime} />
-            </div>
-          </div>
-        )}
       </div>
     </ScrollArea>
   );

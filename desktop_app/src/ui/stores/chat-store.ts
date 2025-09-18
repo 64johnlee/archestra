@@ -5,12 +5,10 @@ import config from '@ui/config';
 import {
   createChat,
   deleteChat,
-  deleteChatMessage,
   getChatById,
   getChatSelectedTools,
   getChats,
   updateChat,
-  updateChatMessage,
 } from '@ui/lib/clients/archestra/api/gen';
 import posthogClient from '@ui/lib/posthog';
 import { initializeChat } from '@ui/lib/utils/chat';
@@ -24,10 +22,7 @@ interface ChatState {
   chats: ChatWithMessages[];
   currentChatSessionId: string | null;
   isLoadingChats: boolean;
-  pendingPrompts: Map<string, string>;
   draftMessages: Map<number, string>; // chatId -> draft content
-  editingMessageId: string | null;
-  editingMessageContent: string;
 }
 
 interface ChatActions {
@@ -39,18 +34,9 @@ interface ChatActions {
   deleteCurrentChat: () => Promise<void>;
   updateChatTitle: (chatId: number, title: string) => Promise<void>;
   initializeStore: () => Promise<void>;
-  setPendingPrompts: (sessionId: string, prompt: string) => void;
-  removePendingPrompt: (sessionId: string) => void;
   saveDraftMessage: (chatId: number, content: string) => void;
   getDraftMessage: (chatId: number) => string;
   clearDraftMessage: (chatId: number) => void;
-
-  // Message editing actions
-  startEditMessage: (messageId: string, currentMessageContent: string) => void;
-  cancelEditMessage: () => void;
-  saveEditMessage: (messageId: string, messages: UIMessage[]) => Promise<UIMessage[]>;
-  deleteMessage: (messageId: string, messages: UIMessage[]) => Promise<void>;
-  setEditingMessageContent: (content: string) => void;
   updateMessages: (chatId: number, messages: UIMessage[]) => void;
 }
 
@@ -98,25 +84,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   chats: [],
   currentChatSessionId: null,
   isLoadingChats: false,
-  pendingPrompts: new Map<string, string>(),
-  editingMessageId: null,
-  editingMessageContent: '',
-
-  setPendingPrompts: (sessionId: string, prompt: string) => {
-    set((state) => {
-      const nextPendingPrompts = new Map(state.pendingPrompts);
-      nextPendingPrompts.set(sessionId, prompt);
-      return { pendingPrompts: nextPendingPrompts };
-    });
-  },
-
-  removePendingPrompt: (sessionId: string) => {
-    set((state) => {
-      const nextPendingPrompts = new Map(state.pendingPrompts);
-      nextPendingPrompts.delete(sessionId);
-      return { pendingPrompts: nextPendingPrompts };
-    });
-  },
   draftMessages: new Map(),
 
   loadChats: async () => {
@@ -347,86 +314,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       newDrafts.delete(chatId);
       return { draftMessages: newDrafts };
     });
-  },
-
-  startEditMessage: (editingMessageId: string, editingMessageContent: string) => {
-    set({ editingMessageId, editingMessageContent });
-  },
-
-  cancelEditMessage: () => {
-    set({ editingMessageId: null, editingMessageContent: '' });
-  },
-
-  setEditingMessageContent: (editingMessageContent: string) => {
-    set({ editingMessageContent });
-  },
-
-  saveEditMessage: async (messageId: string, messages: UIMessage[]): Promise<UIMessage[]> => {
-    const { editingMessageContent, cancelEditMessage } = get();
-    if (!editingMessageContent.trim()) {
-      return messages;
-    }
-
-    let updatedMessage: UIMessage | null = null;
-
-    const updatedMessages = messages.map((msg) => {
-      if (msg.id === messageId) {
-        // Update the message content
-        if (msg.role === 'user' || msg.role === 'assistant') {
-          updatedMessage = {
-            ...msg,
-            parts: [{ type: 'text', text: editingMessageContent }],
-          } as UIMessage;
-          return updatedMessage;
-        }
-      }
-      return msg;
-    });
-
-    try {
-      // Persist the updated message to the backend
-      await updateChatMessage({
-        path: {
-          id: messageId,
-        },
-        body: {
-          content: updatedMessage,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to persist message update:', error);
-      // Continue with local update even if backend fails
-    }
-
-    // Update the messages in the current chat
-    const currentChat = get().getCurrentChat();
-    if (currentChat) {
-      get().updateMessages(currentChat.id, updatedMessages);
-    }
-
-    // Clear editing state
-    cancelEditMessage();
-
-    return updatedMessages;
-  },
-
-  deleteMessage: async (messageId: string, messages: UIMessage[]) => {
-    try {
-      // Delete from backend
-      await deleteChatMessage({ path: { id: messageId } });
-
-      // Update local state
-      const updatedMessages = messages.filter((msg) => msg.id !== messageId);
-
-      // Update the messages in the current chat
-      const currentChat = get().getCurrentChat();
-      if (currentChat) {
-        get().updateMessages(currentChat.id, updatedMessages);
-      }
-    } catch (error) {
-      console.error('Failed to delete message:', error);
-      throw error;
-    }
   },
 
   updateMessages: (chatId: number, messages: UIMessage[]) => {
