@@ -112,8 +112,8 @@ export default class PodmanContainer {
     );
 
     // Check if this is a Docker-style configuration
-    if (command === 'docker' || command === 'podman') {
-      // Parse Docker/Podman run command to extract image and real args
+    if (command === 'docker') {
+      // Parse Docker run command to extract image and real args
       const dockerConfig = PodmanContainer.parseDockerCommand(args || []);
       this.customImage = dockerConfig.image;
       this.command = dockerConfig.command;
