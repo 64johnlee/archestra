@@ -2,6 +2,7 @@ import { UIMessage } from 'ai';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { DEFAULT_ARCHESTRA_TOOLS } from '@constants';
 import config from '@ui/config';
 import {
   createChat,
@@ -15,7 +16,7 @@ import posthogClient from '@ui/lib/posthog';
 import websocketService from '@ui/lib/websocket';
 import { type ChatWithMessages, type ServerChatWithMessagesRepresentation } from '@ui/types';
 
-import { DEFAULT_ARCHESTRA_TOOLS } from '../../constants';
+import { useOllamaStore } from './ollama-store';
 import { useToolsStore } from './tools-store';
 
 interface ChatState {
@@ -335,8 +336,12 @@ export const useChatStore = create<ChatStore>()(
         }));
       },
 
-      setSelectedModel: (model: string) => {
-        set({ selectedModel: model });
+      setSelectedModel: (newModelName: string) => {
+        const { selectedModel: currentModelName } = get();
+
+        set({ selectedModel: newModelName });
+
+        useOllamaStore.getState().conditionallyHandleOllamaModelChange(currentModelName, newModelName);
       },
     }),
     {

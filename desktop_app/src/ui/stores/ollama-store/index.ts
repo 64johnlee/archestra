@@ -1,21 +1,24 @@
 import { ModelResponse } from 'ollama/browser';
 import { create } from 'zustand';
 
+import { SYSTEM_MODEL_NAMES } from '@constants';
 import config from '@ui/config';
 import {
   OllamaModelDownloadProgress,
   OllamaRequiredModelStatus,
   getOllamaRequiredModelsStatus,
+  pullOllamaModel,
   removeOllamaModel,
 } from '@ui/lib/clients/archestra/api/gen';
 import { ArchestraOllamaClient } from '@ui/lib/clients/ollama';
 import websocketService from '@ui/lib/websocket';
 import { useStatusBarStore } from '@ui/stores/status-bar-store';
 
-import { SYSTEM_MODEL_NAMES } from '../../../constants';
 import { AVAILABLE_MODELS } from './available_models';
 
-const ollamaClient = new ArchestraOllamaClient({ host: config.archestra.ollamaProxyUrl });
+const { ollamaProxyUrl } = config.archestra;
+
+const ollamaClient = new ArchestraOllamaClient({ host: ollamaProxyUrl });
 
 interface OllamaState {
   installedModels: ModelResponse[];
@@ -36,9 +39,21 @@ interface OllamaActions {
 
   fetchRequiredModelsStatus: () => Promise<void>;
   updateRequiredModelDownloadProgress: (progress: OllamaModelDownloadProgress) => void;
+
+  conditionallyHandleOllamaModelChange: (previousModelName: string | undefined, newModelName: string) => Promise<void>;
 }
 
 type OllamaStore = OllamaState & OllamaActions;
+
+const preloadOllamaModel = async (model: string, keepAlive: string) =>
+  fetch(`${ollamaProxyUrl}/api/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      keep_alive: keepAlive,
+    }),
+  });
 
 export const useOllamaStore = create<OllamaStore>((set, get) => ({
   // State
@@ -100,23 +115,17 @@ export const useOllamaStore = create<OllamaStore>((set, get) => ({
       }));
 
       // Use the new backend endpoint that sends WebSocket progress
-      const response = await fetch('/api/ollama/pull', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const { data } = await pullOllamaModel({
+        body: {
+          model: fullModelName,
         },
-        body: JSON.stringify({ model: fullModelName }),
       });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Failed to download model: ${error}`);
+      if (!data) {
+        throw new Error('Failed to download model');
+      } else if (!data.success) {
+        throw new Error(`Failed to download model: ${data.message}`);
       }
-
-      // The WebSocket events will update the progress via the subscription below
-      // Just wait for completion
-      const result = await response.json();
-      console.log('Model download completed:', result);
 
       await get().fetchInstalledModels();
     } catch (error) {
@@ -272,6 +281,68 @@ export const useOllamaStore = create<OllamaStore>((set, get) => ({
         get().fetchInstalledModels();
         get().fetchRequiredModelsStatus();
       }, 500);
+    }
+  },
+
+  conditionallyHandleOllamaModelChange: async (previousModelName: string | undefined, newModelName: string) => {
+    const { installedModels } = get();
+    const statusBarStore = useStatusBarStore.getState();
+
+    const previousModelIsOllamaModel = installedModels.some((model) => model.model === previousModelName);
+    const newModelIsOllamaModel = installedModels.some((model) => model.model === newModelName);
+
+    if (previousModelName && previousModelIsOllamaModel) {
+      statusBarStore.updateTask('ollama-model-switch', {
+        id: 'ollama-model-switch',
+        type: 'model',
+        title: 'Switching Model',
+        description: `Unloading ${previousModelName}...`,
+        status: 'active',
+        timestamp: Date.now(),
+      });
+
+      try {
+        // Unload the previous model by setting keep_alive to 0
+        await preloadOllamaModel(previousModelName, '0');
+      } catch (error) {
+        console.error('Failed to unload previous model:', error);
+      }
+
+      setTimeout(() => statusBarStore.removeTask('ollama-model-switch'), 5000);
+    }
+
+    if (newModelIsOllamaModel) {
+      // Show loading new model
+      statusBarStore.updateTask('ollama-model-switch', {
+        id: 'ollama-model-switch',
+        type: 'model',
+        title: 'Loading Model',
+        description: `Loading ${newModelName} into memory...`,
+        status: 'active',
+        timestamp: Date.now(),
+      });
+
+      try {
+        // Pre-load the new model with keep_alive to keep it in memory (for 30 minutes)
+        await preloadOllamaModel(newModelName, '30m');
+
+        statusBarStore.updateTask('ollama-model-switch', {
+          status: 'completed',
+          description: `${newModelName} loaded`,
+        });
+
+        setTimeout(() => statusBarStore.removeTask('ollama-model-switch'), 2000);
+      } catch (error) {
+        console.error('Failed to load new model:', error);
+
+        statusBarStore.updateTask('ollama-model-switch', {
+          status: 'error',
+          description: 'Failed to load model',
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        setTimeout(() => statusBarStore.removeTask('ollama-model-switch'), 5000);
+      }
     }
   },
 }));
