@@ -2042,6 +2042,44 @@ export type GetOllamaRequiredModelsStatusResponses = {
 export type GetOllamaRequiredModelsStatusResponse =
   GetOllamaRequiredModelsStatusResponses[keyof GetOllamaRequiredModelsStatusResponses];
 
+export type RemoveOllamaModelData = {
+  body?: never;
+  path: {
+    modelName: string;
+  };
+  query?: never;
+  url: '/api/ollama/models/{modelName}';
+};
+
+export type RemoveOllamaModelErrors = {
+  /**
+   * Default Response
+   */
+  400: {
+    error: string;
+  };
+  /**
+   * Default Response
+   */
+  500: {
+    error: string;
+  };
+};
+
+export type RemoveOllamaModelError = RemoveOllamaModelErrors[keyof RemoveOllamaModelErrors];
+
+export type RemoveOllamaModelResponses = {
+  /**
+   * Default Response
+   */
+  200: {
+    success: boolean;
+    message: string;
+  };
+};
+
+export type RemoveOllamaModelResponse = RemoveOllamaModelResponses[keyof RemoveOllamaModelResponses];
+
 export type RestartSandboxData = {
   body?: never;
   path?: never;

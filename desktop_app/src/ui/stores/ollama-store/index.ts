@@ -7,6 +7,7 @@ import {
   OllamaModelDownloadProgress,
   OllamaRequiredModelStatus,
   getOllamaRequiredModelsStatus,
+  removeOllamaModel,
 } from '@ui/lib/clients/archestra/api/gen';
 import { ArchestraOllamaClient } from '@ui/lib/clients/ollama';
 import websocketService from '@ui/lib/websocket';
@@ -32,6 +33,7 @@ interface OllamaState {
 
 interface OllamaActions {
   downloadModel: (fullModelName: string) => Promise<void>;
+  uninstallModel: (fullModelName: string) => Promise<void>;
   fetchInstalledModels: () => Promise<void>;
   setSelectedModel: (model: string) => void;
 
@@ -160,6 +162,107 @@ export const useOllamaStore = create<OllamaStore>()(
               downloadProgress: newDownloadProgress,
             };
           });
+        }
+      },
+
+      uninstallModel: async (fullModelName: string) => {
+        const statusBarStore = useStatusBarStore.getState();
+        const taskId = `ollama-uninstall-${fullModelName}`;
+        let finalizeTimer: NodeJS.Timeout | undefined;
+        let progressTimer: NodeJS.Timeout | undefined;
+
+        try {
+          // Show uninstall task
+          statusBarStore.updateTask(taskId, {
+            id: taskId,
+            type: 'model',
+            title: 'Model',
+            description: `Uninstalling ${fullModelName} (1/5)...`,
+            progress: 1,
+            status: 'active',
+            timestamp: Date.now(),
+          });
+
+          // Simulate step-wise progress while backend processes the uninstall
+          // Steps: 1/5 -> 2/5 -> 3/5 -> 4/5 -> 5/5 (90%)
+          const stepTargets = [5, 25, 50, 75, 90];
+          let simulated = 1;
+          let stepIndex = 0;
+
+          progressTimer = setInterval(() => {
+            simulated = Math.min(simulated + 2, 90);
+            if (stepIndex < stepTargets.length && simulated >= stepTargets[stepIndex]) {
+              statusBarStore.updateTask(taskId, {
+                progress: simulated,
+                description: `Uninstalling ${fullModelName} (${stepIndex + 1}/5)...`,
+              });
+
+              stepIndex++;
+            } else {
+              statusBarStore.updateTask(taskId, { progress: simulated });
+            }
+
+            if (simulated >= 90) {
+              clearInterval(progressTimer);
+            }
+          }, 200);
+
+          const { data } = await removeOllamaModel({
+            path: {
+              modelName: fullModelName,
+            },
+          });
+
+          if (data && !data.success) {
+            throw new Error(data.message || `Failed to uninstall ${fullModelName}`);
+          }
+
+          // Refresh the installed models list after successful uninstall
+          await get().fetchInstalledModels();
+
+          // Finish progress and show a brief success state using the same active layout
+          clearInterval(progressTimer);
+          // Smoothly animate to 100% keeping the uninstalling copy
+          finalizeTimer = setInterval(() => {
+            simulated = Math.min(simulated + 2, 100);
+
+            if (simulated < 100) {
+              statusBarStore.updateTask(taskId, {
+                progress: simulated,
+                description: `Uninstalling ${fullModelName} (5/5)...`,
+              });
+            } else {
+              clearInterval(finalizeTimer);
+
+              statusBarStore.updateTask(taskId, { progress: 100 });
+
+              // Keep as active briefly so it shows in the collapsed header
+              statusBarStore.updateTask(taskId, {
+                status: 'active',
+                description: `Uninstalled ${fullModelName} successfully`,
+              });
+
+              setTimeout(() => statusBarStore.removeTask(taskId), 3000);
+            }
+          }, 60);
+        } catch (error) {
+          console.error('Failed to uninstall model:', error);
+
+          clearInterval(progressTimer);
+
+          if (finalizeTimer) {
+            clearInterval(finalizeTimer);
+          }
+
+          statusBarStore.updateTask(taskId, {
+            status: 'error',
+            description: `Failed to uninstall ${fullModelName}`,
+            error: error instanceof Error ? error.message : String(error),
+          });
+
+          setTimeout(() => statusBarStore.removeTask(taskId), 5000);
+
+          throw error;
         }
       },
 

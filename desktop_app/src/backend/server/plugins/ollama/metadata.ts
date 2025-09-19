@@ -55,6 +55,57 @@ const ollamaMetadataRoutes: FastifyPluginAsyncZod = async (fastify) => {
       }
     }
   );
+
+  // Remove/uninstall a model
+  fastify.delete(
+    '/api/ollama/models/:modelName',
+    {
+      schema: {
+        operationId: 'removeOllamaModel',
+        description: 'Remove/uninstall an Ollama model',
+        tags: ['MCP Server'],
+        params: z.object({
+          modelName: z.string(),
+        }),
+        response: {
+          200: z.object({
+            success: z.boolean(),
+            message: z.string(),
+          }),
+          400: z.object({
+            error: z.string(),
+          }),
+          500: z.object({
+            error: z.string(),
+          }),
+        },
+      },
+    },
+    async ({ params: { modelName } }, reply) => {
+      try {
+        // Check if it's a required model - don't allow removal of required models
+        const isRequiredModel = ollamaRequiredModels.some((m) => m.model === modelName);
+
+        if (isRequiredModel) {
+          return reply.code(400).send({
+            error: `Cannot remove required model: ${modelName}. This model is needed for app functionality.`,
+          });
+        }
+
+        await OllamaClient.remove(modelName);
+
+        return reply.code(200).send({
+          success: true,
+          message: `Model ${modelName} successfully removed`,
+        });
+      } catch (error) {
+        fastify.log.error({ err: error, modelName }, 'Failed to remove model');
+        return reply.code(500).send({
+          error: error instanceof Error ? error.message : 'Failed to remove model',
+        });
+      }
+    }
+  );
 };
 
 export default ollamaMetadataRoutes;
