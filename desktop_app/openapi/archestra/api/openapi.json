@@ -1065,7 +1065,7 @@
       },
       "SupportedCloudProvidersInput": {
         "type": "string",
-        "enum": ["anthropic", "openai", "deepseek", "gemini"]
+        "enum": ["anthropic", "openai", "deepseek", "gemini", "archestra"]
       },
       "SupportedCloudProviderModelInput": {
         "type": "object",
@@ -2889,7 +2889,7 @@
       },
       "SupportedCloudProviders": {
         "type": "string",
-        "enum": ["anthropic", "openai", "deepseek", "gemini"]
+        "enum": ["anthropic", "openai", "deepseek", "gemini", "archestra"]
       },
       "SupportedCloudProviderModel": {
         "type": "object",
