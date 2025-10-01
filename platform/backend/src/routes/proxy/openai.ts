@@ -4,10 +4,8 @@ import { z } from "zod";
 import config from "../../config";
 import ToolInvocationPolicyEvaluator from "../../guardrails/tool-invocation";
 import TrustedDataPolicyEvaluator from "../../guardrails/trusted-data";
-import ChatModel from "../../models/chat";
-import InteractionModel from "../../models/interaction";
-import { ChatIdSchema, ErrorResponseSchema } from "../../types";
-import { OpenAi } from "../../types/llm-providers";
+import { ChatModel, InteractionModel, ToolModel } from "../../models";
+import { ChatIdSchema, ErrorResponseSchema, OpenAi } from "../../types";
 
 const { trustedDataAutonomyPolicies, toolInvocationAutonomyPolicies } = config;
 
@@ -85,6 +83,24 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
       const openAiClient = new OpenAI({ apiKey: openAiApiKey });
 
       try {
+        /**
+         * Persist tools if present in the request
+         *
+         * NOTE: for right now we are only persisting function tools (not custom tools)
+         */
+        const tools =
+          requestBody.tools?.filter((tool) => tool.type === "function") || [];
+
+        for (const {
+          function: { name, parameters, description },
+        } of tools) {
+          await ToolModel.createToolIfNotExists({
+            name,
+            parameters,
+            description,
+          });
+        }
+
         // Process incoming tool result messages and evaluate trusted data policies
         for (const message of requestBody.messages) {
           if (message.role === "tool") {
