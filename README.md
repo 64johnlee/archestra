@@ -18,10 +18,10 @@
 
 A lightweight pluggable proxy bringing fine-grained guardrails to mitigate the [Lethal Trifecta](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/) for external and internal agents.
 
-- 🔥 **Open Source**
-- 🔌 **Supports MCP, A2A, structured output, custom tool calls**
-- 🔒 **Guardrails**
-- ⚡️ **Lightweight**
+- **Open Source**
+- **Supports MCP, A2A, structured output, custom tool calls**
+- **Guardrails**
+- **Lightweight**
 
 ![Trifecta](/docs/assets/lethaltrifecta.jpg)
 
