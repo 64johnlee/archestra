@@ -1,9 +1,12 @@
-# Archestra Platform, solving agentic security
+# Archestra Desktop, the Most Simple and Safe MCP Client
 
-- 🔥 **Open Source**
-- 🔌 **MCP, A2A, structured output, custom tool calls**
-- 🔒 **Guardrails**
-- ⚡️ **Lightweight**
+
+- 🔥 **Unique Authentication** — No need to toss API keys and config files to run MCP!
+- 🔒 **Sandboxed MCP Runtime** — Isolated sandbox protecting the host from supply chain attacks.
+- 🔌 **Full OSS MCPs Support** — Compatible with thousands of existing MCP servers.
+- 💻 **Local-First Architecture** — Privacy-focused design with local LLM.
+
+![Archestra Screenshot](./docs/assets/screenshot.png)
 
 <div align="center">
 
@@ -21,37 +24,42 @@
   - <a href="https://join.slack.com/t/archestracommunity/shared_invite/zt-39yk4skox-zBF1NoJ9u4t59OU8XxQChg">Slack Commuity</a>
 </p>
 
-## Development
+
+## Overview
+
+Archestra is a 100% local runtime for MCP (Model Context Protocol) servers and a ChatGPT-like UI allowing non-technical users to build safe and private agents with powerful data access.
+
+
+## Installation
+
+Download from [archestra.ai](https://archestra.ai/) or [GitHub Releases](https://github.com/archestra-ai/archestra/releases).
+
+## Build from Source
 
 Before you begin, ensure you have the following installed:
 
-- Node.js (v18 or higher)
-- pnpm (v8 or higher) - Install with npm install -g pnpm
-- [Tilt](https://docs.tilt.dev/install.html)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-macos/)
-- Local k8s cluster (Docker Desktop with k8s enabled, Kind or Orbstack)
-- [Biome VSCode extension](https://open-vsx.org/extension/biomejs/biome)
-- Git
+- **Node.js** (v18 or higher)
+- **pnpm** (v8 or higher) - Install with `npm install -g pnpm`
+- **Git**
 
-
-Run dev environment
+Clone the Repository
 
 ```bash
 git clone https://github.com/archestra-ai/archestra.git
-cd archestra/platform
-tilt up
+cd archestra/desktop_app
 ```
 
-# Archestra Desktop, the Most Simple and Safe MCP Client
+Use pnpm to install all required dependencies:
 
-- 🔥 **Unique Authentication** — No need to toss API keys and config files to run MCP!
-- 🔒 **Sandboxed MCP Runtime** — Isolated sandbox protecting the host from supply chain attacks.
-- 🔌 **Full OSS MCPs Support** — Compatible with thousands of existing MCP servers.
-- 💻 **Local-First Architecture** — Privacy-focused design with local LLM.
+```bash
+pnpm install
+```
 
-![Archestra Screenshot](./docs/assets/screenshot.png)
+Start Dev Environment
 
-**[Read more about Archestra Desktop](/desktop_app/README.md)**
+```bash
+pnpm start
+```
 
 ## 🤝 Contributing
 
@@ -62,6 +70,7 @@ Thank you for contributing and continuously making <b>Archestra</b> better, <b>y
 <a href="https://github.com/archestra-ai/archestra/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=archestra-ai/archestra" />
 </a>
+
 
 ---
 
