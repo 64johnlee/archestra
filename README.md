@@ -1,4 +1,4 @@
-# Archestra Platform
+# Archestra Platform (alpha)
 
 <div align="center">
 
