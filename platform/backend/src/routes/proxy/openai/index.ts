@@ -20,7 +20,8 @@ const { trustedDataAutonomyPolicies, toolInvocationAutonomyPolicies } = config;
  * Extract tool name from conversation history by finding the assistant message
  * that contains the tool_call_id
  *
- * TODO: we probably don't need this.. to verify
+ * We need to do this because the name of the tool is not included in the "tool" message (ie. tool call result)
+ * (just the content and tool_call_id)
  */
 const extractToolNameFromHistory = async (
   chatId: string,
@@ -34,7 +35,10 @@ const extractToolNameFromHistory = async (
 
     if (content.role === "assistant" && content.tool_calls) {
       for (const toolCall of content.tool_calls) {
-        if (toolCall.id === toolCallId) {
+        /**
+         * TODO: do we need to handle custom tool calls here as well?
+         */
+        if (toolCall.id === toolCallId && toolCall.type === "function") {
           return toolCall.function.name;
         }
       }
@@ -115,8 +119,7 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
               // Store tool result as interaction (tainted if not trusted)
               await InteractionModel.create({
                 chatId,
-                // biome-ignore lint/suspicious/noExplicitAny: tbd later
-                content: message as any,
+                content: message,
                 tainted: !isTrusted,
                 taintReason: trustReason,
               });
@@ -131,8 +134,7 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
         if (lastMessage.role === "user") {
           await InteractionModel.create({
             chatId,
-            // biome-ignore lint/suspicious/noExplicitAny: tbd later
-            content: lastMessage as any,
+            content: lastMessage,
           });
         }
 
@@ -143,13 +145,11 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
           reply.header("Connection", "keep-alive");
 
           const stream = await openAiClient.chat.completions.create({
-            // biome-ignore lint/suspicious/noExplicitAny: tbd later
-            ...(requestBody as any),
+            ...requestBody,
             stream: true,
           });
 
-          // biome-ignore lint/suspicious/noExplicitAny: tbd later
-          for await (const chunk of stream as any) {
+          for await (const chunk of stream) {
             reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
           }
 
@@ -160,8 +160,7 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
         // Handle non-streaming response
         const response = await openAiClient.chat.completions.create({
-          // biome-ignore lint/suspicious/noExplicitAny: tbd later
-          ...(requestBody as any),
+          ...requestBody,
           stream: false,
         });
 
@@ -215,15 +214,12 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
           }
         }
 
-        // Store the assistant response
         await InteractionModel.create({
           chatId,
-          // biome-ignore lint/suspicious/noExplicitAny: tbd later
-          content: assistantMessage as any,
+          content: assistantMessage,
         });
 
-        // biome-ignore lint/suspicious/noExplicitAny: tbd later
-        return reply.send(response as any);
+        return reply.send(response);
       } catch (error) {
         fastify.log.error(error);
         const statusCode =
@@ -243,6 +239,15 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
     },
   );
 
+  /**
+   * NOTE: we may just want to use something like fastify-http-proxy to proxy ALL openai endpoints
+   * except for the ones that we are handling "specially" (ex. chat/completions)
+   *
+   * https://github.com/fastify/fastify-http-proxy
+   *
+   * Also see https://github.com/archestra-ai/archestra/blob/ba98a62945ff23a0d2075dfd415cdd358bd61991/desktop_app/src/backend/server/plugins/ollama/proxy.ts
+   * for how we are handling this in the desktop app ollama proxy
+   */
   fastify.get(
     "/api/proxy/openai/models",
     {

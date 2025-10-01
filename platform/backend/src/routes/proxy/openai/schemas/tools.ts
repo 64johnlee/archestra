@@ -16,7 +16,7 @@ const FunctionDefinitionSchema = z
     `https://github.com/openai/openai-node/blob/master/src/resources/shared.ts#L174`,
   );
 
-export const FunctionToolSchema = z
+const FunctionToolSchema = z
   .object({
     type: z.literal("function"),
     function: FunctionDefinitionSchema,
@@ -25,7 +25,7 @@ export const FunctionToolSchema = z
     `https://github.com/openai/openai-node/blob/v6.0.0/src/resources/chat/completions/completions.ts#L988`,
   );
 
-export const CustomToolSchema = z
+const CustomToolSchema = z
   .object({
     type: z.literal("custom"),
     custom: z.object({

@@ -1,10 +1,10 @@
 import { and, asc, eq } from "drizzle-orm";
-import db, { interactionsTable, type MessageContent } from "../database";
+import db, { type InteractionContent, interactionsTable } from "../database";
 
 class InteractionModel {
   static async create(data: {
     chatId: string;
-    content: MessageContent;
+    content: InteractionContent;
     tainted?: boolean;
     taintReason?: string;
   }) {

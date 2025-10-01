@@ -52,7 +52,8 @@ class ChatModel {
     const chat = rows[0].chats;
     const interactions = rows
       .filter((row) => row.interactions !== null)
-      .map((row) => row.interactions!);
+      .map((row) => row.interactions)
+      .filter((interaction) => interaction !== null);
 
     return {
       ...chat,

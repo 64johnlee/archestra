@@ -1,18 +1,38 @@
 import { z } from "zod";
 
-import { CustomToolSchema, FunctionToolSchema } from "./tools";
+const FunctionToolCallSchema = z
+  .object({
+    id: z.string(),
+    type: z.literal("function"),
+    function: z
+      .object({
+        arguments: z.string(),
+        name: z.string(),
+      })
+      .describe(
+        `https://github.com/openai/openai-node/blob/v6.0.0/src/resources/chat/completions/completions.ts#L1165`,
+      ),
+  })
+  .describe(
+    `https://github.com/openai/openai-node/blob/v6.0.0/src/resources/chat/completions/completions.ts#L1144`,
+  );
 
-export const FunctionToolCallSchema = FunctionToolSchema.extend({
-  id: z.string(),
-}).describe(
-  `https://github.com/openai/openai-node/blob/v6.0.0/src/resources/chat/completions/completions.ts#L1144`,
-);
-
-const CustomToolCallSchema = CustomToolSchema.extend({
-  id: z.string(),
-}).describe(
-  `https://github.com/openai/openai-node/blob/v6.0.0/src/resources/chat/completions/completions.ts#L1107`,
-);
+const CustomToolCallSchema = z
+  .object({
+    id: z.string(),
+    type: z.literal("custom"),
+    custom: z
+      .object({
+        input: z.string(),
+        name: z.string(),
+      })
+      .describe(
+        `https://github.com/openai/openai-node/blob/v6.0.0/src/resources/chat/completions/completions.ts#L1128`,
+      ),
+  })
+  .describe(
+    `https://github.com/openai/openai-node/blob/v6.0.0/src/resources/chat/completions/completions.ts#L1107`,
+  );
 
 export const ToolCallSchema = z
   .union([FunctionToolCallSchema, CustomToolCallSchema])
@@ -141,7 +161,7 @@ const AssistantMessageParamSchema = z
       .union([
         z.string(),
         z.array(ContentPartTextSchema),
-        ContentPartRefusalSchema,
+        z.array(ContentPartRefusalSchema),
       ])
       .nullable()
       .optional(),

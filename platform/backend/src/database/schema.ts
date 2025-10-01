@@ -9,28 +9,14 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { MessageParamSchema as OpenAiMessageContentSchema } from "../routes/proxy/openai/schemas/messages";
 
-export const MessageContentSchema = z.object({
-  role: z.enum(["system", "user", "assistant", "tool"]),
-  content: z.string().nullable().optional(),
-  name: z.string().nullable().optional(),
-  tool_call_id: z.string().nullable().optional(),
-  tool_calls: z
-    .array(
-      z.object({
-        id: z.string(),
-        type: z.literal("function"),
-        function: z.object({
-          name: z.string(),
-          arguments: z.string(),
-        }),
-      }),
-    )
-    .nullable()
-    .optional(),
-});
+/**
+ * As we support more llm provider types, this type will expand and should be updated
+ */
+export const InteractionContentSchema = z.union([OpenAiMessageContentSchema]);
 
-export type MessageContent = z.infer<typeof MessageContentSchema>;
+export type InteractionContent = z.infer<typeof InteractionContentSchema>;
 
 export const chatsTable = pgTable("chats", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -51,7 +37,7 @@ export const interactionsTable = pgTable(
     chatId: uuid("chat_id")
       .notNull()
       .references(() => chatsTable.id, { onDelete: "cascade" }),
-    content: jsonb("content").$type<MessageContent>().notNull(),
+    content: jsonb("content").$type<InteractionContent>().notNull(),
     tainted: boolean("tainted").notNull().default(false),
     taintReason: text("taint_reason"),
     createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
@@ -65,10 +51,10 @@ export const interactionsTable = pgTable(
 export const SelectChatSchema = createSelectSchema(chatsTable);
 export const InsertChatSchema = createInsertSchema(chatsTable);
 export const SelectInteractionSchema = createSelectSchema(interactionsTable, {
-  content: MessageContentSchema,
+  content: InteractionContentSchema,
 });
 export const InsertInteractionSchema = createInsertSchema(interactionsTable, {
-  content: MessageContentSchema,
+  content: InteractionContentSchema,
 });
 
 // API response schemas - properly typed with relations

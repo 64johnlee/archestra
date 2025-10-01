@@ -20,12 +20,14 @@ const ChatCompletionUsageSchema = z
     prompt_tokens: z.number(),
     total_tokens: z.number(),
     completion_tokens_details: z
-      .object()
+      .any()
+      .optional()
       .describe(
         `https://github.com/openai/openai-node/blob/master/src/resources/completions.ts#L144`,
       ),
     prompt_tokens_details: z
-      .object()
+      .any()
+      .optional()
       .describe(
         `https://github.com/openai/openai-node/blob/master/src/resources/completions.ts#L173`,
       ),
@@ -51,7 +53,7 @@ const ChoiceSchema = z
         refusal: z.string().nullable(),
         role: z.literal("assistant"),
         annotations: z.array(z.any()).optional(),
-        audio: z.any().nullable(),
+        audio: z.any().nullable().optional(),
         function_call: z
           .object({
             arguments: z.string(),
