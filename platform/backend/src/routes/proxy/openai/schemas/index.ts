@@ -58,6 +58,7 @@ const ChoiceSchema = z
             name: z.string(),
           })
           .nullable()
+          .optional()
           .describe(
             `https://github.com/openai/openai-node/blob/v6.0.0/src/resources/chat/completions/completions.ts#L431`,
           ),
