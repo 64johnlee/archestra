@@ -23,7 +23,7 @@ A lightweight pluggable proxy bringing fine-grained guardrails to mitigate the L
 - **Guardrails**
 - **Lightweight**
 
-![Trifecta](/docs/assets/trifecta.png)
+<img src="/docs/assets/trifecta.png" alt="Trifecta" width="600" />
 
 The Lethal Trifecta: [Simon Willison](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/), [The Economist](https://www.economist.com/leaders/2025/09/25/how-to-stop-ais-lethal-trifecta)
 
