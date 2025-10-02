@@ -64,106 +64,74 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
       try {
         await utils.persistTools(tools, agentId);
-        await utils.evaluateTrustedDataPolicies(messages, chatId, agentId);
+        await utils.trustedData.evaluatePolicies(messages, chatId, agentId);
         await utils.persistUserMessage(messages, chatId);
 
-        let assistantMessage: OpenAI.Chat.Completions.ChatCompletionMessage | null =
-          null;
-
         if (stream) {
-          // Handle streaming response
           reply.header("Content-Type", "text/event-stream");
           reply.header("Cache-Control", "no-cache");
           reply.header("Connection", "keep-alive");
 
+          // Handle streaming response
           const stream = await openAiClient.chat.completions.create({
             ...body,
             stream: true,
           });
 
-          /**
-           * Accumulate the assistant message, and tool calls from chunks
-           *
-           * NOTE: for right now we ignore "custom" tool calls
-           */
-          let accumulatedContent = "";
-          const accumulatedToolCalls: OpenAI.Chat.Completions.ChatCompletionMessageFunctionToolCall[] =
-            [];
+          const chatCompletionChunksAndMessage =
+            await utils.streaming.handleChatCompletions(stream);
 
-          for await (const chunk of stream) {
-            const delta = chunk.choices[0]?.delta;
+          let assistantMessage = chatCompletionChunksAndMessage.message;
+          let chunks: OpenAI.Chat.Completions.ChatCompletionChunk[] =
+            chatCompletionChunksAndMessage.chunks;
 
-            // Accumulate content
-            if (delta?.content) {
-              accumulatedContent += delta.content;
-            }
-
-            // Accumulate tool calls
-            if (delta?.tool_calls) {
-              for (const toolCallDelta of delta.tool_calls.filter(
-                (toolCall) => toolCall.type === "function",
-              )) {
-                const index = toolCallDelta.index;
-
-                // Initialize tool call if it doesn't exist
-                if (!accumulatedToolCalls[index]) {
-                  accumulatedToolCalls[index] = {
-                    id: toolCallDelta.id || "",
-                    type: "function",
-                    function: {
-                      name: "",
-                      arguments: "",
-                    },
-                  };
-                }
-
-                // Accumulate tool call fields
-                if (toolCallDelta.id) {
-                  accumulatedToolCalls[index].id = toolCallDelta.id;
-                }
-                if (toolCallDelta.function?.name) {
-                  accumulatedToolCalls[index].function.name =
-                    toolCallDelta.function.name;
-                }
-                if (toolCallDelta.function?.arguments) {
-                  accumulatedToolCalls[index].function.arguments +=
-                    toolCallDelta.function.arguments;
-                }
-              }
-            }
-
-            // Stream chunk to client
-            reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
-          }
-
-          // Construct the complete assistant message
-          assistantMessage = {
-            role: "assistant",
-            content: accumulatedContent || null,
-            tool_calls:
-              accumulatedToolCalls.length > 0
-                ? accumulatedToolCalls
-                : undefined,
-          } as OpenAI.Chat.Completions.ChatCompletionMessage;
-
-          const toolInvocationPolicyError =
-            await utils.evaluateToolInvocationPolicies(
+          const toolInvocationRefusal =
+            await utils.toolInvocation.evaluatePolicies(
               assistantMessage,
               agentId,
             );
 
-          if (toolInvocationPolicyError) {
-            // When streaming, we can't send a 403 status after headers are sent
-            // Instead, send an error event in SSE format
-            reply.raw.write(
-              `data: ${JSON.stringify({ error: toolInvocationPolicyError })}\n\n`,
-            );
-            reply.raw.write("data: [DONE]\n\n");
-            reply.raw.end();
-            return reply;
+          if (toolInvocationRefusal) {
+            /**
+             * Tool invocation was blocked
+             *
+             * Overwrite the assistant message that will be persisted
+             * Plus send a single chunk, representing the refusal message instead of original chunks
+             */
+            assistantMessage = toolInvocationRefusal.message;
+            chunks = [
+              {
+                id: "chatcmpl-blocked",
+                object: "chat.completion.chunk",
+                created: Date.now() / 1000, // the type annotation for created mentions that it is in seconds
+                model: body.model,
+                choices: [
+                  {
+                    index: 0,
+                    delta: {
+                      role: "assistant",
+                      content: null,
+                      refusal: toolInvocationRefusal.message.refusal,
+                    },
+                    finish_reason: "stop",
+                    logprobs: null,
+                  },
+                ],
+              },
+            ];
           }
 
           await utils.persistAssistantMessage(assistantMessage, chatId);
+
+          for (const chunk of chunks) {
+            /**
+             * The setTimeout here is used simply to simulate the streaming delay (and make it look more natural)
+             */
+            reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
+            await new Promise((resolve) =>
+              setTimeout(resolve, Math.random() * 10),
+            );
+          }
 
           reply.raw.write("data: [DONE]\n\n");
           reply.raw.end();
@@ -174,15 +142,16 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
             stream: false,
           });
 
-          assistantMessage = response.choices[0].message;
+          let assistantMessage = response.choices[0].message;
 
-          const toolInvocationPolicyError =
-            await utils.evaluateToolInvocationPolicies(
+          const toolInvocationRefusal =
+            await utils.toolInvocation.evaluatePolicies(
               assistantMessage,
               agentId,
             );
-          if (toolInvocationPolicyError) {
-            return reply.status(403).send(toolInvocationPolicyError);
+          if (toolInvocationRefusal) {
+            assistantMessage = toolInvocationRefusal.message;
+            response.choices = [toolInvocationRefusal];
           }
 
           await utils.persistAssistantMessage(assistantMessage, chatId);

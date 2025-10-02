@@ -6,6 +6,7 @@ import path, { resolve } from "node:path";
 import * as readline from "node:readline/promises";
 import dotenv from "dotenv";
 import OpenAI from "openai";
+import type { Stream } from "openai/core/streaming";
 import type {
   ChatCompletionMessageParam,
   ChatCompletionTool,
@@ -255,6 +256,78 @@ const executeToolCall = async (
   throw new Error(`Unknown tool: ${toolName}`);
 };
 
+const getAssistantMessageFromStream = async (
+  stream: Stream<OpenAI.Chat.Completions.ChatCompletionChunk>,
+  shouldPrintPrefix: boolean,
+): Promise<OpenAI.Chat.Completions.ChatCompletionMessage> => {
+  // Accumulate the assistant message from chunks
+  let accumulatedContent = "";
+  let accumulatedRefusal = "";
+  const accumulatedToolCalls: any[] = [];
+
+  if (shouldPrintPrefix) {
+    process.stdout.write("\nAssistant: ");
+  }
+
+  for await (const chunk of stream) {
+    // Skip chunks without choices (metadata, end markers, etc.)
+    if (!chunk.choices || chunk.choices.length === 0) {
+      continue;
+    }
+
+    const delta = chunk.choices[0]?.delta;
+
+    if (delta?.content) {
+      accumulatedContent += delta.content;
+      process.stdout.write(delta.content);
+    }
+
+    if (delta?.refusal) {
+      accumulatedRefusal += delta.refusal;
+      process.stdout.write(delta.refusal);
+    }
+
+    if (delta?.tool_calls) {
+      for (const toolCallDelta of delta.tool_calls) {
+        const index = toolCallDelta.index;
+
+        // Initialize tool call if it doesn't exist
+        if (!accumulatedToolCalls[index]) {
+          accumulatedToolCalls[index] = {
+            id: toolCallDelta.id || "",
+            type: "function",
+            function: {
+              name: "",
+              arguments: "",
+            },
+          };
+        }
+
+        // Accumulate tool call fields
+        if (toolCallDelta.id) {
+          accumulatedToolCalls[index].id = toolCallDelta.id;
+        }
+        if (toolCallDelta.function?.name) {
+          accumulatedToolCalls[index].function.name =
+            toolCallDelta.function.name;
+        }
+        if (toolCallDelta.function?.arguments) {
+          accumulatedToolCalls[index].function.arguments +=
+            toolCallDelta.function.arguments;
+        }
+      }
+    }
+  }
+
+  return {
+    role: "assistant" as const,
+    content: accumulatedContent || null,
+    refusal: accumulatedRefusal || null,
+    tool_calls:
+      accumulatedToolCalls.length > 0 ? accumulatedToolCalls : undefined,
+  };
+};
+
 const cliChatWithGuardrails = async () => {
   const {
     agentId,
@@ -317,210 +390,116 @@ Some examples:
     while (continueLoop && stepCount < maxSteps) {
       stepCount++;
 
-      try {
-        const chatCompletionRequest: OpenAI.Chat.Completions.ChatCompletionCreateParams =
+      const chatCompletionRequest: OpenAI.Chat.Completions.ChatCompletionCreateParams =
+        {
+          model,
+          messages,
+          tools: getToolDefinitions(),
+          tool_choice: "auto",
+          stream,
+        };
+      const chatCompletionRequestOptions: OpenAI.RequestOptions = {
+        headers: {
+          "User-Agent": "Archestra CLI Chat",
+          ...(chatId ? { "X-Archestra-Chat-Id": chatId } : {}),
+        },
+      };
+
+      let assistantMessage: OpenAI.Chat.Completions.ChatCompletionMessage;
+
+      if (stream) {
+        const response = await openai.chat.completions.create(
           {
-            model,
-            messages,
-            tools: getToolDefinitions(),
-            tool_choice: "auto",
-            stream,
-          };
-        const chatCompletionRequestOptions: OpenAI.RequestOptions = chatId
-          ? {
-              headers: {
-                "X-Archestra-Chat-Id": chatId,
-              },
-            }
-          : {};
+            ...chatCompletionRequest,
+            stream: true,
+          },
+          chatCompletionRequestOptions,
+        );
 
-        let assistantMessage;
+        assistantMessage = await getAssistantMessageFromStream(
+          response,
+          stepCount === 1,
+        );
+      } else {
+        const response = await openai.chat.completions.create(
+          {
+            ...chatCompletionRequest,
+            stream: false,
+          },
+          chatCompletionRequestOptions,
+        );
 
-        if (stream) {
-          const response = await openai.chat.completions.create(
-            {
-              ...chatCompletionRequest,
-              stream: true,
-            },
-            chatCompletionRequestOptions,
+        assistantMessage = response.choices[0].message;
+
+        // Only print if there's content or refusal to show (not for tool calls)
+        if (assistantMessage.content || assistantMessage.refusal) {
+          process.stdout.write(
+            `\nAssistant: ${assistantMessage.content || assistantMessage.refusal}`,
           );
-
-          // Accumulate the assistant message from chunks
-          let accumulatedContent = "";
-          const accumulatedToolCalls: any[] = [];
-          let streamError = false;
-
-          process.stdout.write("\nAssistant: ");
-
-          for await (const chunk of response) {
-            // Check for error events in the stream
-            if ("error" in chunk) {
-              const errorMessage =
-                (chunk.error as any)?.error?.message ||
-                "Tool invocation blocked by security policy";
-              process.stdout.write(
-                `\n[SECURITY POLICY BLOCKED] ${errorMessage}`,
-              );
-              streamError = true;
-              continueLoop = false;
-              break;
-            }
-
-            const delta = chunk.choices[0]?.delta;
-
-            if (delta?.content) {
-              accumulatedContent += delta.content;
-              process.stdout.write(delta.content);
-            }
-
-            if (delta?.tool_calls) {
-              for (const toolCallDelta of delta.tool_calls) {
-                const index = toolCallDelta.index;
-
-                // Initialize tool call if it doesn't exist
-                if (!accumulatedToolCalls[index]) {
-                  accumulatedToolCalls[index] = {
-                    id: toolCallDelta.id || "",
-                    type: "function",
-                    function: {
-                      name: "",
-                      arguments: "",
-                    },
-                  };
-                }
-
-                // Accumulate tool call fields
-                if (toolCallDelta.id) {
-                  accumulatedToolCalls[index].id = toolCallDelta.id;
-                }
-                if (toolCallDelta.function?.name) {
-                  accumulatedToolCalls[index].function.name =
-                    toolCallDelta.function.name;
-                }
-                if (toolCallDelta.function?.arguments) {
-                  accumulatedToolCalls[index].function.arguments +=
-                    toolCallDelta.function.arguments;
-                }
-              }
-            }
-          }
-
-          // Only construct message if there was no stream error
-          if (!streamError) {
-            // Construct the complete assistant message
-            assistantMessage = {
-              role: "assistant" as const,
-              content: accumulatedContent || null,
-              tool_calls:
-                accumulatedToolCalls.length > 0
-                  ? accumulatedToolCalls
-                  : undefined,
-            };
-          }
-        } else {
-          const response = await openai.chat.completions.create(
-            {
-              ...chatCompletionRequest,
-              stream: false,
-            },
-            chatCompletionRequestOptions,
-          );
-
-          assistantMessage = response.choices[0].message;
         }
+      }
 
-        // Only process message if it exists (might not exist if stream error)
-        if (!assistantMessage) {
-          break;
-        }
+      messages.push(assistantMessage);
 
-        messages.push(assistantMessage);
+      // Check if there are tool calls
+      if (
+        assistantMessage.tool_calls &&
+        assistantMessage.tool_calls.length > 0
+      ) {
+        // Execute each tool call
+        for (const toolCall of assistantMessage.tool_calls) {
+          let toolName: string;
+          let toolArgs: any;
 
-        // Check if there are tool calls
-        if (
-          assistantMessage.tool_calls &&
-          assistantMessage.tool_calls.length > 0
-        ) {
-          // Execute each tool call
-          for (const toolCall of assistantMessage.tool_calls) {
-            const toolName = toolCall.function.name;
-            const toolArgs = JSON.parse(toolCall.function.arguments);
-
-            if (debug) {
-              console.log(
-                `\n[DEBUG] Calling tool: ${toolName} with args:`,
-                toolArgs,
-              );
-            }
-
-            try {
-              const toolResult = await executeToolCall(
-                toolName,
-                toolArgs,
-                includeExternalEmail,
-                includeMaliciousEmail,
-              );
-
-              messages.push({
-                role: "tool",
-                tool_call_id: toolCall.id,
-                content: JSON.stringify(toolResult),
-              });
-
-              if (debug) {
-                console.log(`[DEBUG] Tool result:`, toolResult);
-              }
-            } catch (error) {
-              const errorMessage =
-                error instanceof Error ? error.message : String(error);
-              messages.push({
-                role: "tool",
-                tool_call_id: toolCall.id,
-                content: JSON.stringify({ error: errorMessage }),
-              });
-
-              if (debug) {
-                console.error(`[DEBUG] Tool error:`, errorMessage);
-              }
-            }
+          if (toolCall.type === "function") {
+            toolName = toolCall.function.name;
+            toolArgs = JSON.parse(toolCall.function.arguments);
+          } else {
+            toolName = toolCall.custom.name;
+            toolArgs = JSON.parse(toolCall.custom.input);
           }
-        } else {
-          // Only print if we're not streaming (streaming already printed the content)
-          if (!stream) {
-            process.stdout.write(`\nAssistant: ${assistantMessage.content}`);
-          }
-          continueLoop = false;
-        }
-      } catch (error: any) {
-        // Handle backend guardrails errors (403, etc.)
-        if (error.status === 403) {
-          const errorMessage =
-            error.error?.message ||
-            error.message ||
-            "Tool invocation blocked by security policy";
 
           if (debug) {
-            console.error(
-              "\n[DEBUG] 403 Error details:",
-              JSON.stringify(error, null, 2),
+            console.log(
+              `\n[DEBUG] Calling tool: ${toolName} with args:`,
+              toolArgs,
             );
           }
 
-          process.stdout.write(`\n[SECURITY POLICY BLOCKED] ${errorMessage}`);
+          try {
+            const toolResult = await executeToolCall(
+              toolName,
+              toolArgs,
+              includeExternalEmail,
+              includeMaliciousEmail,
+            );
 
-          /**
-           * Remove the last user message to prevent the LLM from retrying the same blocked request
-           * The LLM doesn't see that the request was blocked, so it will keep trying
-           *
-           * In a real agentic app, the application would need to handle this case gracefully..
-           */
-          messages.pop();
+            messages.push({
+              role: "tool",
+              tool_call_id: toolCall.id,
+              content: JSON.stringify(toolResult),
+            });
 
-          continueLoop = false;
-          break;
+            if (debug) {
+              console.log(`[DEBUG] Tool result:`, toolResult);
+            }
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            messages.push({
+              role: "tool",
+              tool_call_id: toolCall.id,
+              content: JSON.stringify({ error: errorMessage }),
+            });
+
+            if (debug) {
+              console.error(`[DEBUG] Tool error:`, errorMessage);
+            }
+          }
         }
-        // Re-throw other errors
-        throw error;
+      } else {
+        // No tool calls, stop the loop
+        continueLoop = false;
       }
     }
 
@@ -532,7 +511,8 @@ Some examples:
   }
 };
 
-cliChatWithGuardrails().catch((_error) => {
-  console.log("\n\nBye!");
+cliChatWithGuardrails().catch((error) => {
+  console.error("\n\nError:", error);
+  console.log("Bye!");
   process.exit(0);
 });
