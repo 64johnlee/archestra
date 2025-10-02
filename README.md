@@ -1,6 +1,10 @@
 # Archestra Platform (alpha)
 
 <div align="center">
+<img src="/docs/assets/trifecta.png" alt="Trifecta" width="500" />
+</div>
+
+<div align="center">
 
 [![License](https://img.shields.io/github/license/archestra-ai/archestra)](LICENSE)
 <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/archestra-ai/archestra"/>
@@ -22,8 +26,6 @@ A lightweight pluggable proxy bringing fine-grained guardrails to mitigate the L
 - **Supports MCP, A2A, structured output, custom tool calls**
 - **Guardrails**
 - **Lightweight**
-
-<img src="/docs/assets/trifecta.png" alt="Trifecta" width="600" />
 
 The Lethal Trifecta: [Simon Willison](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/), [The Economist](https://www.economist.com/leaders/2025/09/25/how-to-stop-ais-lethal-trifecta)
 
