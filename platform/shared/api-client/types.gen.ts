@@ -836,6 +836,216 @@ export type GetChatResponses = {
 
 export type GetChatResponse = GetChatResponses[keyof GetChatResponses];
 
+export type DeleteApiProxyOpenaiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/proxy/openai/';
+};
+
+export type DeleteApiProxyOpenaiResponses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type GetApiProxyOpenaiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/proxy/openai/';
+};
+
+export type GetApiProxyOpenaiResponses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type HeadApiProxyOpenaiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/proxy/openai/';
+};
+
+export type HeadApiProxyOpenaiResponses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type OptionsApiProxyOpenaiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/proxy/openai/';
+};
+
+export type OptionsApiProxyOpenaiResponses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type PatchApiProxyOpenaiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/proxy/openai/';
+};
+
+export type PatchApiProxyOpenaiResponses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type PostApiProxyOpenaiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/proxy/openai/';
+};
+
+export type PostApiProxyOpenaiResponses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type PutApiProxyOpenaiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/proxy/openai/';
+};
+
+export type PutApiProxyOpenaiResponses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type DeleteApiProxyOpenaiBy__Data = {
+    body?: never;
+    path: {
+        '*': string;
+    };
+    query?: never;
+    url: '/api/proxy/openai/{*}';
+};
+
+export type DeleteApiProxyOpenaiBy__Responses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type GetApiProxyOpenaiBy__Data = {
+    body?: never;
+    path: {
+        '*': string;
+    };
+    query?: never;
+    url: '/api/proxy/openai/{*}';
+};
+
+export type GetApiProxyOpenaiBy__Responses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type HeadApiProxyOpenaiBy__Data = {
+    body?: never;
+    path: {
+        '*': string;
+    };
+    query?: never;
+    url: '/api/proxy/openai/{*}';
+};
+
+export type HeadApiProxyOpenaiBy__Responses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type OptionsApiProxyOpenaiBy__Data = {
+    body?: never;
+    path: {
+        '*': string;
+    };
+    query?: never;
+    url: '/api/proxy/openai/{*}';
+};
+
+export type OptionsApiProxyOpenaiBy__Responses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type PatchApiProxyOpenaiBy__Data = {
+    body?: never;
+    path: {
+        '*': string;
+    };
+    query?: never;
+    url: '/api/proxy/openai/{*}';
+};
+
+export type PatchApiProxyOpenaiBy__Responses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type PostApiProxyOpenaiBy__Data = {
+    body?: never;
+    path: {
+        '*': string;
+    };
+    query?: never;
+    url: '/api/proxy/openai/{*}';
+};
+
+export type PostApiProxyOpenaiBy__Responses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
+export type PutApiProxyOpenaiBy__Data = {
+    body?: never;
+    path: {
+        '*': string;
+    };
+    query?: never;
+    url: '/api/proxy/openai/{*}';
+};
+
+export type PutApiProxyOpenaiBy__Responses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
+
 export type OpenAiChatCompletionsData = {
     /**
      * https://github.com/openai/openai-node/blob/v6.0.0/src/resources/chat/completions/completions.ts#L1487

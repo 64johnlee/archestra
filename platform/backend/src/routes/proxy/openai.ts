@@ -91,8 +91,6 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
             [];
 
           for await (const chunk of stream) {
-            console.log("chunk", JSON.stringify(chunk, null, 2));
-
             const delta = chunk.choices[0]?.delta;
 
             // Accumulate content
