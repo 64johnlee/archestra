@@ -37,7 +37,6 @@ const extractToolNameFromHistory = async (
 export const evaluatePolicies = async (
   messages: ChatCompletionRequestMessages,
   chatId: string,
-  agentId: string,
 ) => {
   for (const message of messages) {
     if (message.role === "tool") {
@@ -50,17 +49,46 @@ export const evaluatePolicies = async (
 
       if (toolName) {
         // Evaluate trusted data policy
-        const { isTrusted, trustReason } =
-          await TrustedDataPolicyModel.evaluate(agentId, toolName, toolResult);
+        const { isTrusted, isBlocked, reason } =
+          await TrustedDataPolicyModel.evaluate(chatId, toolName, toolResult);
 
-        // Store tool result as interaction (tainted if not trusted)
+        // Store tool result as interaction
         await InteractionModel.create({
           chatId,
           content: message,
-          tainted: !isTrusted,
-          taintReason: trustReason,
+          trusted: isTrusted,
+          blocked: isBlocked,
+          reason,
         });
       }
     }
   }
+};
+
+/**
+ * Filter out blocked tool results from the context
+ *
+ * This function removes tool response messages that have been marked as blocked
+ * by trusted data policies, preventing the LLM from seeing potentially malicious data
+ */
+export const filterOutBlockedData = async (
+  chatId: string,
+  messages: ChatCompletionRequestMessages,
+): Promise<ChatCompletionRequestMessages> => {
+  // Get blocked tool call IDs from interactions
+  const blockedToolCallIds =
+    await InteractionModel.getBlockedToolCallIds(chatId);
+
+  // If no blocked interactions, return messages as-is
+  if (blockedToolCallIds.size === 0) {
+    return messages;
+  }
+
+  // Filter out messages with blocked tool_call_ids
+  return messages.filter((message) => {
+    if (message.role === "tool" && message.tool_call_id) {
+      return !blockedToolCallIds.has(message.tool_call_id);
+    }
+    return true;
+  });
 };

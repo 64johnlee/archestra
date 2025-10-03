@@ -4,11 +4,6 @@ import db, { schema } from "../database";
 import type { AutonomyPolicyOperator, TrustedData } from "../types";
 import ToolModel from "./tool";
 
-type EvaluationResult = {
-  isTrusted: boolean;
-  trustReason: string;
-};
-
 class TrustedDataPolicyModel {
   static async create(
     policy: TrustedData.InsertTrustedDataPolicy,
@@ -120,21 +115,26 @@ class TrustedDataPolicyModel {
   }
 
   /**
-   * Evaluate trusted data policies for an agent
+   * Evaluate trusted data policies for a chat
    *
    * KEY SECURITY PRINCIPLE: Data is UNTRUSTED by default.
    * - Only data that explicitly matches a trusted data policy is considered safe
-   * - If no policy matches, the data is considered tainted
+   * - If no policy matches, the data is considered untrusted
    * - This implements an allowlist approach for maximum security
+   * - Policies with action='block_always' take precedence and mark data as blocked
    */
   static async evaluate(
-    agentId: string,
+    chatId: string,
     toolName: string,
     // biome-ignore lint/suspicious/noExplicitAny: tool outputs can be any shape
     toolOutput: any,
-  ): Promise<EvaluationResult> {
+  ): Promise<{
+    isTrusted: boolean;
+    isBlocked: boolean;
+    reason: string;
+  }> {
     /**
-     * Get policies assigned to this agent that also match the tool name,
+     * Get policies assigned to the agent (via chat) that also match the tool name,
      * along with the tool's configuration
      */
     const applicablePoliciesForAgent = await db
@@ -142,7 +142,14 @@ class TrustedDataPolicyModel {
         ...getTableColumns(schema.trustedDataPoliciesTable),
         dataIsTrustedByDefault: schema.toolsTable.dataIsTrustedByDefault,
       })
-      .from(schema.agentTrustedDataPoliciesTable)
+      .from(schema.chatsTable)
+      .innerJoin(
+        schema.agentTrustedDataPoliciesTable,
+        eq(
+          schema.chatsTable.agentId,
+          schema.agentTrustedDataPoliciesTable.agentId,
+        ),
+      )
       .innerJoin(
         schema.trustedDataPoliciesTable,
         eq(
@@ -156,7 +163,7 @@ class TrustedDataPolicyModel {
       )
       .where(
         and(
-          eq(schema.agentTrustedDataPoliciesTable.agentId, agentId),
+          eq(schema.chatsTable.id, chatId),
           eq(schema.toolsTable.name, toolName),
         ),
       );
@@ -175,51 +182,92 @@ class TrustedDataPolicyModel {
       if (tool?.dataIsTrustedByDefault) {
         return {
           isTrusted: true,
-          trustReason: `Tool ${toolName} is configured to trust data by default`,
+          isBlocked: false,
+          reason: `Tool ${toolName} is configured to trust data by default`,
         };
       }
 
       return {
         isTrusted: false,
-        trustReason: `No trust policy defined for tool ${toolName} - data is untrusted by default`,
+        isBlocked: false,
+        reason: `No trust policy defined for tool ${toolName} - data is untrusted by default`,
       };
     }
 
-    // Check if ANY policy marks this data as trusted
+    // First, check if ANY policy blocks this data (blocked policies take precedence)
     for (const {
       attributePath,
       operator,
       value: policyValue,
       description,
+      action,
     } of applicablePoliciesForAgent) {
-      // Extract values from the tool output using the attribute path
-      const outputValue = toolOutput?.value || toolOutput;
-      const values = TrustedDataPolicyModel.extractValuesFromPath(
-        outputValue,
-        attributePath,
-      );
+      if (action === "block_always") {
+        // Extract values from the tool output using the attribute path
+        const outputValue = toolOutput?.value || toolOutput;
+        const values = TrustedDataPolicyModel.extractValuesFromPath(
+          outputValue,
+          attributePath,
+        );
 
-      // For trusted data policies, ALL extracted values must meet the condition
-      let allValuesTrusted = values.length > 0;
-      for (const value of values) {
-        if (
-          !TrustedDataPolicyModel.evaluateCondition(
-            value,
-            operator,
-            policyValue,
-          )
-        ) {
-          allValuesTrusted = false;
-          break;
+        // For blocked policies, if ANY extracted value meets the condition, data is blocked
+        for (const value of values) {
+          if (
+            TrustedDataPolicyModel.evaluateCondition(
+              value,
+              operator,
+              policyValue,
+            )
+          ) {
+            return {
+              isTrusted: false,
+              isBlocked: true,
+              reason: `Data blocked by policy: ${description}`,
+            };
+          }
         }
       }
+    }
 
-      if (allValuesTrusted) {
-        // At least one policy trusts this data
-        return {
-          isTrusted: true,
-          trustReason: `Data trusted by policy: ${description}`,
-        };
+    // Check if ANY policy marks this data as trusted (only if not blocked)
+    for (const {
+      attributePath,
+      operator,
+      value: policyValue,
+      description,
+      action,
+    } of applicablePoliciesForAgent) {
+      if (action === "allow") {
+        // Extract values from the tool output using the attribute path
+        const outputValue = toolOutput?.value || toolOutput;
+        const values = TrustedDataPolicyModel.extractValuesFromPath(
+          outputValue,
+          attributePath,
+        );
+
+        // For trusted data policies, ALL extracted values must meet the condition
+        let allValuesTrusted = values.length > 0;
+        for (const value of values) {
+          if (
+            !TrustedDataPolicyModel.evaluateCondition(
+              value,
+              operator,
+              policyValue,
+            )
+          ) {
+            allValuesTrusted = false;
+            break;
+          }
+        }
+
+        if (allValuesTrusted) {
+          // At least one policy trusts this data
+          return {
+            isTrusted: true,
+            isBlocked: false,
+            reason: `Data trusted by policy: ${description}`,
+          };
+        }
       }
     }
 
@@ -227,14 +275,15 @@ class TrustedDataPolicyModel {
     if (dataIsTrustedByDefault) {
       return {
         isTrusted: true,
-        trustReason: `Tool ${toolName} is configured to trust data by default`,
+        isBlocked: false,
+        reason: `Tool ${toolName} is configured to trust data by default`,
       };
     }
 
     return {
       isTrusted: false,
-      trustReason:
-        "Data does not match any trust policies - considered tainted",
+      isBlocked: false,
+      reason: "Data does not match any trust policies - considered untrusted",
     };
   }
 }

@@ -188,9 +188,12 @@ The backend integrates advanced security guardrails:
   - Tools can be configured with:
     - `allow_usage_when_untrusted_data_is_present`: Allow tool to run with untrusted data
     - `data_is_trusted_by_default`: Mark tool outputs as trusted by default
-- **Trusted Data Policies**: Mark specific data patterns as trusted sources
+- **Trusted Data Policies**: Mark specific data patterns as trusted or blocked
   - Uses attribute paths to identify data fields
   - Same operator support as invocation policies
+  - Actions: 
+    - `allow`: Mark data as trusted
+    - `block_always`: Prevent data from reaching LLM (blocked data is filtered out before sending to the model)
 - **Taint Analysis**: Tracks untrusted data through the system
 - **Database Persistence**: All chats and interactions stored in PostgreSQL
 
@@ -198,15 +201,18 @@ The backend integrates advanced security guardrails:
 
 - **Agent**: Stores AI agents with name and timestamps
 - **Chat**: Stores chat sessions with timestamps and agent reference
-- **Interaction**: Stores messages with taint status and reasoning
+- **Interaction**: Stores messages with trust status, blocked flag, and reasoning
+  - `trusted`: Boolean indicating if data is trusted (inverse of old "tainted" field)
+  - `blocked`: Boolean indicating if data was blocked by policies
+  - `reason`: Text explaining trust/block decision (renamed from "taint_reason")
 - **Tool**: Stores available tools with metadata and trust configuration
 - **ToolInvocationPolicy**: Policies for controlling tool usage
   - Links to tools and agents
   - Stores argument path, operator, value, action, and reason
-- **TrustedDataPolicy**: Policies for marking data as trusted
-  - Stores attribute path, operator, and value
+- **TrustedDataPolicy**: Policies for marking data as trusted or blocked
+  - Stores attribute path, operator, value, and action ("allow" or "block_always")
 - **AgentToolInvocationPolicy**: Junction table linking agents to their policies
-- Supports taint tracking for security analysis
+- Supports trust tracking and data blocking for security analysis
 
 ### Experiments Workspace
 
