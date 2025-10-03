@@ -280,12 +280,11 @@ export type GetAgentToolInvocationPoliciesResponses = {
     200: Array<{
         id: string;
         toolId: string;
-        description: string;
         argumentName: string;
         operator: string;
         value: string;
         action: string;
-        blockPrompt: string | null;
+        reason: string | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -1511,12 +1510,103 @@ export type GetToolsResponses = {
             [key: string]: unknown;
         };
         description: string | null;
+        allowUsageWhenUntrustedDataIsPresent: boolean;
+        dataIsTrustedByDefault: boolean;
         createdAt: string;
         updatedAt: string;
     }>;
 };
 
 export type GetToolsResponse = GetToolsResponses[keyof GetToolsResponses];
+
+export type UpdateToolData = {
+    body?: {
+        id?: string;
+        agentId?: string;
+        name?: string;
+        /**
+         *
+         * https://github.com/openai/openai-node/blob/master/src/resources/shared.ts#L217
+         *
+         * The parameters the functions accepts, described as a JSON Schema object. See the
+         * [guide](https://platform.openai.com/docs/guides/function-calling) for examples,
+         * and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/) for
+         * documentation about the format.
+         *
+         * Omitting parameters defines a function with an empty parameter list.
+         *
+         */
+        parameters?: {
+            [key: string]: unknown;
+        };
+        description?: string | null;
+        allowUsageWhenUntrustedDataIsPresent?: boolean;
+        dataIsTrustedByDefault?: boolean;
+        createdAt?: unknown;
+        updatedAt?: unknown;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/tools/{id}';
+};
+
+export type UpdateToolErrors = {
+    /**
+     * Default Response
+     */
+    404: {
+        error: string | {
+            message: string;
+            type: string;
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: string | {
+            message: string;
+            type: string;
+        };
+    };
+};
+
+export type UpdateToolError = UpdateToolErrors[keyof UpdateToolErrors];
+
+export type UpdateToolResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        agentId: string;
+        name: string;
+        /**
+         *
+         * https://github.com/openai/openai-node/blob/master/src/resources/shared.ts#L217
+         *
+         * The parameters the functions accepts, described as a JSON Schema object. See the
+         * [guide](https://platform.openai.com/docs/guides/function-calling) for examples,
+         * and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/) for
+         * documentation about the format.
+         *
+         * Omitting parameters defines a function with an empty parameter list.
+         *
+         */
+        parameters?: {
+            [key: string]: unknown;
+        };
+        description: string | null;
+        allowUsageWhenUntrustedDataIsPresent: boolean;
+        dataIsTrustedByDefault: boolean;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type UpdateToolResponse = UpdateToolResponses[keyof UpdateToolResponses];
 
 export type GetOperatorsData = {
     body?: never;
@@ -1565,12 +1655,11 @@ export type GetToolInvocationPoliciesResponses = {
     200: Array<{
         id: string;
         toolId: string;
-        description: string;
         argumentName: string;
         operator: string;
         value: string;
         action: string;
-        blockPrompt: string | null;
+        reason: string | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -1581,12 +1670,11 @@ export type GetToolInvocationPoliciesResponse = GetToolInvocationPoliciesRespons
 export type CreateToolInvocationPolicyData = {
     body: {
         toolId: string;
-        description: string;
         argumentName: string;
         operator: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
         value: string;
         action: 'allow_when_context_is_untrusted' | 'block_always';
-        blockPrompt?: string | null;
+        reason?: string | null;
     };
     path?: never;
     query?: never;
@@ -1614,12 +1702,11 @@ export type CreateToolInvocationPolicyResponses = {
     200: {
         id: string;
         toolId: string;
-        description: string;
         argumentName: string;
         operator: string;
         value: string;
         action: string;
-        blockPrompt: string | null;
+        reason: string | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -1709,12 +1796,11 @@ export type GetToolInvocationPolicyResponses = {
     200: {
         id: string;
         toolId: string;
-        description: string;
         argumentName: string;
         operator: string;
         value: string;
         action: string;
-        blockPrompt: string | null;
+        reason: string | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -1725,12 +1811,11 @@ export type GetToolInvocationPolicyResponse = GetToolInvocationPolicyResponses[k
 export type UpdateToolInvocationPolicyData = {
     body?: {
         toolId?: string;
-        description?: string;
         argumentName?: string;
         operator?: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
         value?: string;
         action?: 'allow_when_context_is_untrusted' | 'block_always';
-        blockPrompt?: string | null;
+        reason?: string | null;
     };
     path: {
         id: string;
@@ -1769,12 +1854,11 @@ export type UpdateToolInvocationPolicyResponses = {
     200: {
         id: string;
         toolId: string;
-        description: string;
         argumentName: string;
         operator: string;
         value: string;
         action: string;
-        blockPrompt: string | null;
+        reason: string | null;
         createdAt: string;
         updatedAt: string;
     };
