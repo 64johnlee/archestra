@@ -1,4 +1,4 @@
-import { InteractionModel, TrustedDataPolicyModel } from "../../../models";
+import { InteractionModel, TrustedDataPolicyModel } from "@models";
 import type { ChatCompletionRequestMessages } from "../types";
 
 /**

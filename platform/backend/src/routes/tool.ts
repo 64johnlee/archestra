@@ -1,12 +1,12 @@
-import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
-import { z } from "zod";
-import { ToolModel } from "../models";
+import { ToolModel } from "@models";
 import {
   ErrorResponseSchema,
   SelectToolSchema,
   UpdateToolSchema,
   UuidIdSchema,
-} from "../types";
+} from "@types";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { z } from "zod";
 
 const toolRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get(

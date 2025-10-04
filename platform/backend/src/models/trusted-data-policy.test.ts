@@ -1,5 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
-import type { Tool } from "../types";
+import type { Tool } from "@types";
 import AgentModel from "./agent";
 import ChatModel from "./chat";
 import ToolModel from "./tool";

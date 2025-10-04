@@ -17,7 +17,7 @@ import type {
  *
  * This is a bit of a hack for now to avoid having to have a duplicate .env file in the backend subdirectory
  */
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+dotenv.config({ path: path.resolve(__dirname, "../../.env"), quiet: true });
 
 const BACKEND_URL = "http://localhost:9000";
 

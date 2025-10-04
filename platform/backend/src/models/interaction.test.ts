@@ -1,5 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
-import type { InteractionContent } from "../types";
+import type { InteractionContent } from "@types";
 import AgentModel from "./agent";
 import ChatModel from "./chat";
 import InteractionModel from "./interaction";

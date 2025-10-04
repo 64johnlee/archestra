@@ -1,3 +1,4 @@
+import type { ToolParametersContent } from "@types";
 import {
   boolean,
   jsonb,
@@ -6,7 +7,6 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { ToolParametersContent } from "../../types";
 import agentsTable from "./agent";
 
 const toolsTable = pgTable("tools", {

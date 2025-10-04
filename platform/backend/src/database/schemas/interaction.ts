@@ -1,3 +1,4 @@
+import type { InteractionContent } from "@types";
 import {
   boolean,
   index,
@@ -7,7 +8,6 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { InteractionContent } from "../../types";
 import chatsTable from "./chat";
 
 const interactionsTable = pgTable(

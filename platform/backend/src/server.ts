@@ -1,3 +1,4 @@
+import config from "@config";
 import fastifyCors from "@fastify/cors";
 import fastifySwagger from "@fastify/swagger";
 import Fastify from "fastify";
@@ -8,12 +9,7 @@ import {
   validatorCompiler,
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
-import config from "./config";
-import agentRoutes from "./routes/agent";
-import autonomyPolicyRoutes from "./routes/autonomy-policies";
-import chatRoutes from "./routes/chat";
-import openAiProxyRoutes from "./routes/proxy/openai";
-import toolRoutes from "./routes/tool";
+import * as routes from "./routes";
 
 const {
   api: { port, name, version, host },
@@ -77,11 +73,11 @@ const start = async () => {
       version,
     }));
 
-    fastify.register(agentRoutes);
-    fastify.register(chatRoutes);
-    fastify.register(openAiProxyRoutes);
-    fastify.register(toolRoutes);
-    fastify.register(autonomyPolicyRoutes);
+    fastify.register(routes.agentRoutes);
+    fastify.register(routes.chatRoutes);
+    fastify.register(routes.openAiProxyRoutes);
+    fastify.register(routes.toolRoutes);
+    fastify.register(routes.autonomyPolicyRoutes);
 
     await fastify.listen({ port, host });
     fastify.log.info(`${name} started on port ${port}`);
