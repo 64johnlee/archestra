@@ -101,7 +101,7 @@ jobs:
   build-and-push-platform-docker-image-to-dockerhub:
     name: Build and push platform Docker image to Docker Hub
     if: needs.release-please.outputs.platform_release_created
-    uses: ./.github/workflows/build-and-push-image-to-dockerhub.yml
+    uses: ./.github/workflows/build-dockerhub-image.yml
     needs:
       - release-please
     permissions:

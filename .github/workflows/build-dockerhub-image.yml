@@ -8,11 +8,6 @@ on:
         description: "Directory containing the Dockerfile"
         required: true
         type: string
-      org_namespace:
-        description: "Organization namespace for the Docker image"
-        required: false
-        type: string
-        default: archestra
       image_name:
         description: "Name of the Docker image"
         required: true
@@ -58,7 +53,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
         with:
-          images: ${{ inputs.org_namespace }}/${{ inputs.image_name }}
+          images: archestra/${{ inputs.image_name }}
 
       - name: Build and push Docker image
         id: push
@@ -73,6 +68,6 @@ jobs:
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
         with:
-          subject-name: index.docker.io/${{ inputs.org_namespace }}/${{ inputs.image_name }}
+          subject-name: index.docker.io/archestra/${{ inputs.image_name }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: ${{ inputs.push_image }}
