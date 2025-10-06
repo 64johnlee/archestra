@@ -268,3 +268,75 @@ The `experiments/` workspace contains prototype features:
 - Use workspace-relative imports within each workspace
 - Run `pnpm type-check` before committing to catch type errors
 - Use `tilt up` for the best development experience with hot reload
+
+### Release Process
+
+The platform uses [release-please](https://github.com/googleapis/release-please) for automated release management:
+
+- **Version**: Currently at v0.0.0 (initial version)
+- **Release PRs**: Automatically created when conventional commits are merged
+- **Platform Releases**: When a platform release is merged:
+  1. Docker image is built and published to DockerHub (archestra/platform)
+  2. Helm chart is published to Google Artifact Registry
+- **Changelog**: Maintained in `platform/CHANGELOG.md`
+- **Release Configuration**: See `.github/release-please/release-please-config.json`
+- **Release Manifest**: See `.github/release-please/.release-please-manifest.json`
+
+#### Release Workflow Details
+
+The release process is triggered automatically when:
+1. Conventional commits are merged to main
+2. Release-please creates a PR with version bumps
+3. When the release PR is merged, the following happens:
+   - Platform Docker image is built from `platform/` directory
+   - Image is pushed to DockerHub with the new version tag
+   - Helm chart (from `platform/helm/`) is packaged and pushed to GAR
+
+The release workflow (`release-please.yml`) monitors both `desktop_app` and `platform` packages:
+- Outputs separate release states: `platform_release_created` and `desktop_release_created`
+- Platform releases trigger:
+  - `build-and-push-platform-docker-image-to-dockerhub` job
+  - `publish-platform-helm-chart` job
+- Desktop releases remain unchanged
+
+#### Docker Image Publishing
+
+The platform Docker image is published to DockerHub:
+- **Repository**: `archestra/platform`
+- **Build Context**: `./platform` directory
+- **Triggered by**: Platform releases from release-please
+- **Version Tags**: Uses the platform version from release-please output
+- **Workflow**: `.github/workflows/build-dockerhub-image.yml`
+- **Authentication**: Requires `DOCKER_USERNAME` and `DOCKER_PASSWORD` secrets
+- **Build Features**:
+  - Multi-stage builds supported via Dockerfile
+  - Metadata extraction for tags and labels
+  - Artifact attestation for provenance tracking
+  - Optional push based on workflow inputs
+
+#### Helm Chart
+
+The platform includes a production-ready Helm chart for Kubernetes deployments:
+- **Location**: `platform/helm/`
+- **Chart Name**: archestra-platform
+- **Version**: Automatically set from release-please output
+- **Features**: 
+  - Deployment with configurable replicas
+  - Service (ClusterIP by default)
+  - Optional Ingress with TLS support
+  - Optional HorizontalPodAutoscaler
+  - ServiceAccount with annotations support
+  - Configurable resource limits and requests
+  - Liveness and readiness probes
+  - Environment variables and secrets management
+  - Security context configuration
+  - Node selector and tolerations support
+- **Values**: Configurable via `values.yaml`
+- **Publishing**:
+  - **Repository**: `oci://europe-west1-docker.pkg.dev/friendly-path-465518-r6/archestra-public/helm-charts`
+  - **Authentication**: Google Artifact Registry via Workload Identity Federation
+  - **Workflow**: `.github/workflows/publish-platform-helm-chart.yml`
+- **Testing**: 
+  - Helm lint validation in CI
+  - Helm unit tests via helm-unittest plugin
+  - Basic connectivity test included in `tests/`
