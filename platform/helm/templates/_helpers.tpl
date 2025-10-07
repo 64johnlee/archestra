@@ -51,12 +51,31 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use
+Environment variables for the Archestra Platform container
 */}}
-{{- define "archestra-platform.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "archestra-platform.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+{{- define "archestra-platform.env" -}}
+- name: DATABASE_URL
+  value: {{ if .Values.postgresql.external_database_url }}{{ .Values.postgresql.external_database_url }}{{ else }}postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ include "archestra-platform.fullname" . }}-postgresql:5432/{{ .Values.postgresql.auth.database }}{{ end }}
 {{- end }}
+
+{{/*
+PostgreSQL host for database connectivity checks
+*/}}
+{{- define "archestra-platform.postgresql.host" -}}
+{{- if .Values.postgresql.external_database_url -}}
+{{- regexReplaceAll "^postgresql://[^@]+@([^:/]+).*$" .Values.postgresql.external_database_url "${1}" -}}
+{{- else -}}
+{{- include "archestra-platform.fullname" . }}-postgresql
+{{- end -}}
+{{- end }}
+
+{{/*
+PostgreSQL port for database connectivity checks
+*/}}
+{{- define "archestra-platform.postgresql.port" -}}
+{{- if .Values.postgresql.external_database_url -}}
+{{- regexReplaceAll "^postgresql://[^@]+@[^:]+:([0-9]+).*$" .Values.postgresql.external_database_url "${1}" -}}
+{{- else -}}
+5432
+{{- end -}}
 {{- end }}
