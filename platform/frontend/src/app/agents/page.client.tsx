@@ -104,7 +104,11 @@ function Agents({ initialData }: { initialData: GetAgentsResponses["200"] }) {
                       {agent.id}
                     </TableCell>
                     <TableCell>
-                      {new Date(agent.createdAt).toLocaleDateString()}
+                      {new Date(agent.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "numeric",
+                        day: "numeric",
+                      })}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
