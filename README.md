@@ -1,4 +1,4 @@
-# Archestra Platform (alpha)
+# Archestra Platform
 
 <div align="center">
 <img src="/docs/assets/trifecta.png" alt="Trifecta" width="500" />
