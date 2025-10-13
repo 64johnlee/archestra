@@ -1,7 +1,7 @@
 # Archestra Platform
 
 <div align="center">
-<img src="/docs/assets/trifecta.png" alt="Trifecta" width="500" />
+<img src="/docs/assets/trifecta.png" alt="Trifecta" />
 </div>
 
 <div align="center">
