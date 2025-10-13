@@ -165,6 +165,37 @@ const ChatBotDemo = ({
                     )}
 
                   {message.parts.map((part, i) => {
+                    // Skip tool result parts that immediately follow a tool invocation with same toolCallId
+                    if (
+                      (part.type === "dynamic-tool" ||
+                        part.type === "tool-invocation") &&
+                      part.state === "output-available" &&
+                      i > 0
+                    ) {
+                      const prevPart = message.parts[i - 1];
+                      if (
+                        (prevPart.type === "dynamic-tool" ||
+                          prevPart.type === "tool-invocation") &&
+                        prevPart.state === "input-available" &&
+                        prevPart.toolCallId === part.toolCallId
+                      ) {
+                        return null;
+                      }
+                    }
+
+                    // Skip dual-llm-analysis parts that follow a tool (invocation or result)
+                    // They will be rendered together with the tool
+                    if (_isDualLlmPart(part) && i > 0) {
+                      const prevPart = message.parts[i - 1];
+                      if (
+                        prevPart.type === "dynamic-tool" ||
+                        ("type" in prevPart &&
+                          prevPart.type === "tool-invocation")
+                      ) {
+                        return null;
+                      }
+                    }
+
                     switch (part.type) {
                       case "text":
                         return (
@@ -230,6 +261,33 @@ const ChatBotDemo = ({
                           return "";
                         };
 
+                        // Look ahead for tool result and dual LLM analysis
+                        let toolResultPart = null;
+                        let dualLlmPart: DualLlmPart | null = null;
+
+                        // Check if next part is a tool result (same tool call ID)
+                        const nextPart = message.parts[i + 1];
+                        if (
+                          nextPart &&
+                          (nextPart.type === "dynamic-tool" ||
+                            nextPart.type === "tool-invocation") &&
+                          nextPart.state === "output-available" &&
+                          nextPart.toolCallId === part.toolCallId
+                        ) {
+                          toolResultPart = nextPart;
+
+                          // Check if there's a dual LLM part after the tool result
+                          const dualLlmPartCandidate = message.parts[i + 2];
+                          if (_isDualLlmPart(dualLlmPartCandidate)) {
+                            dualLlmPart = dualLlmPartCandidate;
+                          }
+                        } else {
+                          // Check if the next part is directly a dual LLM analysis
+                          if (_isDualLlmPart(nextPart)) {
+                            dualLlmPart = nextPart;
+                          }
+                        }
+
                         return (
                           <Tool
                             key={`${message.id}-${part.toolCallId}`}
@@ -237,7 +295,13 @@ const ChatBotDemo = ({
                           >
                             <ToolHeader
                               type={`tool-${toolName}`}
-                              state={part.state}
+                              state={
+                                dualLlmPart
+                                  ? "output-available-dual-llm"
+                                  : toolResultPart
+                                    ? "output-available"
+                                    : part.state
+                              }
                               icon={getIcon()}
                             />
                             <ToolContent>
@@ -245,10 +309,47 @@ const ChatBotDemo = ({
                               Object.keys(part.input).length > 0 ? (
                                 <ToolInput input={part.input} />
                               ) : null}
-                              <ToolOutput
-                                output={part.output}
-                                errorText={part.errorText}
-                              />
+                              {toolResultPart && (
+                                <ToolOutput
+                                  label={
+                                    toolResultPart.errorText
+                                      ? "Error"
+                                      : dualLlmPart
+                                        ? "Unsafe Result"
+                                        : "Result"
+                                  }
+                                  output={toolResultPart.output as unknown}
+                                  errorText={toolResultPart.errorText}
+                                />
+                              )}
+                              {!toolResultPart && Boolean(part.output) && (
+                                <ToolOutput
+                                  label={
+                                    part.errorText
+                                      ? "Error"
+                                      : dualLlmPart
+                                        ? "Unsafe Result"
+                                        : "Result"
+                                  }
+                                  output={part.output as unknown}
+                                  errorText={part.errorText}
+                                />
+                              )}
+                              {dualLlmPart && (
+                                <>
+                                  <ToolOutput
+                                    label="Safe Result"
+                                    output={dualLlmPart.safeResult}
+                                  />
+                                  <ToolOutput
+                                    label="Questions and Answers"
+                                    output={undefined}
+                                    conversations={dualLlmPart.conversations.slice(
+                                      1,
+                                    )}
+                                  />
+                                </>
+                              )}
                             </ToolContent>
                           </Tool>
                         );
@@ -270,10 +371,8 @@ const ChatBotDemo = ({
                         );
                       default: {
                         // Handle custom blocked-tool type
-                        // @ts-expect-error - Custom Archestrapart type not in base UIMessage
-                        if (part.type === "blocked-tool") {
-                          const blockedPart =
-                            part as unknown as BlockedToolPart;
+                        if (_isBlockedToolPart(part)) {
+                          const blockedPart = part as BlockedToolPart;
                           return (
                             <div
                               key={`${message.id}-${i}`}
@@ -310,6 +409,39 @@ const ChatBotDemo = ({
                                 </div>
                               </div>
                             </div>
+                          );
+                        }
+
+                        // Handle custom dual-llm-analysis type (standalone, not following a tool)
+                        if (_isDualLlmPart(part)) {
+                          const dualLlmPart = part as DualLlmPart;
+
+                          return (
+                            <Tool
+                              key={`${message.id}-dual-llm-${i}`}
+                              className="bg-sky-400/20"
+                            >
+                              <ToolHeader
+                                type="tool-dual-llm-action"
+                                state="output-available-dual-llm"
+                                icon={
+                                  <ShieldCheck className="size-4 text-muted-foreground" />
+                                }
+                              />
+                              <ToolContent>
+                                <ToolOutput
+                                  label="Safe Result"
+                                  output={dualLlmPart.safeResult}
+                                />
+                                <ToolOutput
+                                  label="Questions and Answers"
+                                  output={undefined}
+                                  conversations={dualLlmPart.conversations.slice(
+                                    1,
+                                  )}
+                                />
+                              </ToolContent>
+                            </Tool>
                           );
                         }
                         return null;
@@ -402,14 +534,43 @@ export type BlockedToolPart = {
   fullRefusal?: string;
 };
 
+export type DualLlmPart = {
+  type: "dual-llm-analysis";
+  toolCallId: string;
+  safeResult: string;
+  conversations: Array<{
+    role: "user" | "assistant";
+    content: string | unknown;
+  }>;
+};
+
 export type PartialUIMessage = Partial<UIMessage> & {
   role: UIMessage["role"];
-  parts: (UIMessage["parts"][number] | BlockedToolPart)[];
+  parts: (UIMessage["parts"][number] | BlockedToolPart | DualLlmPart)[];
   metadata?: {
     trusted?: boolean;
     blocked?: boolean;
     reason?: string;
   };
 };
+
+// Type guards for custom part types
+function _isDualLlmPart(part: unknown): part is DualLlmPart {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    "type" in part &&
+    (part as { type: string }).type === "dual-llm-analysis"
+  );
+}
+
+function _isBlockedToolPart(part: unknown): part is BlockedToolPart {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    "type" in part &&
+    (part as { type: string }).type === "blocked-tool"
+  );
+}
 
 export default ChatBotDemo;

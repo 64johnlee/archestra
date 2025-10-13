@@ -78,6 +78,34 @@
       "when": 1760116071330,
       "tag": "0010_neat_zombie",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1760248734208,
+      "tag": "0011_salty_zodiak",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1760257156731,
+      "tag": "0012_lame_hammerhead",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1760286518019,
+      "tag": "0013_curved_lethal_legion",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1760286890689,
+      "tag": "0014_steady_sprite",
+      "breakpoints": true
     }
   ]
 }
