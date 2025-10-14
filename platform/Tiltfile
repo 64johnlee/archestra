@@ -53,12 +53,20 @@ dotenv(
   './.env'
 )
 
-# pre
 local_resource(
   'pnpm-install',
   cmd='pnpm install',
   deps=['./frontend/package.json', './backend/package.json'],
   labels=['pre']
+)
+
+local_resource(
+  'db-seed-mock-data',
+  cmd='pnpm db:seed:mock-data',
+  resource_deps=['pnpm-install', 'postgresql'],
+  trigger_mode=TRIGGER_MODE_MANUAL,
+  auto_init=False,
+  labels=['database']
 )
 
 local_resource(
@@ -89,7 +97,7 @@ local_resource(
   ''',
   deps=['./backend/src/database/migrations', './backend/src/standalone-scripts/seed-db.ts'],
   resource_deps=['pnpm-install', 'postgresql'],
-  labels=['pre']
+  labels=['database']
 )
 
 # prod bundle
