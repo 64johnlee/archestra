@@ -30,22 +30,24 @@ const ChatCompletionUsageSchema = z
     `https://github.com/openai/openai-node/blob/master/src/resources/completions.ts#L113`,
   );
 
+export const FinishReasonSchema = z.enum([
+  "stop",
+  "length",
+  "tool_calls",
+  "content_filter",
+  "function_call",
+]);
+
 const ChoiceSchema = z
   .object({
-    finish_reason: z.enum([
-      "stop",
-      "length",
-      "tool_calls",
-      "content_filter",
-      "function_call",
-    ]),
+    finish_reason: FinishReasonSchema,
     index: z.number(),
     logprobs: z.any().nullable(),
     message: z
       .object({
         content: z.string().nullable(),
         refusal: z.string().nullable(),
-        role: z.literal("assistant"),
+        role: z.enum(["assistant"]),
         annotations: z.array(z.any()).optional(),
         audio: z.any().nullable().optional(),
         function_call: z
@@ -88,7 +90,7 @@ export const ChatCompletionResponseSchema = z
     choices: z.array(ChoiceSchema),
     created: z.number(),
     model: z.string(),
-    object: z.literal("chat.completion"),
+    object: z.enum(["chat.completion"]),
     server_tier: z.string().optional(),
     system_fingerprint: z.string().nullable().optional(),
     usage: ChatCompletionUsageSchema.optional(),

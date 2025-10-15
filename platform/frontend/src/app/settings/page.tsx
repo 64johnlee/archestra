@@ -6,9 +6,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CodeText } from "@/components/code-text";
 import { Button } from "@/components/ui/button";
+// TODO: uncomment this out when we have > 1 provider
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from "@/components/ui/select";
+import type { SupportedProviders } from "@/lib/clients/api/types.gen";
 import config from "@/lib/config";
 
 const { proxyUrl: apiProxyUrl } = config.api;
+
+const providerDisplayNames: Record<SupportedProviders, string> = {
+  openai: "OpenAI",
+  gemini: "Gemini",
+};
 
 export default function SettingsPage() {
   const [particles, setParticles] = useState<
@@ -20,6 +34,9 @@ export default function SettingsPage() {
     }>
   >([]);
   const [copied, setCopied] = useState(false);
+  // TODO: uncomment this out when we have > 1 provider
+  const [selectedProvider, _setSelectedProvider] =
+    useState<SupportedProviders>("openai");
 
   const particleIdRef = useRef(0);
   const frameRef = useRef<number | undefined>(undefined);
@@ -129,11 +146,12 @@ export default function SettingsPage() {
   }, []);
 
   const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(apiProxyUrl);
+    const fullUrl = `${apiProxyUrl}/${selectedProvider}`;
+    await navigator.clipboard.writeText(fullUrl);
     setCopied(true);
     toast.success("Proxy URL copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
-  }, []);
+  }, [selectedProvider]);
 
   const getParticlePosition = useCallback((path: string, progress: number) => {
     // Smooth progress from 0 to 100
@@ -312,7 +330,9 @@ export default function SettingsPage() {
 
                 <div className="flex flex-col items-center z-10">
                   <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">OpenAI</span>
+                    <span className="text-white font-bold text-lg">
+                      {providerDisplayNames[selectedProvider]}
+                    </span>
                   </div>
                   <span className="mt-3 font-medium">LLM</span>
                 </div>
@@ -326,55 +346,108 @@ export default function SettingsPage() {
               </p>
               <div className="border-t pt-6">
                 <h3 className="font-medium mb-2">Proxy Endpoint</h3>
-                <div className="bg-muted rounded-md p-3 flex items-center justify-between">
-                  <code className="text-sm">{apiProxyUrl}</code>
-                  <Button variant="ghost" size="icon" onClick={handleCopy}>
-                    {copied ? (
-                      <Check className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
+                <div className="space-y-3">
+                  {/* TODO: uncomment this out when we have > 1 provider */}
+                  {/* <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Provider:</span>
+                    <Select
+                      value={selectedProvider}
+                      onValueChange={(value) =>
+                        setSelectedProvider(value as SupportedProviders)
+                      }
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="openai">OpenAI</SelectItem>
+                        <SelectItem value="gemini">Gemini</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div> */}
+                  <div className="bg-muted rounded-md p-3 flex items-center justify-between">
+                    <CodeText className="text-sm">
+                      {`${apiProxyUrl}/${selectedProvider}`}
+                    </CodeText>
+                    <Button variant="ghost" size="icon" onClick={handleCopy}>
+                      {copied ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Configure your agents to use this endpoint instead of directly
-                  calling OpenAI (default should be https://api.openai.com/v1/)
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  This value is configured via the{" "}
+                {selectedProvider === "openai" && (
+                  <>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      OpenAI provides{" "}
+                      <CodeText className="text-xs">/chat/completions</CodeText>{" "}
+                      and <CodeText className="text-xs">/responses</CodeText>{" "}
+                      API's. Archestra doesn't support{" "}
+                      <CodeText className="text-xs">/responses</CodeText> yet.
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      We're working on it (
+                      <a
+                        href="https://github.com/archestra-ai/archestra/issues/720"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500"
+                      >
+                        GitHub issue
+                      </a>
+                      ), meanwhile please make sure that your agent uses{" "}
+                      <CodeText className="text-xs">/chat/completions</CodeText>
+                      , check{" "}
+                      <a
+                        href="https://ai-sdk.dev/providers/ai-sdk-providers/openai#language-models"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500"
+                      >
+                        this
+                      </a>{" "}
+                      for an example
+                    </p>
+                  </>
+                )}
+                {selectedProvider === "gemini" && (
+                  <>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Configure your agents to use this endpoint instead of
+                      directly calling Google Gemini (default should be
+                      https://generativelanguage.googleapis.com/v1/)
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Archestra supports{" "}
+                      <a
+                        href="https://ai.google.dev/api/generate-content"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500"
+                      >
+                        Gemini generateContent API
+                      </a>{" "}
+                      so make sure to use it when connecting to Archestra.
+                    </p>
+                  </>
+                )}
+                <p className="text-sm text-muted-foreground mt-3">
+                  The host/port is configurable via the{" "}
                   <CodeText className="text-xs">
                     ARCHESTRA_API_BASE_URL
                   </CodeText>{" "}
-                  environment variable
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  OpenAI provides{" "}
-                  <CodeText className="text-xs">/chat/completions</CodeText> and{" "}
-                  <CodeText className="text-xs">/responses</CodeText> API's.
-                  Archestra doesn't support{" "}
-                  <CodeText className="text-xs">/responses</CodeText> yet. We're
-                  working on it (
+                  environment variable. See{" "}
                   <a
-                    href="https://github.com/archestra-ai/archestra/issues/720"
+                    href="https://www.archestra.ai/docs/platform-deployment#environment-variables"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-500"
                   >
                     here
                   </a>{" "}
-                  is a GH issue ), meanwhile please make sure that your agent
-                  uses{" "}
-                  <CodeText className="text-xs">/chat/completions</CodeText>,{" "}
-                  check{" "}
-                  <a
-                    href="https://ai-sdk.dev/providers/ai-sdk-providers/openai#language-models"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500"
-                  >
-                    this
-                  </a>{" "}
-                  for an example
+                  for more details.
                 </p>
               </div>
 
