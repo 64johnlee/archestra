@@ -10,6 +10,7 @@ import {
 } from "fastify-type-provider-zod";
 import { z } from "zod";
 import config from "@/config";
+import { authMiddleware } from "@/middleware/auth-middleware";
 import {
   Anthropic,
   Gemini,
@@ -79,6 +80,7 @@ const start = async () => {
     await fastify.register(fastifyCors, {
       origin: [/http:\/\/localhost:\d+/],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
       credentials: true,
     });
 
@@ -114,6 +116,9 @@ const start = async () => {
       version,
     }));
 
+    fastify.addHook("preHandler", authMiddleware);
+
+    fastify.register(routes.authRoutes);
     fastify.register(routes.anthropicProxyRoutes);
     fastify.register(routes.openAiProxyRoutes);
     fastify.register(routes.geminiProxyRoutes);
