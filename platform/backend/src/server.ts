@@ -74,11 +74,12 @@ const start = async () => {
     await seedDatabase();
 
     /**
-     * Register CORS plugin to allow cross-origin requests from frontend
-     * (running on any port in case the default (3000) is taken)
+     * Register CORS plugin to allow cross-origin requests
+     * Origins are configured via CORS_ORIGINS environment variable
+     * Defaults to localhost (any port) for development
      */
     await fastify.register(fastifyCors, {
-      origin: [/http:\/\/localhost:\d+/],
+      origin: config.cors.origins,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
       credentials: true,
