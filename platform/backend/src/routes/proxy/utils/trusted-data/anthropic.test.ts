@@ -23,7 +23,7 @@ describe("trusted-data anthropic utils", () => {
       parameters: {},
       description: "Get emails",
       allowUsageWhenUntrustedDataIsPresent: false,
-      dataIsTrustedByDefault: false,
+      toolResultTreatment: "untrusted",
     });
 
     const tool = await ToolModel.findByName("get_emails");
@@ -428,7 +428,7 @@ describe("trusted-data anthropic utils", () => {
         parameters: {},
         description: "Tool that trusts data by default",
         allowUsageWhenUntrustedDataIsPresent: false,
-        dataIsTrustedByDefault: true,
+        toolResultTreatment: "trusted",
       });
 
       const messages: Messages = [
@@ -473,7 +473,7 @@ describe("trusted-data anthropic utils", () => {
         parameters: {},
         description: "Tool that trusts data by default",
         allowUsageWhenUntrustedDataIsPresent: false,
-        dataIsTrustedByDefault: true,
+        toolResultTreatment: "trusted",
       });
 
       const tool = await ToolModel.findByName("default_trusted_tool");

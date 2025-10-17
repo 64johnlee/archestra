@@ -54,7 +54,7 @@ class ToolModel {
         description: schema.toolsTable.description,
         allowUsageWhenUntrustedDataIsPresent:
           schema.toolsTable.allowUsageWhenUntrustedDataIsPresent,
-        dataIsTrustedByDefault: schema.toolsTable.dataIsTrustedByDefault,
+        toolResultTreatment: schema.toolsTable.toolResultTreatment,
         createdAt: schema.toolsTable.createdAt,
         updatedAt: schema.toolsTable.updatedAt,
         agent: {
@@ -122,7 +122,8 @@ class ToolModel {
       .set(tool)
       .where(eq(schema.toolsTable.id, toolId))
       .returning();
-    return updatedTool || null;
+    if (!updatedTool) return null;
+    return updatedTool;
   }
 }
 
