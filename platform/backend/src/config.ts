@@ -86,20 +86,6 @@ export default {
     adminDefaultPassword:
       process.env[DEFAULT_ADMIN_PASSWORD_ENV_VAR_NAME] ||
       DEFAULT_ADMIN_PASSWORD,
-    /**
-     * Cookie domain for cross-subdomain authentication.
-     *
-     * Examples:
-     * - Same domain, different ports (localhost:3000 + localhost:9000):
-     *   Leave undefined or set to empty string
-     *
-     * - Different subdomains (frontend.archestra.ai + backend.archestra.ai):
-     *   Set to ".archestra.ai"
-     *
-     * - Production (app.example.com + api.example.com):
-     *   Set to ".example.com"
-     */
-    cookieDomain: process.env.ARCHESTRA_AUTH_COOKIE_DOMAIN,
   },
   database: {
     url: process.env.DATABASE_URL,

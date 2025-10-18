@@ -17,9 +17,6 @@ export const authClient = createAuthClient({
     nextCookies(),
     adminClient(),
   ],
-  fetchOptions: {
-    credentials: "include",
-  },
   cookies: { secure: !config.debug },
   autoSignIn: true,
 });
