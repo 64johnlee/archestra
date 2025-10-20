@@ -2,7 +2,7 @@ import { ac, adminRole, memberRole } from "@shared";
 import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
-import { admin, organization } from "better-auth/plugins";
+import { admin, apiKey, organization } from "better-auth/plugins";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import config from "@/config";
@@ -29,6 +29,10 @@ export const auth = betterAuth({
       },
     }),
     admin(),
+    apiKey({
+      enableSessionForAPIKeys: true,
+      apiKeyHeaders: ["X-Archestra-API-Key"],
+    }),
   ],
 
   user: {
@@ -42,9 +46,10 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg", // or "mysql", "sqlite"
     schema: {
-      user: schema.user,
+      apikey: schema.apikey,
+      user: schema.usersTable,
       session: schema.session,
-      organization: schema.organization,
+      organization: schema.organizationsTable,
       member: schema.member,
       invitation: schema.invitation,
       account: schema.account,
@@ -237,7 +242,7 @@ export const auth = betterAuth({
             const orgSlug = `org-${user.id.substring(0, 8)}`;
 
             const org = await db
-              .insert(schema.organization)
+              .insert(schema.organizationsTable)
               .values({
                 id: crypto.randomUUID(),
                 name: orgName,
