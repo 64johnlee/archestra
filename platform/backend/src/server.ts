@@ -22,7 +22,7 @@ import { seedDatabase } from "./database/seed";
 import * as routes from "./routes";
 
 const {
-  api: { port, name, version, host, corsOrigins },
+  api: { port, name, version, host, corsOrigins, authHeaderName },
 } = config;
 
 const fastify = Fastify({
@@ -82,6 +82,7 @@ const start = async () => {
         "Authorization",
         "X-Requested-With",
         "Cookie",
+        authHeaderName,
       ],
       exposedHeaders: ["Set-Cookie"],
       credentials: true,
