@@ -50,7 +50,7 @@ A central place for teams and enterprises to manage MCP and agents at scale.
 
 [Simon Willison](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/), [The Economist](https://www.economist.com/leaders/2025/09/25/how-to-stop-ais-lethal-trifecta)
 
-[![Archestra Demo](https://img.youtube.com/vi/SkmluS-xzmM/0.jpg)](https://www.youtube.com/watch?v=SkmluS-xzmM&t=2148s)
+[![Archestra Demo](https://img.youtube.com/vi/SkmluS-xzmM/0.jpg)](https://www.youtube.com/watch?v=SkmluS-xzmM&t=2155s)
 
 The "lethal trifecta" for AI agents is a critical security vulnerability that arises from combining three specific capabilities: access to private data, exposure to untrusted content, and the ability to communicate externally. An attacker can exploit this combination by embedding malicious instructions within untrusted content, such as a webpage or email. Because LLMs follow any instructions they are given, they can be tricked into accessing your private data and sending it to the attacker. This creates a significant security risk, as the LLM cannot distinguish between user commands and malicious instructions embedded in the content it processes.
 
