@@ -1,4 +1,4 @@
-# Archestra Gateway
+# Archestra Enterprise MCP Gateway
 
 A central place for teams and enterprises to manage MCP and agents at scale.
 - MCP Gateway
@@ -43,17 +43,14 @@ A central place for teams and enterprises to manage MCP and agents at scale.
    - Web UI at <http://localhost:3000>
    - Proxy at <http://localhost:9000>
 
-## Development
+- [Development docs ->](https://www.archestra.ai/docs/platfrom-developer-quickstart)
+- [Production deployment docs ->](https://www.archestra.ai/docs/platform-deployment)
 
-[Check development docs ->](https://www.archestra.ai/docs/platfrom-developer-quickstart)
-
-## Production Deployment
-
-[Check production deployment docs ->](https://www.archestra.ai/docs/platform-deployment)
-
-# Non-probabalistic mitigation of "The Lethal Trifecta"
+# Archestra mitigates "The Lethal Trifecta"
 
 [Simon Willison](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/), [The Economist](https://www.economist.com/leaders/2025/09/25/how-to-stop-ais-lethal-trifecta)
+
+[![Archestra Demo](https://img.youtube.com/vi/SkmluS-xzmM/0.jpg)](https://www.youtube.com/watch?v=SkmluS-xzmM&t=1958s)
 
 The "lethal trifecta" for AI agents is a critical security vulnerability that arises from combining three specific capabilities: access to private data, exposure to untrusted content, and the ability to communicate externally. An attacker can exploit this combination by embedding malicious instructions within untrusted content, such as a webpage or email. Because LLMs follow any instructions they are given, they can be tricked into accessing your private data and sending it to the attacker. This creates a significant security risk, as the LLM cannot distinguish between user commands and malicious instructions embedded in the content it processes.
 
