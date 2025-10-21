@@ -1,6 +1,6 @@
 # Archestra Gateway
 
-A central place for enterprises to manage MCP and agents at scale.
+A central place for teams and enterprises to manage MCP and agents at scale.
 - MCP Gateway
 - LLM Gateway
 - Guardrails preventing "The Lethal Trifecta"
