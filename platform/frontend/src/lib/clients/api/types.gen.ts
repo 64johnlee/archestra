@@ -2117,7 +2117,6 @@ export type GetAgentsResponses = {
         tools: Array<{
             id: string;
             agentId: string | null;
-            source: 'proxy' | 'mcp_server';
             mcpServerId: string | null;
             name: string;
             /**
@@ -2136,8 +2135,6 @@ export type GetAgentsResponses = {
                 [key: string]: unknown;
             };
             description: string | null;
-            allowUsageWhenUntrustedDataIsPresent: boolean;
-            toolResultTreatment: 'trusted' | 'sanitize_with_dual_llm' | 'untrusted';
             createdAt: string;
             updatedAt: string;
         }>;
@@ -2194,7 +2191,6 @@ export type CreateAgentResponses = {
         tools: Array<{
             id: string;
             agentId: string | null;
-            source: 'proxy' | 'mcp_server';
             mcpServerId: string | null;
             name: string;
             /**
@@ -2213,8 +2209,6 @@ export type CreateAgentResponses = {
                 [key: string]: unknown;
             };
             description: string | null;
-            allowUsageWhenUntrustedDataIsPresent: boolean;
-            toolResultTreatment: 'trusted' | 'sanitize_with_dual_llm' | 'untrusted';
             createdAt: string;
             updatedAt: string;
         }>;
@@ -2321,7 +2315,6 @@ export type GetAgentResponses = {
         tools: Array<{
             id: string;
             agentId: string | null;
-            source: 'proxy' | 'mcp_server';
             mcpServerId: string | null;
             name: string;
             /**
@@ -2340,8 +2333,6 @@ export type GetAgentResponses = {
                 [key: string]: unknown;
             };
             description: string | null;
-            allowUsageWhenUntrustedDataIsPresent: boolean;
-            toolResultTreatment: 'trusted' | 'sanitize_with_dual_llm' | 'untrusted';
             createdAt: string;
             updatedAt: string;
         }>;
@@ -2400,7 +2391,6 @@ export type UpdateAgentResponses = {
         tools: Array<{
             id: string;
             agentId: string | null;
-            source: 'proxy' | 'mcp_server';
             mcpServerId: string | null;
             name: string;
             /**
@@ -2419,8 +2409,6 @@ export type UpdateAgentResponses = {
                 [key: string]: unknown;
             };
             description: string | null;
-            allowUsageWhenUntrustedDataIsPresent: boolean;
-            toolResultTreatment: 'trusted' | 'sanitize_with_dual_llm' | 'untrusted';
             createdAt: string;
             updatedAt: string;
         }>;
@@ -2429,6 +2417,79 @@ export type UpdateAgentResponses = {
 };
 
 export type UpdateAgentResponse = UpdateAgentResponses[keyof UpdateAgentResponses];
+
+export type GetAllAgentToolsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/agent-tools';
+};
+
+export type GetAllAgentToolsErrors = {
+    /**
+     * Default Response
+     */
+    401: {
+        error: string | {
+            message: string;
+            type: string;
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: string | {
+            message: string;
+            type: string;
+        };
+    };
+};
+
+export type GetAllAgentToolsError = GetAllAgentToolsErrors[keyof GetAllAgentToolsErrors];
+
+export type GetAllAgentToolsResponses = {
+    /**
+     * Default Response
+     */
+    200: Array<{
+        id: string;
+        allowUsageWhenUntrustedDataIsPresent: boolean;
+        toolResultTreatment: 'trusted' | 'sanitize_with_dual_llm' | 'untrusted';
+        createdAt: string;
+        updatedAt: string;
+        agent: {
+            id: string;
+            name: string;
+        };
+        tool: {
+            id: string;
+            name: string;
+            description: string | null;
+            /**
+             *
+             * https://github.com/openai/openai-node/blob/master/src/resources/shared.ts#L217
+             *
+             * The parameters the functions accepts, described as a JSON Schema object. See the
+             * [guide](https://platform.openai.com/docs/guides/function-calling) for examples,
+             * and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/) for
+             * documentation about the format.
+             *
+             * Omitting parameters defines a function with an empty parameter list.
+             *
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            createdAt: string;
+            updatedAt: string;
+            mcpServerId: string | null;
+            mcpServerName: string | null;
+        };
+    }>;
+};
+
+export type GetAllAgentToolsResponse = GetAllAgentToolsResponses[keyof GetAllAgentToolsResponses];
 
 export type UnassignToolFromAgentData = {
     body?: never;
@@ -2548,7 +2609,6 @@ export type GetAgentToolsResponses = {
     200: Array<{
         id: string;
         agentId: string | null;
-        source: 'proxy' | 'mcp_server';
         mcpServerId: string | null;
         name: string;
         /**
@@ -2567,14 +2627,64 @@ export type GetAgentToolsResponses = {
             [key: string]: unknown;
         };
         description: string | null;
-        allowUsageWhenUntrustedDataIsPresent: boolean;
-        toolResultTreatment: 'trusted' | 'sanitize_with_dual_llm' | 'untrusted';
         createdAt: string;
         updatedAt: string;
     }>;
 };
 
 export type GetAgentToolsResponse = GetAgentToolsResponses[keyof GetAgentToolsResponses];
+
+export type UpdateAgentToolData = {
+    body?: {
+        allowUsageWhenUntrustedDataIsPresent?: boolean;
+        toolResultTreatment?: 'trusted' | 'sanitize_with_dual_llm' | 'untrusted';
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/agent-tools/{id}';
+};
+
+export type UpdateAgentToolErrors = {
+    /**
+     * Default Response
+     */
+    404: {
+        error: string | {
+            message: string;
+            type: string;
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: string | {
+            message: string;
+            type: string;
+        };
+    };
+};
+
+export type UpdateAgentToolError = UpdateAgentToolErrors[keyof UpdateAgentToolErrors];
+
+export type UpdateAgentToolResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id?: string;
+        agentId?: string;
+        toolId?: string;
+        allowUsageWhenUntrustedDataIsPresent?: boolean;
+        toolResultTreatment: 'trusted' | 'sanitize_with_dual_llm' | 'untrusted';
+        createdAt?: string;
+        updatedAt?: string;
+    };
+};
+
+export type UpdateAgentToolResponse = UpdateAgentToolResponses[keyof UpdateAgentToolResponses];
 
 export type DeleteV1AnthropicData = {
     body?: never;
@@ -3067,7 +3177,7 @@ export type GetToolInvocationPoliciesResponses = {
      */
     200: Array<{
         id: string;
-        toolId: string;
+        agentToolId: string;
         argumentName: string;
         operator: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
         value: string;
@@ -3082,7 +3192,7 @@ export type GetToolInvocationPoliciesResponse = GetToolInvocationPoliciesRespons
 
 export type CreateToolInvocationPolicyData = {
     body: {
-        toolId: string;
+        agentToolId: string;
         argumentName: string;
         operator: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
         value: string;
@@ -3114,7 +3224,7 @@ export type CreateToolInvocationPolicyResponses = {
      */
     200: {
         id: string;
-        toolId: string;
+        agentToolId: string;
         argumentName: string;
         operator: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
         value: string;
@@ -3208,7 +3318,7 @@ export type GetToolInvocationPolicyResponses = {
      */
     200: {
         id: string;
-        toolId: string;
+        agentToolId: string;
         argumentName: string;
         operator: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
         value: string;
@@ -3223,7 +3333,7 @@ export type GetToolInvocationPolicyResponse = GetToolInvocationPolicyResponses[k
 
 export type UpdateToolInvocationPolicyData = {
     body?: {
-        toolId?: string;
+        agentToolId?: string;
         argumentName?: string;
         operator?: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
         value?: string;
@@ -3266,7 +3376,7 @@ export type UpdateToolInvocationPolicyResponses = {
      */
     200: {
         id: string;
-        toolId: string;
+        agentToolId: string;
         argumentName: string;
         operator: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
         value: string;
@@ -3306,7 +3416,7 @@ export type GetTrustedDataPoliciesResponses = {
      */
     200: Array<{
         id: string;
-        toolId: string;
+        agentToolId: string;
         description: string;
         attributePath: string;
         operator: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
@@ -3321,7 +3431,7 @@ export type GetTrustedDataPoliciesResponse = GetTrustedDataPoliciesResponses[key
 
 export type CreateTrustedDataPolicyData = {
     body: {
-        toolId: string;
+        agentToolId: string;
         description: string;
         attributePath: string;
         operator: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
@@ -3353,7 +3463,7 @@ export type CreateTrustedDataPolicyResponses = {
      */
     200: {
         id: string;
-        toolId: string;
+        agentToolId: string;
         description: string;
         attributePath: string;
         operator: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
@@ -3447,7 +3557,7 @@ export type GetTrustedDataPolicyResponses = {
      */
     200: {
         id: string;
-        toolId: string;
+        agentToolId: string;
         description: string;
         attributePath: string;
         operator: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
@@ -3462,7 +3572,7 @@ export type GetTrustedDataPolicyResponse = GetTrustedDataPolicyResponses[keyof G
 
 export type UpdateTrustedDataPolicyData = {
     body?: {
-        toolId?: string;
+        agentToolId?: string;
         description?: string;
         attributePath?: string;
         operator?: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
@@ -3505,7 +3615,7 @@ export type UpdateTrustedDataPolicyResponses = {
      */
     200: {
         id: string;
-        toolId: string;
+        agentToolId: string;
         description: string;
         attributePath: string;
         operator: 'equal' | 'notEqual' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex';
@@ -5348,7 +5458,6 @@ export type GetToolsResponses = {
      */
     200: Array<{
         id: string;
-        source: 'proxy' | 'mcp_server';
         name: string;
         /**
          *
@@ -5366,8 +5475,6 @@ export type GetToolsResponses = {
             [key: string]: unknown;
         };
         description: string | null;
-        allowUsageWhenUntrustedDataIsPresent: boolean;
-        toolResultTreatment: 'trusted' | 'sanitize_with_dual_llm' | 'untrusted';
         createdAt: string;
         updatedAt: string;
         agent: {
@@ -5382,96 +5489,3 @@ export type GetToolsResponses = {
 };
 
 export type GetToolsResponse = GetToolsResponses[keyof GetToolsResponses];
-
-export type UpdateToolData = {
-    body?: {
-        id?: string;
-        agentId?: string | null;
-        source?: 'proxy' | 'mcp_server';
-        mcpServerId?: string | null;
-        name?: string;
-        /**
-         *
-         * https://github.com/openai/openai-node/blob/master/src/resources/shared.ts#L217
-         *
-         * The parameters the functions accepts, described as a JSON Schema object. See the
-         * [guide](https://platform.openai.com/docs/guides/function-calling) for examples,
-         * and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/) for
-         * documentation about the format.
-         *
-         * Omitting parameters defines a function with an empty parameter list.
-         *
-         */
-        parameters?: {
-            [key: string]: unknown;
-        };
-        description?: string | null;
-        allowUsageWhenUntrustedDataIsPresent?: boolean;
-        toolResultTreatment?: 'trusted' | 'sanitize_with_dual_llm' | 'untrusted';
-        createdAt?: unknown;
-        updatedAt?: unknown;
-    };
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/tools/{id}';
-};
-
-export type UpdateToolErrors = {
-    /**
-     * Default Response
-     */
-    404: {
-        error: string | {
-            message: string;
-            type: string;
-        };
-    };
-    /**
-     * Default Response
-     */
-    500: {
-        error: string | {
-            message: string;
-            type: string;
-        };
-    };
-};
-
-export type UpdateToolError = UpdateToolErrors[keyof UpdateToolErrors];
-
-export type UpdateToolResponses = {
-    /**
-     * Default Response
-     */
-    200: {
-        id: string;
-        agentId: string | null;
-        source: 'proxy' | 'mcp_server';
-        mcpServerId: string | null;
-        name: string;
-        /**
-         *
-         * https://github.com/openai/openai-node/blob/master/src/resources/shared.ts#L217
-         *
-         * The parameters the functions accepts, described as a JSON Schema object. See the
-         * [guide](https://platform.openai.com/docs/guides/function-calling) for examples,
-         * and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/) for
-         * documentation about the format.
-         *
-         * Omitting parameters defines a function with an empty parameter list.
-         *
-         */
-        parameters?: {
-            [key: string]: unknown;
-        };
-        description: string | null;
-        allowUsageWhenUntrustedDataIsPresent: boolean;
-        toolResultTreatment: 'trusted' | 'sanitize_with_dual_llm' | 'untrusted';
-        createdAt: string;
-        updatedAt: string;
-    };
-};
-
-export type UpdateToolResponse = UpdateToolResponses[keyof UpdateToolResponses];

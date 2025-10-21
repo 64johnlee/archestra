@@ -103,6 +103,8 @@ export const RouteId = {
   AssignToolToAgent: "assignToolToAgent",
   UnassignToolFromAgent: "unassignToolFromAgent",
   GetAgentTools: "getAgentTools",
+  GetAllAgentTools: "getAllAgentTools",
+  UpdateAgentTool: "updateAgentTool",
 
   // Features Routes
   GetFeatures: "getFeatures",
@@ -125,7 +127,6 @@ export const RouteId = {
 
   // Tool Routes
   GetTools: "getTools",
-  UpdateTool: "updateTool",
 
   // Interaction Routes
   GetInteractions: "getInteractions",
