@@ -122,21 +122,9 @@ const start = async () => {
 
     fastify.addHook("preHandler", authMiddleware.handle);
 
-    fastify.register(routes.authRoutes);
-    fastify.register(routes.anthropicProxyRoutes);
-    fastify.register(routes.openAiProxyRoutes);
-    fastify.register(routes.geminiProxyRoutes);
-
-    fastify.register(routes.agentRoutes);
-    fastify.register(routes.agentToolRoutes);
-    fastify.register(routes.featuresRoutes);
-    fastify.register(routes.interactionRoutes);
-    fastify.register(routes.mcpCatalogRoutes);
-    fastify.register(routes.mcpServerRoutes);
-    fastify.register(routes.toolRoutes);
-    fastify.register(routes.autonomyPolicyRoutes);
-    fastify.register(routes.dualLlmConfigRoutes);
-    fastify.register(routes.dualLlmResultRoutes);
+    for (const route of Object.values(routes)) {
+      fastify.register(route);
+    }
 
     await fastify.listen({ port, host });
     fastify.log.info(`${name} started on port ${port}`);
