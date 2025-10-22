@@ -356,6 +356,49 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
                 reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
               }
             }
+
+            // Execute MCP tools and continue streaming conversation
+            if (accumulatedToolCalls.length > 0) {
+              const commonToolCalls =
+                utils.adapters.openai.toolCallsToCommon(accumulatedToolCalls);
+              const mcpResults = await utils.tools.executeMcpToolCalls(
+                commonToolCalls,
+                resolvedAgentId,
+              );
+
+              if (mcpResults.length > 0) {
+                // Convert MCP results to OpenAI tool messages
+                const toolMessages =
+                  utils.adapters.openai.toolResultsToMessages(mcpResults);
+
+                // Update conversation with tool results
+                const updatedMessages = [
+                  ...filteredMessages,
+                  assistantMessage,
+                  ...toolMessages,
+                ];
+
+                /**
+                 * Make another streaming call with the tool results (without tools to prevent loops)
+                 *
+                 * We also need to remove tool_choice otherwise openai complains about:
+                 * "400 Invalid value for 'tool_choice': 'tool_choice' is only allowed when 'tools' are specified"
+                 */
+                const continuationStream =
+                  await openAiClient.chat.completions.create({
+                    ...body,
+                    messages: updatedMessages,
+                    tools: undefined,
+                    tool_choice: undefined,
+                    stream: true,
+                  });
+
+                // Stream the continuation response
+                for await (const chunk of continuationStream) {
+                  reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
+                }
+              }
+            }
           }
         }
 
@@ -454,11 +497,17 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
               ...toolMessages,
             ];
 
-            // Make another call with the tool results
+            /**
+             * Make another call with the tool results (without tools to prevent loops)
+             *
+             * We also need to remove tool_choice otherwise openai complains about:
+             * "400 Invalid value for 'tool_choice': 'tool_choice' is only allowed when 'tools' are specified"
+             */
             const finalResponse = await openAiClient.chat.completions.create({
               ...body,
               messages: updatedMessages,
-              tools: mergedTools.length > 0 ? mergedTools : undefined,
+              tools: undefined,
+              tool_choice: undefined,
               stream: false,
             });
 
