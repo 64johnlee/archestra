@@ -1,4 +1,5 @@
 import { DEFAULT_ADMIN_EMAIL } from "@shared";
+import { verifyPassword } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -44,12 +45,31 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
           .where(eq(schema.usersTable.email, DEFAULT_ADMIN_EMAIL))
           .limit(1);
 
-        // Default credentials are enabled only if:
-        // 1. The config is using defaults
-        // 2. The default admin user exists in the database
-        const enabled = !!adminUser;
+        if (!adminUser) {
+          // Default admin user doesn't exist
+          return reply.send({ enabled: false });
+        }
 
-        return reply.send({ enabled });
+        // Check if the user is using the default password
+        // Get the password hash from the account table
+        const [account] = await db
+          .select()
+          .from(schema.account)
+          .where(eq(schema.account.userId, adminUser.id))
+          .limit(1);
+
+        if (!account?.password) {
+          // No password set (shouldn't happen for email/password auth)
+          return reply.send({ enabled: false });
+        }
+
+        // Compare the stored password hash with the default password
+        const isDefaultPassword = await verifyPassword({
+          password: config.auth.adminDefaultPassword,
+          hash: account.password,
+        });
+
+        return reply.send({ enabled: isDefaultPassword });
       } catch (error) {
         fastify.log.error(error);
         return reply.status(500).send({ enabled: false });
