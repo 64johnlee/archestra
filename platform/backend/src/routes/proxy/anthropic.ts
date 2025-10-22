@@ -148,7 +148,7 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
         reply.header("Connection", "keep-alive");
       }
 
-      const { toolResultUpdates, contextIsTrusted, usedDualLlm } =
+      const { toolResultUpdates, contextIsTrusted } =
         await utils.trustedData.evaluateIfContextIsTrusted(
           commonMessages,
           resolvedAgentId,
