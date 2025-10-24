@@ -2218,6 +2218,76 @@ export type CreateAgentResponses = {
 
 export type CreateAgentResponse = CreateAgentResponses[keyof CreateAgentResponses];
 
+export type GetDefaultAgentData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/agents/default';
+};
+
+export type GetDefaultAgentErrors = {
+    /**
+     * Default Response
+     */
+    401: {
+        error: string | {
+            message: string;
+            type: string;
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: string | {
+            message: string;
+            type: string;
+        };
+    };
+};
+
+export type GetDefaultAgentError = GetDefaultAgentErrors[keyof GetDefaultAgentErrors];
+
+export type GetDefaultAgentResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        name: string;
+        isDemo: boolean;
+        createdAt: string;
+        updatedAt: string;
+        tools: Array<{
+            id: string;
+            agentId: string | null;
+            mcpServerId: string | null;
+            name: string;
+            /**
+             *
+             * https://github.com/openai/openai-node/blob/master/src/resources/shared.ts#L217
+             *
+             * The parameters the functions accepts, described as a JSON Schema object. See the
+             * [guide](https://platform.openai.com/docs/guides/function-calling) for examples,
+             * and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/) for
+             * documentation about the format.
+             *
+             * Omitting parameters defines a function with an empty parameter list.
+             *
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            description: string | null;
+            createdAt: string;
+            updatedAt: string;
+        }>;
+        usersWithAccess: Array<string>;
+    };
+};
+
+export type GetDefaultAgentResponse = GetDefaultAgentResponses[keyof GetDefaultAgentResponses];
+
 export type DeleteAgentData = {
     body?: never;
     path: {
@@ -5087,16 +5157,26 @@ export type UpdateInternalMcpCatalogItemResponses = {
 
 export type UpdateInternalMcpCatalogItemResponse = UpdateInternalMcpCatalogItemResponses[keyof UpdateInternalMcpCatalogItemResponses];
 
-export type GetV1McpByAgentIdData = {
+export type GetV1McpData = {
     body?: never;
-    path: {
-        agentId: string;
-    };
+    path?: never;
     query?: never;
-    url: '/v1/mcp/{agentId}';
+    url: '/v1/mcp';
 };
 
-export type GetV1McpByAgentIdResponses = {
+export type GetV1McpErrors = {
+    /**
+     * Default Response
+     */
+    401: {
+        error: string;
+        message: string;
+    };
+};
+
+export type GetV1McpError = GetV1McpErrors[keyof GetV1McpErrors];
+
+export type GetV1McpResponses = {
     /**
      * Default Response
      */
@@ -5111,20 +5191,18 @@ export type GetV1McpByAgentIdResponses = {
     };
 };
 
-export type GetV1McpByAgentIdResponse = GetV1McpByAgentIdResponses[keyof GetV1McpByAgentIdResponses];
+export type GetV1McpResponse = GetV1McpResponses[keyof GetV1McpResponses];
 
-export type PostV1McpByAgentIdData = {
+export type PostV1McpData = {
     body?: {
         [key: string]: unknown;
     };
-    path: {
-        agentId: string;
-    };
+    path?: never;
     query?: never;
-    url: '/v1/mcp/{agentId}';
+    url: '/v1/mcp';
 };
 
-export type PostV1McpByAgentIdResponses = {
+export type PostV1McpResponses = {
     /**
      * Default Response
      */
