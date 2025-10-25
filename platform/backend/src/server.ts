@@ -108,6 +108,13 @@ const start = async () => {
           version,
         },
       },
+
+      /**
+       * basically we use this hide untagged option to NOT include fastify-http-proxy routes in the OpenAPI spec
+       * (ex. we use this in several spots, as of this writing, under ./routes/proxy/)
+       */
+      hideUntagged: true,
+
       /**
        * https://github.com/turkerdev/fastify-type-provider-zod?tab=readme-ov-file#how-to-use-together-with-fastifyswagger
        */
@@ -124,6 +131,7 @@ const start = async () => {
       "/health",
       {
         schema: {
+          tags: ["health"],
           response: {
             200: z.object({
               name: z.string(),
