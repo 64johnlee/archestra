@@ -2071,8 +2071,14 @@ export type GetHealthResponses = {
     /**
      * Default Response
      */
-    200: unknown;
+    200: {
+        name: string;
+        status: string;
+        version: string;
+    };
 };
+
+export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
 
 export type GetAgentsData = {
     body?: never;
