@@ -3832,7 +3832,7 @@ export type GetFeaturesResponses = {
      * Default Response
      */
     200: {
-        mcp_registry: boolean;
+        [key: string]: never;
     };
 };
 
