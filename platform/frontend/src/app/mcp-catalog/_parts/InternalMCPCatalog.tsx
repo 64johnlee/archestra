@@ -1,16 +1,17 @@
 "use client";
 
-import { GITHUB_MCP_SERVER_NAME } from "@shared";
 import {
   Download,
   Eye,
   MoreVertical,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   Trash2,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AssignAgentDialog } from "@/app/tools/_parts/assign-agent-dialog";
 import { OAuthConfirmationDialog } from "@/components/oauth-confirmation-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ import type {
 } from "@/lib/clients/api";
 import { useInternalMcpCatalog } from "@/lib/internal-mcp-catalog.query";
 import {
+  useDeleteMcpServer,
   useInstallMcpServer,
   useMcpServers,
   useMcpServerTools,
@@ -37,8 +39,8 @@ import { BulkAssignAgentDialog } from "./bulk-assign-agent-dialog";
 import { CreateCatalogDialog } from "./create-catalog-dialog";
 import { DeleteCatalogDialog } from "./delete-catalog-dialog";
 import { EditCatalogDialog } from "./edit-catalog-dialog";
-import { GitHubInstallDialog } from "./github-install-dialog";
 import { McpToolsDialog } from "./mcp-tools-dialog";
+import { ReinstallConfirmationDialog } from "./reinstall-confirmation-dialog";
 import { RemoteServerInstallDialog } from "./remote-server-install-dialog";
 import { TransportBadges } from "./transport-badges";
 import { UninstallServerDialog } from "./uninstall-server-dialog";
@@ -52,8 +54,10 @@ function InternalServerCard({
   item,
   installed,
   isInstalling,
+  needsReinstall,
   onInstall,
   onUninstall,
+  onReinstall,
   onEdit,
   onDelete,
   onViewTools,
@@ -61,8 +65,10 @@ function InternalServerCard({
   item: CatalogItemWithOptionalLabel;
   installed: boolean;
   isInstalling: boolean;
+  needsReinstall: boolean;
   onInstall: () => void;
   onUninstall: () => void;
+  onReinstall: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onViewTools?: () => void;
@@ -114,9 +120,21 @@ function InternalServerCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col pt-3 gap-2">
+      <CardContent className="flex-1 flex flex-col pt-3 gap-2 justify-end">
         {installed ? (
           <>
+            {needsReinstall && (
+              <Button
+                onClick={onReinstall}
+                size="sm"
+                variant="default"
+                className="w-full"
+                disabled={isInstalling}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                {isInstalling ? "Reinstalling..." : "Reinstall Required"}
+              </Button>
+            )}
             {onViewTools && (
               <Button
                 onClick={onViewTools}
@@ -164,6 +182,7 @@ export function InternalMCPCatalog({
     initialData: initialInstalledServers,
   });
   const installMutation = useInstallMcpServer();
+  const deleteMutation = useDeleteMcpServer();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<
@@ -178,7 +197,6 @@ export function InternalMCPCatalog({
   } | null>(null);
   const [installingItemId, setInstallingItemId] = useState<string | null>(null);
   const [catalogSearchQuery, setCatalogSearchQuery] = useState("");
-  const [isGitHubDialogOpen, setIsGitHubDialogOpen] = useState(false);
   const [isRemoteServerDialogOpen, setIsRemoteServerDialogOpen] =
     useState(false);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<
@@ -207,6 +225,10 @@ export function InternalMCPCatalog({
       createdAt: string;
     }>
   >([]);
+  const [showReinstallDialog, setShowReinstallDialog] = useState(false);
+  const [catalogItemForReinstall, setCatalogItemForReinstall] = useState<
+    GetInternalMcpCatalogResponses["200"][number] | null
+  >(null);
 
   const toolsDialogServer = useMemo(() => {
     return installedServers?.find(
@@ -219,25 +241,7 @@ export function InternalMCPCatalog({
 
   const handleInstall = useCallback(
     async (catalogItem: GetInternalMcpCatalogResponses["200"][number]) => {
-      /**
-       * NOTE: THIS IS ABSOLUTELY TEMPORARY..
-       *
-       * Check if this is a GitHub MCP server that requires authentication
-       */
-      if (catalogItem.name === GITHUB_MCP_SERVER_NAME) {
-        setSelectedCatalogItem(catalogItem);
-        setIsGitHubDialogOpen(true);
-        return;
-      }
-
-      // Check if this server requires OAuth authentication
-      if (catalogItem.oauthConfig) {
-        setSelectedCatalogItem(catalogItem);
-        setIsOAuthDialogOpen(true);
-        return;
-      }
-
-      // Check if this is a remote server with user configuration
+      // Check if this is a remote server with user configuration or it's the GitHub MCP server from the external catalog
       if (
         catalogItem.serverType === "remote" &&
         catalogItem.userConfig &&
@@ -248,14 +252,24 @@ export function InternalMCPCatalog({
         return;
       }
 
+      // Check if this server requires OAuth authentication
+      if (catalogItem.oauthConfig) {
+        setSelectedCatalogItem(catalogItem);
+        setIsOAuthDialogOpen(true);
+        return;
+      }
+
       // For servers without configuration, install directly
-      setInstallingItemId(catalogItem.id);
-      await installMutation.mutateAsync({
-        name: catalogItem.name,
-        catalogId: catalogItem.id,
-        teams: [],
-      });
-      setInstallingItemId(null);
+      try {
+        setInstallingItemId(catalogItem.id);
+        await installMutation.mutateAsync({
+          name: catalogItem.name,
+          catalogId: catalogItem.id,
+          teams: [],
+        });
+      } finally {
+        setInstallingItemId(null);
+      }
     },
     [installMutation],
   );
@@ -266,14 +280,17 @@ export function InternalMCPCatalog({
       accessToken: string,
       teams: string[],
     ) => {
-      setInstallingItemId(catalogItem.id);
-      await installMutation.mutateAsync({
-        name: catalogItem.name,
-        catalogId: catalogItem.id,
-        accessToken,
-        teams,
-      });
-      setInstallingItemId(null);
+      try {
+        setInstallingItemId(catalogItem.id);
+        await installMutation.mutateAsync({
+          name: catalogItem.name,
+          catalogId: catalogItem.id,
+          accessToken,
+          teams,
+        });
+      } finally {
+        setInstallingItemId(null);
+      }
     },
     [installMutation],
   );
@@ -283,20 +300,23 @@ export function InternalMCPCatalog({
       catalogItem: GetInternalMcpCatalogResponses["200"][number],
       metadata?: Record<string, unknown>,
     ) => {
-      setInstallingItemId(catalogItem.id);
+      try {
+        setInstallingItemId(catalogItem.id);
 
-      // Extract access_token from metadata if present and pass as accessToken
-      const accessToken =
-        metadata?.access_token && typeof metadata.access_token === "string"
-          ? metadata.access_token
-          : undefined;
+        // Extract access_token from metadata if present and pass as accessToken
+        const accessToken =
+          metadata?.access_token && typeof metadata.access_token === "string"
+            ? metadata.access_token
+            : undefined;
 
-      await installMutation.mutateAsync({
-        name: catalogItem.name,
-        catalogId: catalogItem.id,
-        ...(accessToken && { accessToken }),
-      });
-      setInstallingItemId(null);
+        await installMutation.mutateAsync({
+          name: catalogItem.name,
+          catalogId: catalogItem.id,
+          ...(accessToken && { accessToken }),
+        });
+      } finally {
+        setInstallingItemId(null);
+      }
     },
     [installMutation],
   );
@@ -357,6 +377,66 @@ export function InternalMCPCatalog({
     [],
   );
 
+  const handleReinstallRequired = useCallback(
+    async (
+      catalogId: string,
+      updatedData?: { name?: string; serverUrl?: string },
+    ) => {
+      // Check if there's an installed server from this catalog item
+      const installedServer = getInstalledServer(catalogId);
+
+      // Only show reinstall dialog if the server is actually installed
+      if (!installedServer) {
+        return;
+      }
+
+      // Wait a bit for queries to refetch after mutation
+      // This ensures we have fresh catalog data
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Find the catalog item and show reinstall dialog
+      let catalogItem = catalogItems?.find((item) => item.id === catalogId);
+
+      // If we have updated data from the edit, merge it with the catalog item
+      if (catalogItem && updatedData) {
+        catalogItem = {
+          ...catalogItem,
+          ...(updatedData.name && { name: updatedData.name }),
+          ...(updatedData.serverUrl && { serverUrl: updatedData.serverUrl }),
+        };
+      }
+
+      if (catalogItem) {
+        setCatalogItemForReinstall(catalogItem);
+        setShowReinstallDialog(true);
+      }
+    },
+    [catalogItems, getInstalledServer],
+  );
+
+  const handleReinstall = useCallback(
+    async (catalogItem: GetInternalMcpCatalogResponses["200"][number]) => {
+      // Get the installed server to get its ID (not catalog ID)
+      const installedServer = installedServers?.find(
+        (server) => server.catalogId === catalogItem.id,
+      );
+      if (!installedServer) {
+        toast.error("Server not found, cannot reinstall");
+        return;
+      }
+
+      // Delete the installed server using its server ID
+      await deleteMutation.mutateAsync({
+        id: installedServer.id,
+        name: catalogItem.name,
+      });
+
+      // Then reinstall
+      await handleInstall(catalogItem);
+    },
+    [handleInstall, deleteMutation, installedServers],
+  );
+
   const filteredCatalogItems = useMemo(() => {
     const items = catalogSearchQuery.trim()
       ? (catalogItems || []).filter((item) =>
@@ -378,16 +458,6 @@ export function InternalMCPCatalog({
       return 0;
     });
   }, [catalogItems, catalogSearchQuery, installedServers]);
-
-  // Find installed servers that don't have matching catalog items
-  const _orphanedServers = useMemo(() => {
-    if (!installedServers) return [];
-
-    const catalogIds = new Set(catalogItems?.map((item) => item.id) || []);
-    return installedServers.filter(
-      (server) => server.catalogId && !catalogIds.has(server.catalogId),
-    );
-  }, [installedServers, catalogItems]);
 
   return (
     <div className="space-y-4">
@@ -422,7 +492,10 @@ export function InternalMCPCatalog({
               key={item.id}
               item={itemWithLabel}
               installed={!!installedServer}
-              isInstalling={installingItemId === item.id}
+              isInstalling={
+                installingItemId === item.id || installMutation.isPending
+              }
+              needsReinstall={installedServer?.reinstallRequired ?? false}
               onInstall={() => handleInstall(item)}
               onUninstall={() => {
                 if (installedServer) {
@@ -432,6 +505,7 @@ export function InternalMCPCatalog({
                   );
                 }
               }}
+              onReinstall={() => handleReinstall(item)}
               onEdit={() => setEditingItem(item)}
               onDelete={() => setDeletingItem(item)}
               onViewTools={
@@ -464,6 +538,7 @@ export function InternalMCPCatalog({
       <EditCatalogDialog
         item={editingItem}
         onClose={() => setEditingItem(null)}
+        onReinstallRequired={handleReinstallRequired}
       />
 
       <DeleteCatalogDialog
@@ -472,17 +547,6 @@ export function InternalMCPCatalog({
         installationCount={
           deletingItem ? getInstallationCount(deletingItem.id) : 0
         }
-      />
-
-      <GitHubInstallDialog
-        isOpen={isGitHubDialogOpen}
-        onClose={() => {
-          setIsGitHubDialogOpen(false);
-          setSelectedCatalogItem(null);
-        }}
-        onInstall={handleGitHubInstall}
-        catalogItem={selectedCatalogItem}
-        isInstalling={installMutation.isPending}
       />
 
       <RemoteServerInstallDialog
@@ -570,6 +634,25 @@ export function InternalMCPCatalog({
         onOpenChange={(open) => {
           if (!open) setSelectedToolForAssignment(null);
         }}
+      />
+
+      <ReinstallConfirmationDialog
+        isOpen={showReinstallDialog}
+        onClose={() => {
+          setShowReinstallDialog(false);
+          setCatalogItemForReinstall(null);
+        }}
+        onConfirm={async () => {
+          if (catalogItemForReinstall) {
+            setShowReinstallDialog(false);
+            await handleReinstall(catalogItemForReinstall);
+            setCatalogItemForReinstall(null);
+          }
+        }}
+        serverName={
+          catalogItemForReinstall?.label || catalogItemForReinstall?.name || ""
+        }
+        isReinstalling={installMutation.isPending}
       />
     </div>
   );

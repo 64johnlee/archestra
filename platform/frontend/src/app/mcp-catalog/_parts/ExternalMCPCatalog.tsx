@@ -1,5 +1,6 @@
 "use client";
 
+import { GITHUB_MCP_SERVER_NAME } from "@shared";
 import { BookOpen, Github, Info, Loader2, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { DebouncedInput } from "@/components/debounced-input";
@@ -58,6 +59,17 @@ export function ExternalMCPCatalog({
   const createMutation = useCreateInternalMcpCatalogItem();
 
   const handleAddToCatalog = async (server: ArchestraMcpServerManifest) => {
+    if (server.name === GITHUB_MCP_SERVER_NAME) {
+      server.user_config = {
+        access_token: {
+          sensitive: true,
+          type: "string",
+          title: "Access Token",
+          description: "The access token for the GitHub MCP server",
+          required: true,
+        },
+      };
+    }
     // Rewrite redirect URIs to prefer platform callback (port 3000)
     const rewrittenOauth =
       server.oauth_config && !server.oauth_config.requires_proxy
@@ -317,7 +329,7 @@ function ServerCard({
           </p>
         )}
 
-        <div className="flex flex-col gap-2 mt-auto pt-3">
+        <div className="flex flex-col gap-2 mt-auto pt-3 justify-end">
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
