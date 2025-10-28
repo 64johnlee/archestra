@@ -1,5 +1,6 @@
 "use client";
 
+import type { archestraApiTypes } from "@shared";
 import {
   Download,
   Eye,
@@ -24,10 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import type {
-  GetInternalMcpCatalogResponses,
-  GetMcpServersResponses,
-} from "@/lib/clients/api";
+import { useRole } from "@/lib/auth.hook";
 import { useInternalMcpCatalog } from "@/lib/internal-mcp-catalog.query";
 import {
   useDeleteMcpServer,
@@ -37,6 +35,7 @@ import {
 } from "@/lib/mcp-server.query";
 import { BulkAssignAgentDialog } from "./bulk-assign-agent-dialog";
 import { CreateCatalogDialog } from "./create-catalog-dialog";
+import { CustomServerRequestDialog } from "./custom-server-request-dialog";
 import { DeleteCatalogDialog } from "./delete-catalog-dialog";
 import { EditCatalogDialog } from "./edit-catalog-dialog";
 import { McpToolsDialog } from "./mcp-tools-dialog";
@@ -46,7 +45,7 @@ import { TransportBadges } from "./transport-badges";
 import { UninstallServerDialog } from "./uninstall-server-dialog";
 
 type CatalogItemWithOptionalLabel =
-  GetInternalMcpCatalogResponses["200"][number] & {
+  archestraApiTypes.GetInternalMcpCatalogResponses["200"][number] & {
     label?: string | null;
   };
 
@@ -174,22 +173,26 @@ export function InternalMCPCatalog({
   initialData,
   installedServers: initialInstalledServers,
 }: {
-  initialData?: GetInternalMcpCatalogResponses["200"];
-  installedServers?: GetMcpServersResponses["200"];
+  initialData?: archestraApiTypes.GetInternalMcpCatalogResponses["200"];
+  installedServers?: archestraApiTypes.GetMcpServersResponses["200"];
 }) {
   const { data: catalogItems } = useInternalMcpCatalog({ initialData });
   const { data: installedServers } = useMcpServers({
     initialData: initialInstalledServers,
   });
   const installMutation = useInstallMcpServer();
+  const userRole = useRole();
+  const isAdmin = userRole === "admin";
   const deleteMutation = useDeleteMcpServer();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCustomRequestDialogOpen, setIsCustomRequestDialogOpen] =
+    useState(false);
   const [editingItem, setEditingItem] = useState<
-    GetInternalMcpCatalogResponses["200"][number] | null
+    archestraApiTypes.GetInternalMcpCatalogResponses["200"][number] | null
   >(null);
   const [deletingItem, setDeletingItem] = useState<
-    GetInternalMcpCatalogResponses["200"][number] | null
+    archestraApiTypes.GetInternalMcpCatalogResponses["200"][number] | null
   >(null);
   const [uninstallingServer, setUninstallingServer] = useState<{
     id: string;
@@ -200,7 +203,7 @@ export function InternalMCPCatalog({
   const [isRemoteServerDialogOpen, setIsRemoteServerDialogOpen] =
     useState(false);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<
-    GetInternalMcpCatalogResponses["200"][number] | null
+    archestraApiTypes.GetInternalMcpCatalogResponses["200"][number] | null
   >(null);
   const [isOAuthDialogOpen, setIsOAuthDialogOpen] = useState(false);
   const [toolsDialogServerId, setToolsDialogServerId] = useState<string | null>(
@@ -227,7 +230,7 @@ export function InternalMCPCatalog({
   >([]);
   const [showReinstallDialog, setShowReinstallDialog] = useState(false);
   const [catalogItemForReinstall, setCatalogItemForReinstall] = useState<
-    GetInternalMcpCatalogResponses["200"][number] | null
+    archestraApiTypes.GetInternalMcpCatalogResponses["200"][number] | null
   >(null);
 
   const toolsDialogServer = useMemo(() => {
@@ -240,7 +243,9 @@ export function InternalMCPCatalog({
     useMcpServerTools(toolsDialogServerId);
 
   const handleInstall = useCallback(
-    async (catalogItem: GetInternalMcpCatalogResponses["200"][number]) => {
+    async (
+      catalogItem: archestraApiTypes.GetInternalMcpCatalogResponses["200"][number],
+    ) => {
       // Check if this is a remote server with user configuration or it's the GitHub MCP server from the external catalog
       if (
         catalogItem.serverType === "remote" &&
@@ -274,9 +279,9 @@ export function InternalMCPCatalog({
     [installMutation],
   );
 
-  const handleGitHubInstall = useCallback(
+  const _handleGitHubInstall = useCallback(
     async (
-      catalogItem: GetInternalMcpCatalogResponses["200"][number],
+      catalogItem: archestraApiTypes.GetInternalMcpCatalogResponses["200"][number],
       accessToken: string,
       teams: string[],
     ) => {
@@ -297,7 +302,7 @@ export function InternalMCPCatalog({
 
   const handleRemoteServerInstall = useCallback(
     async (
-      catalogItem: GetInternalMcpCatalogResponses["200"][number],
+      catalogItem: archestraApiTypes.GetInternalMcpCatalogResponses["200"][number],
       metadata?: Record<string, unknown>,
     ) => {
       try {
@@ -415,7 +420,9 @@ export function InternalMCPCatalog({
   );
 
   const handleReinstall = useCallback(
-    async (catalogItem: GetInternalMcpCatalogResponses["200"][number]) => {
+    async (
+      catalogItem: archestraApiTypes.GetInternalMcpCatalogResponses["200"][number],
+    ) => {
       // Get the installed server to get its ID (not catalog ID)
       const installedServer = installedServers?.find(
         (server) => server.catalogId === catalogItem.id,
@@ -468,9 +475,17 @@ export function InternalMCPCatalog({
             MCP Servers from this registry can be assigned to your agents.
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button
+          onClick={() =>
+            isAdmin
+              ? setIsCreateDialogOpen(true)
+              : setIsCustomRequestDialogOpen(true)
+          }
+        >
           <Plus className="mr-2 h-4 w-4" />
-          Add MCP server using config
+          {isAdmin
+            ? "Add MCP server using config"
+            : "Request to add custom MCP Server"}
         </Button>
       </div>
       <div className="relative">
@@ -533,6 +548,11 @@ export function InternalMCPCatalog({
       <CreateCatalogDialog
         isOpen={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}
+      />
+
+      <CustomServerRequestDialog
+        isOpen={isCustomRequestDialogOpen}
+        onClose={() => setIsCustomRequestDialogOpen(false)}
       />
 
       <EditCatalogDialog

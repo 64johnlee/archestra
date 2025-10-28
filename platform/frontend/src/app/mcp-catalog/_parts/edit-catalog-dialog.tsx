@@ -1,3 +1,4 @@
+import type { archestraApiTypes } from "@shared";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { GetInternalMcpCatalogResponses } from "@/lib/clients/api";
 import { useUpdateInternalMcpCatalogItem } from "@/lib/internal-mcp-catalog.query";
 import {
   McpCatalogForm,
@@ -18,7 +18,7 @@ import {
 } from "./mcp-catalog-form";
 
 interface EditCatalogDialogProps {
-  item: GetInternalMcpCatalogResponses["200"][number] | null;
+  item: archestraApiTypes.GetInternalMcpCatalogResponses["200"][number] | null;
   onClose: () => void;
   onReinstallRequired: (
     catalogId: string,

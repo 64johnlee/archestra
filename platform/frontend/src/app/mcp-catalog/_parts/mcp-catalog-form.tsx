@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { archestraApiTypes } from "@shared";
 import { AlertCircle, Info } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -24,7 +25,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { GetInternalMcpCatalogResponses } from "@/lib/clients/api";
 
 // Simplified OAuth config schema
 const oauthConfigSchema = z.object({
@@ -149,7 +149,7 @@ export function transformFormToApiData(
 
 // Transform catalog item to form values
 export function transformCatalogItemToFormValues(
-  item: GetInternalMcpCatalogResponses["200"][number],
+  item: archestraApiTypes.GetInternalMcpCatalogResponses["200"][number],
 ): McpCatalogFormValues {
   // Determine auth method
   let authMethod: "none" | "pat" | "oauth" = "none";
@@ -198,7 +198,7 @@ export function transformCatalogItemToFormValues(
 
 interface McpCatalogFormProps {
   mode: "create" | "edit";
-  initialValues?: GetInternalMcpCatalogResponses["200"][number];
+  initialValues?: archestraApiTypes.GetInternalMcpCatalogResponses["200"][number];
   onSubmit: (values: McpCatalogFormValues) => void;
   submitButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
