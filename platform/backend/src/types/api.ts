@@ -163,6 +163,10 @@ export const RouteId = {
   GetInteractions: "getInteractions",
   GetInteraction: "getInteraction",
 
+  // MCP Tool Call Routes
+  GetMcpToolCalls: "getMcpToolCalls",
+  GetMcpToolCall: "getMcpToolCall",
+
   // Autonomy Policy Routes
   GetOperators: "getOperators",
   GetToolInvocationPolicies: "getToolInvocationPolicies",
