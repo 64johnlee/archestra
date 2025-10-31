@@ -2,7 +2,9 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import config from "@/config";
+import logger from "@/logging";
 import { McpServerRuntimeManager } from "@/mcp-server-runtime";
+
 import {
   InternalMcpCatalogModel,
   McpToolCallModel,
@@ -54,12 +56,15 @@ class McpClient {
           toolCall,
           toolResult,
         });
-        console.log("✅ Saved early-return error:", {
-          toolName: toolCall.name,
-          error: errorMessage,
-        });
+        logger.info(
+          {
+            toolName: toolCall.name,
+            error: errorMessage,
+          },
+          "✅ Saved early-return error:",
+        );
       } catch (dbError) {
-        console.error("Failed to persist early-return error:", dbError);
+        logger.error({ err: dbError }, "Failed to persist early-return error:");
       }
     }
 
@@ -197,9 +202,9 @@ class McpClient {
                     result.content,
                   );
                 } catch (error) {
-                  console.error(
+                  logger.error(
+                    { err: error },
                     `Error applying response modifier template for tool ${toolCall.name}:`,
-                    error,
                   );
                   // If template fails, use original content
                 }
@@ -221,8 +226,7 @@ class McpClient {
                   toolCall,
                   toolResult,
                 });
-                console.log(
-                  "✅ Saved streamable-http MCP tool call (success):",
+                logger.info(
                   {
                     id: savedToolCall.id,
                     toolName: toolCall.name,
@@ -231,11 +235,12 @@ class McpClient {
                         ? toolResult.content.substring(0, 100)
                         : JSON.stringify(toolResult.content).substring(0, 100),
                   },
+                  "✅ Saved streamable-http MCP tool call (success):",
                 );
               } catch (dbError) {
-                console.error(
+                logger.error(
+                  { err: dbError },
                   "Failed to persist streamable-http MCP tool call:",
-                  dbError,
                 );
                 // Continue execution even if persistence fails
               }
@@ -257,14 +262,18 @@ class McpClient {
                   toolCall,
                   toolResult,
                 });
-                console.log(
+                logger.info(
+                  {
+                    id: savedToolCall.id,
+                    toolName: toolCall.name,
+                    error: toolResult.error,
+                  },
                   "✅ Saved streamable-http MCP tool call (error):",
-                  savedToolCall.id,
                 );
               } catch (dbError) {
-                console.error(
+                logger.error(
+                  { err: dbError },
                   "Failed to persist failed streamable-http MCP tool call:",
-                  dbError,
                 );
               }
             }
@@ -327,9 +336,9 @@ class McpClient {
                   result.content,
                 );
               } catch (error) {
-                console.error(
+                logger.error(
+                  { err: error },
                   `Error applying response modifier template for tool ${toolCall.name}:`,
-                  error,
                 );
                 // If template fails, use original content
               }
@@ -351,16 +360,22 @@ class McpClient {
                 toolCall,
                 toolResult,
               });
-              console.log("✅ Saved local MCP tool call (success):", {
-                id: savedToolCall.id,
-                toolName: toolCall.name,
-                resultContent:
-                  typeof toolResult.content === "string"
-                    ? toolResult.content.substring(0, 100)
-                    : JSON.stringify(toolResult.content).substring(0, 100),
-              });
+              logger.info(
+                {
+                  id: savedToolCall.id,
+                  toolName: toolCall.name,
+                  resultContent:
+                    typeof toolResult.content === "string"
+                      ? toolResult.content.substring(0, 100)
+                      : JSON.stringify(toolResult.content).substring(0, 100),
+                },
+                "✅ Saved local MCP tool call (success):",
+              );
             } catch (dbError) {
-              console.error("Failed to persist local MCP tool call:", dbError);
+              logger.error(
+                { err: dbError },
+                "Failed to persist local MCP tool call:",
+              );
               // Continue execution even if persistence fails
             }
           } catch (error) {
@@ -381,13 +396,19 @@ class McpClient {
                 toolCall,
                 toolResult,
               });
-              console.log("✅ Saved local MCP tool call (error):", {
-                id: savedToolCall.id,
-                toolName: toolCall.name,
-                error: toolResult.error,
-              });
+              logger.info(
+                {
+                  id: savedToolCall.id,
+                  toolName: toolCall.name,
+                  error: toolResult.error,
+                },
+                "✅ Saved local MCP tool call (error):",
+              );
             } catch (dbError) {
-              console.error("Failed to persist local MCP tool call:", dbError);
+              logger.error(
+                { err: dbError },
+                "Failed to persist local MCP tool call:",
+              );
               // Continue execution even if persistence fails
             }
           }
@@ -453,9 +474,9 @@ class McpClient {
                 result.content,
               );
             } catch (error) {
-              console.error(
+              logger.error(
+                { err: error },
                 `Error applying response modifier template for tool ${toolCall.name}:`,
-                error,
               );
               // If template fails, use original content
             }
@@ -477,16 +498,19 @@ class McpClient {
               toolCall,
               toolResult,
             });
-            console.log("✅ Saved successful MCP tool call:", {
-              id: savedToolCall.id,
-              toolName: toolCall.name,
-              resultContent:
-                typeof toolResult.content === "string"
-                  ? toolResult.content.substring(0, 100)
-                  : JSON.stringify(toolResult.content).substring(0, 100),
-            });
+            logger.info(
+              {
+                id: savedToolCall.id,
+                toolName: toolCall.name,
+                resultContent:
+                  typeof toolResult.content === "string"
+                    ? toolResult.content.substring(0, 100)
+                    : JSON.stringify(toolResult.content).substring(0, 100),
+              },
+              "✅ Saved successful MCP tool call:",
+            );
           } catch (dbError) {
-            console.error("Failed to persist MCP tool call:", dbError);
+            logger.error({ err: dbError }, "Failed to persist MCP tool call:");
             // Continue execution even if persistence fails
           }
         } catch (error) {
@@ -507,13 +531,16 @@ class McpClient {
               toolCall,
               toolResult,
             });
-            console.log("✅ Saved failed MCP tool call:", {
-              id: savedToolCall.id,
-              toolName: toolCall.name,
-              error: toolResult.error,
-            });
+            logger.info(
+              {
+                id: savedToolCall.id,
+                toolName: toolCall.name,
+                error: toolResult.error,
+              },
+              "✅ Saved failed MCP tool call:",
+            );
           } catch (dbError) {
-            console.error("Failed to persist MCP tool call:", dbError);
+            logger.error({ err: dbError }, "Failed to persist MCP tool call:");
             // Continue execution even if persistence fails
           }
         }
@@ -539,7 +566,7 @@ class McpClient {
             toolResult,
           });
         } catch (dbError) {
-          console.error("Failed to persist MCP tool call:", dbError);
+          logger.error({ err: dbError }, "Failed to persist MCP tool call:");
           // Continue execution even if persistence fails
         }
       }
@@ -748,7 +775,7 @@ class McpClient {
       try {
         await client.close();
       } catch (error) {
-        console.error(`Error closing MCP client ${clientId}:`, error);
+        logger.error({ err: error }, `Error closing MCP client ${clientId}:`);
       }
       this.clients.delete(clientId);
     }
@@ -769,7 +796,7 @@ class McpClient {
       try {
         await client.close();
       } catch (error) {
-        console.error("Error closing active MCP connection:", error);
+        logger.error({ err: error }, "Error closing active MCP connection:");
       }
     });
 
@@ -784,15 +811,15 @@ export default mcpClient;
 
 // Clean up connections on process exit
 process.on("exit", () => {
-  mcpClient.disconnectAll().catch(console.error);
+  mcpClient.disconnectAll().catch(logger.error);
 });
 
 process.on("SIGINT", () => {
-  mcpClient.disconnectAll().catch(console.error);
+  mcpClient.disconnectAll().catch(logger.error);
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
-  mcpClient.disconnectAll().catch(console.error);
+  mcpClient.disconnectAll().catch(logger.error);
   process.exit(0);
 });
