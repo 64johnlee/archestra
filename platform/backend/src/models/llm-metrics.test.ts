@@ -1,5 +1,4 @@
 import type { GoogleGenAI } from "@google/genai";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Agent } from "@/types";
 import AgentModel from "./agent";
 
@@ -25,18 +24,15 @@ vi.mock("prom-client", () => {
 
 import { getObservableFetch, getObservableGenAI } from "./llm-metrics";
 
-let testAgent: Agent;
-
-beforeAll(async () => {
-  testAgent = await AgentModel.create({
-    name: "Test Agent",
-    teams: [],
-  });
-});
-
 describe("getObservableFetch", () => {
-  beforeEach(() => {
+  let testAgent: Agent;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    testAgent = await AgentModel.create({
+      name: "Test Agent",
+      teams: [],
+    });
   });
 
   it("records duration and tokens on successful request", async () => {
@@ -253,8 +249,14 @@ describe("getObservableGenAI", () => {
     } as unknown as GoogleGenAI;
   }
 
-  beforeEach(() => {
+  let testAgent: Agent;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    testAgent = await AgentModel.create({
+      name: "Test Agent",
+      teams: [],
+    });
   });
 
   it("records duration and tokens on successful Gemini request", async () => {
