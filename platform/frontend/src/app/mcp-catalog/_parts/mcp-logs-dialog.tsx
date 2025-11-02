@@ -1,7 +1,14 @@
 "use client";
 
-import { Copy, Terminal } from "lucide-react";
-import { useCallback, useState } from "react";
+import {
+  ArrowDown,
+  Copy,
+  Play,
+  RefreshCw,
+  Square,
+  Terminal,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +24,7 @@ interface McpLogsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   serverName: string;
+  serverId?: string;
   logs: string;
   command: string;
   isLoading: boolean;
@@ -27,24 +35,153 @@ export function McpLogsDialog({
   open,
   onOpenChange,
   serverName,
-  logs,
+  serverId,
+  logs: initialLogs,
   command,
-  isLoading,
-  error,
+  isLoading: initialIsLoading,
+  error: initialError,
 }: McpLogsDialogProps) {
   const [copied, setCopied] = useState(false);
   const [commandCopied, setCommandCopied] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [streamedLogs, setStreamedLogs] = useState("");
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Use streamed logs when following, otherwise use initial logs
+  const displayLogs = isFollowing ? streamedLogs : initialLogs;
+  const displayError = isFollowing ? streamError : initialError?.message;
+  const displayIsLoading = isFollowing ? false : initialIsLoading;
+
+  const startFollowing = useCallback(async () => {
+    if (!serverId) {
+      toast.error("Server ID is required for streaming logs");
+      return;
+    }
+
+    setIsFollowing(true);
+    setStreamError(null);
+
+    // Create an abort controller for this stream
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    try {
+      const response = await fetch(
+        `/api/mcp_server/${serverId}/logs?lines=500&follow=true`,
+        {
+          signal: abortController.signal,
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to stream logs: ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error("No response body");
+      }
+
+      // Clear existing logs when starting to follow
+      setStreamedLogs("");
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        const chunk = decoder.decode(value, { stream: true });
+        setStreamedLogs((prev) => {
+          const newLogs = prev + chunk;
+
+          // Auto-scroll to bottom when new logs arrive (with a slight delay to ensure DOM update)
+          if (autoScroll) {
+            setTimeout(() => {
+              if (scrollAreaRef.current) {
+                const scrollContainer = scrollAreaRef.current.querySelector(
+                  "[data-radix-scroll-area-viewport]",
+                );
+                if (scrollContainer) {
+                  scrollContainer.scrollTop = scrollContainer.scrollHeight;
+                }
+              }
+            }, 10);
+          }
+
+          return newLogs;
+        });
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        setStreamError(err.message);
+        toast.error(`Streaming failed: ${err.message}`);
+      }
+    } finally {
+      setIsFollowing(false);
+      abortControllerRef.current = null;
+    }
+  }, [serverId, autoScroll]);
+
+  const stopFollowing = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsFollowing(false);
+  }, []);
+
+  // Auto-scroll management: detect when user scrolls up manually
+  useEffect(() => {
+    const scrollContainer = scrollAreaRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]",
+    );
+
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
+      setAutoScroll(isAtBottom);
+    };
+
+    scrollContainer.addEventListener("scroll", handleScroll);
+    return () => scrollContainer.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Clean up when dialog closes
+  useEffect(() => {
+    if (!open) {
+      stopFollowing();
+      setStreamedLogs("");
+      setStreamError(null);
+      setAutoScroll(true); // Reset auto-scroll when dialog reopens
+    }
+  }, [open, stopFollowing]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopFollowing();
+    };
+  }, [stopFollowing]);
 
   const handleCopyLogs = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(logs);
+      await navigator.clipboard.writeText(displayLogs);
       setCopied(true);
       toast.success("Logs copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     } catch (_error) {
       toast.error("Failed to copy logs");
     }
-  }, [logs]);
+  }, [displayLogs]);
 
   const handleCopyCommand = useCallback(async () => {
     try {
@@ -56,6 +193,18 @@ export function McpLogsDialog({
       toast.error("Failed to copy command");
     }
   }, [command]);
+
+  const scrollToBottom = useCallback(() => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]",
+      );
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        setAutoScroll(true);
+      }
+    }
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -75,30 +224,73 @@ export function McpLogsDialog({
           <div className="flex flex-col gap-2 flex-1 min-h-0">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">Container Logs</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopyLogs}
-                disabled={isLoading || !!error || !logs}
-              >
-                <Copy className="mr-2 h-3 w-3" />
-                {copied ? "Copied!" : "Copy"}
-              </Button>
+              <div className="flex gap-2">
+                {!isFollowing ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={startFollowing}
+                      disabled={displayIsLoading || !serverId}
+                    >
+                      <Play className="mr-2 h-3 w-3" />
+                      Follow
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.reload()}
+                      disabled={displayIsLoading}
+                    >
+                      <RefreshCw className="mr-2 h-3 w-3" />
+                      Refresh
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={stopFollowing}>
+                    <Square className="mr-2 h-3 w-3" />
+                    Stop
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyLogs}
+                  disabled={displayIsLoading || !!displayError || !displayLogs}
+                >
+                  <Copy className="mr-2 h-3 w-3" />
+                  {copied ? "Copied!" : "Copy"}
+                </Button>
+                {isFollowing && !autoScroll && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={scrollToBottom}
+                    className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                  >
+                    <ArrowDown className="mr-2 h-3 w-3" />
+                    Scroll to Bottom
+                  </Button>
+                )}
+              </div>
             </div>
 
-            <div className="h-[450px] rounded-md border bg-slate-950 overflow-y-scroll">
+            <ScrollArea
+              ref={scrollAreaRef}
+              className="h-[450px] rounded-md border bg-slate-950"
+            >
               <div className="p-4">
-                {isLoading ? (
+                {displayIsLoading ? (
                   <div className="text-slate-400 font-mono text-sm">
                     Loading logs...
                   </div>
-                ) : error ? (
+                ) : displayError ? (
                   <div className="text-red-400 font-mono text-sm">
-                    Error loading logs: {error.message}
+                    Error loading logs: {displayError}
                   </div>
-                ) : logs ? (
+                ) : displayLogs ? (
                   <pre className="text-slate-200 font-mono text-xs whitespace-pre-wrap">
-                    {logs}
+                    {displayLogs}
                   </pre>
                 ) : (
                   <div className="text-slate-400 font-mono text-sm">
@@ -106,7 +298,7 @@ export function McpLogsDialog({
                   </div>
                 )}
               </div>
-            </div>
+            </ScrollArea>
           </div>
 
           {/* Command section */}
