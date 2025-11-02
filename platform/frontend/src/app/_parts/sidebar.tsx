@@ -52,6 +52,7 @@ interface MenuItem {
   url: string;
   icon: LucideIcon;
   subItems?: MenuItem[];
+  customIsActive?: (pathname: string) => boolean;
 }
 
 const getNavigationItems = (
@@ -75,35 +76,20 @@ const getNavigationItems = (
             title: "Logs",
             url: "/logs/llm-proxy",
             icon: MessagesSquare,
-            subItems: [
-              {
-                title: "LLM Proxy",
-                url: "/logs/llm-proxy",
-                icon: MessagesSquare,
-              },
-              {
-                title: "MCP Gateway",
-                url: "/logs/mcp-gateway",
-                icon: Router,
-              },
-            ],
+            customIsActive: (pathname: string) => pathname.startsWith("/logs"),
           },
           {
             title: "Tools",
-            url: "/tools",
+            url: "/tools/agents-assigned",
             icon: Wrench,
+            customIsActive: (pathname: string) => pathname.startsWith("/tools"),
           },
           {
             title: "MCP Registry",
-            url: "/mcp-catalog",
+            url: "/mcp-catalog/registry",
             icon: Router,
-            subItems: [
-              {
-                title: "Installation Requests",
-                url: "/mcp-catalog/installation-requests",
-                icon: ClipboardList,
-              },
-            ],
+            customIsActive: (pathname: string) =>
+              pathname.startsWith("/mcp-catalog"),
           },
           ...(role === "admin"
             ? [
@@ -157,7 +143,13 @@ export function AppSidebar() {
             <SidebarMenu>
               {getNavigationItems(isAuthenticated, role).map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={item.url === pathname}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={
+                      item.customIsActive?.(pathname) ??
+                      pathname.startsWith(item.url)
+                    }
+                  >
                     <Link href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
