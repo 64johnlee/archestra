@@ -188,6 +188,9 @@ const routePermissionsConfig: Partial<
     agent: ["read"],
     tool: ["read"],
   },
+  [RouteId.GetAgentAvailableTokens]: {
+    agent: ["read"],
+  },
   [RouteId.GetUnassignedTools]: {
     tool: ["read"],
   },
@@ -301,6 +304,18 @@ const routePermissionsConfig: Partial<
     mcpServer: ["create"],
   },
   [RouteId.DeleteMcpServer]: {
+    mcpServer: ["delete"],
+  },
+  [RouteId.RevokeUserMcpServerAccess]: {
+    mcpServer: ["delete"],
+  },
+  [RouteId.GrantTeamMcpServerAccess]: {
+    mcpServer: ["create"],
+  },
+  [RouteId.RevokeTeamMcpServerAccess]: {
+    mcpServer: ["delete"],
+  },
+  [RouteId.RevokeAllTeamsMcpServerAccess]: {
     mcpServer: ["delete"],
   },
   [RouteId.GetMcpServerInstallationStatus]: {
