@@ -33,6 +33,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **MCP Restart**: <http://localhost:9000/api/mcp_server/:id/restart> (POST to restart pod)
 - **Tempo API**: <http://localhost:3200/> (Tempo HTTP API for distributed tracing)
 - **Grafana**: <http://localhost:3002/> (metrics and trace visualization, manual start via Tilt)
+- **Tempo API**: <http://localhost:3200/> (Tempo HTTP API for distributed tracing)
 - **Prometheus**: <http://localhost:9090/> (metrics storage, starts with Grafana)
 - **MCP Tool Calls API**: <http://localhost:9000/api/mcp-tool-calls> (GET paginated MCP tool call logs)
 
@@ -118,9 +119,9 @@ ARCHESTRA_LOGGING_LEVEL=info  # Options: trace, debug, info, warn, error, fatal
 
 ## Observability
 
-**Tracing**: LLM proxy routes add agent data via `sprinkleTraceAttributes()`. Traces include `agent.name` and `agent.<label>` attributes. Traces stored in Grafana Tempo, viewable via Grafana UI.
+**Tracing**: LLM proxy routes add agent data via `startActiveLlmSpan()`. Traces include `agent.id`, `agent.name` and dynamic `agent.<label>` attributes. Agent label keys are fetched from database on startup and included as resource attributes. Traces stored in Grafana Tempo.
 
-**Metrics**: Prometheus metrics (`llm_request_duration_seconds`, `llm_tokens_total`) include `agent_name` label for per-agent analysis.
+**Metrics**: Prometheus metrics (`llm_request_duration_seconds`, `llm_tokens_total`) include `agent_name`, `agent_id` and dynamic agent labels as dimensions. Metrics are reinitialized on startup with current label keys from database.
 
 **Local Setup**: Use `tilt trigger observability` or `docker compose -f dev/docker-compose.observability.yml up` to start Tempo, Prometheus, and Grafana with pre-configured datasources.
 
