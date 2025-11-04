@@ -17,6 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Key URLs
 
 - **Frontend**: <http://localhost:3000/>
+- **Backend**: <http://localhost:9000/> (Fastify API server)
 - **Chat**: <http://localhost:3000/chat> (n8n expert chat with MCP tools)
 - **Tools Inspector**: <http://localhost:3000/tools>
 - **Settings**: <http://localhost:3000/settings> (Main settings page with tabs for LLM & MCP Gateways, Dual LLM, Your Account, Members, Teams, Appearance)
@@ -46,7 +47,7 @@ pnpm dev                                # Start all workspaces
 pnpm lint                               # Lint and auto-fix
 pnpm type-check                         # Check TypeScript types
 pnpm test                               # Run tests
-pnpm test:e2e                           # Run e2e tests with Playwright (includes WireMock)
+pnpm test:e2e                           # Run e2e tests with Playwright (chromium, webkit, firefox) (chromium, webkit, firefox)
 
 # Database
 pnpm db:migrate      # Run database migrations
@@ -80,6 +81,9 @@ ANTHROPIC_API_KEY=your-api-key-here
 # Provider Base URLs (optional - for testing)
 ARCHESTRA_OPENAI_BASE_URL=https://api.openai.com/v1
 ARCHESTRA_ANTHROPIC_BASE_URL=https://api.anthropic.com
+
+# Analytics (optional - disabled for local dev and e2e tests)
+ARCHESTRA_ANALYTICS=disabled  # Set to "disabled" to disable PostHog analytics
 
 # Chat Feature Configuration (n8n automation expert)
 ARCHESTRA_CHAT_ANTHROPIC_API_KEY=your-api-key-here  # Required for chat (direct Anthropic API)
@@ -207,4 +211,4 @@ ARCHESTRA_LOGGING_LEVEL=info  # Options: trace, debug, info, warn, error, fatal
 - Custom logos display with "Powered by Archestra" attribution
 - Database columns: theme, customFont, logoType, logo
 
-**Testing**: Vitest with PGLite for in-memory PostgreSQL testing, Playwright e2e tests with WireMock for API mocking
+**Testing**: Vitest with PGLite for in-memory PostgreSQL testing, Playwright e2e tests (chromium, webkit, firefox) with WireMock for API mocking
