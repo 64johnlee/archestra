@@ -38,6 +38,7 @@ const {
     corsOrigins,
     apiKeyAuthorizationHeaderName,
   },
+  observability,
 } = config;
 
 const fastify = Fastify({
@@ -74,6 +75,58 @@ z.globalRegistry.add(Anthropic.API.MessagesResponseSchema, {
   id: "AnthropicMessagesResponse",
 });
 
+/**
+ * Create separate Fastify instance for metrics on a separate port
+ *
+ * This is to avoid exposing the metrics endpoint, by default, the metrics endpoint
+ */
+const startMetricsServer = async () => {
+  const { secret: metricsSecret } = observability.metrics;
+
+  const metricsServer = Fastify({
+    loggerInstance: logger,
+  });
+
+  // Add authentication hook for metrics endpoint if secret is configured
+  if (metricsSecret) {
+    metricsServer.addHook("preHandler", async (request, reply) => {
+      // Skip auth for health endpoint
+      if (request.url === "/health") {
+        return;
+      }
+
+      const authHeader = request.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        reply.code(401).send({ error: "Unauthorized: Bearer token required" });
+        return;
+      }
+
+      const token = authHeader.slice(7); // Remove 'Bearer ' prefix
+      if (token !== metricsSecret) {
+        reply.code(401).send({ error: "Unauthorized: Invalid token" });
+        return;
+      }
+    });
+  }
+
+  metricsServer.get("/health", () => ({ status: "ok" }));
+
+  await metricsServer.register(metricsPlugin, {
+    endpoint: observability.metrics.endpoint,
+  });
+
+  // Start metrics server on dedicated port
+  await metricsServer.listen({
+    port: observability.metrics.port,
+    host,
+  });
+  metricsServer.log.info(
+    `Metrics server started on port ${observability.metrics.port}${
+      metricsSecret ? " (with authentication)" : " (no authentication)"
+    }`,
+  );
+};
+
 const start = async () => {
   try {
     await seedRequiredStartingData();
@@ -81,6 +134,9 @@ const start = async () => {
     // Initialize metrics with keys of custom agent labels
     const labelKeys = await AgentLabelModel.getAllKeys();
     initializeMetrics(labelKeys);
+
+    // Start metrics server
+    await startMetricsServer();
 
     logger.info(
       `Observability initialized with ${labelKeys.length} agent label keys`,
@@ -111,8 +167,6 @@ const start = async () => {
       );
       // Continue server startup even if MCP runtime fails
     }
-
-    await fastify.register(metricsPlugin, { endpoint: "/metrics" });
 
     // Register CORS plugin to allow cross-origin requests
     await fastify.register(fastifyCors, {
