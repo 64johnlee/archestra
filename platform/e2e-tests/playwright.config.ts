@@ -35,7 +35,6 @@ export default defineConfig({
       testMatch: /.*\.setup\.ts/,
       testDir: './',
     },
-
     {
       name: 'chromium',
       use: {
@@ -46,7 +45,6 @@ export default defineConfig({
       // Run the setup project before tests
       dependencies: ['setup'],
     },
-
     {
       name: 'firefox',
       use: {
@@ -57,17 +55,15 @@ export default defineConfig({
       // Run the setup project before tests
       dependencies: ['setup'],
     },
-
-    // TODO: uncomment this out once https://github.com/archestra-ai/archestra/issues/923 is fixed
-    // {
-    //   name: 'webkit',
-    //   use: {
-    //     ...devices['Desktop Safari'],
-    //     // Use the stored authentication state
-    //     storageState: authFile,
-    //   },
-    //   // Run the setup project before tests
-    //   dependencies: ['setup'],
-    // },
+    {
+      name: 'webkit',
+      use: {
+        ...devices['Desktop Safari'],
+        // Use the stored authentication state
+        storageState: authFile,
+      },
+      // Run the setup project before tests
+      dependencies: ['setup'],
+    },
   ],
 });
