@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { OAuthConfirmationDialog } from "@/components/oauth-confirmation-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useRole } from "@/lib/auth.hook";
+import { useHasPermissions } from "@/lib/auth.query";
 import { authClient } from "@/lib/clients/auth/auth-client";
 import { useInternalMcpCatalog } from "@/lib/internal-mcp-catalog.query";
 import {
@@ -41,8 +41,7 @@ export function InternalMCPCatalog({
     initialData: initialInstalledServers,
   });
   const installMutation = useInstallMcpServer();
-  const userRole = useRole();
-  const isAdmin = userRole === "admin";
+
   const deleteMutation = useDeleteMcpServer();
   const session = authClient.useSession();
   const currentUserId = session.data?.user?.id;
@@ -72,6 +71,10 @@ export function InternalMCPCatalog({
   const [installingServerIds, setInstallingServerIds] = useState<Set<string>>(
     new Set(),
   );
+
+  const { data: userIsMcpServerAdmin } = useHasPermissions({
+    mcpServer: ["admin"],
+  });
 
   // Poll installation status for the first installing server
   const mcpServerInstallationStatus = useMcpServerInstallationStatus(
@@ -459,13 +462,15 @@ export function InternalMCPCatalog({
         </div>
         <Button
           onClick={() =>
-            isAdmin
+            userIsMcpServerAdmin
               ? setIsCreateDialogOpen(true)
               : setIsCustomRequestDialogOpen(true)
           }
         >
           <Plus className="mr-2 h-4 w-4" />
-          {isAdmin ? "Add MCP Server" : "Request to add custom MCP Server"}
+          {userIsMcpServerAdmin
+            ? "Add MCP Server"
+            : "Request to add custom MCP Server"}
         </Button>
       </div>
       <div className="space-y-4">
@@ -518,7 +523,6 @@ export function InternalMCPCatalog({
                   onReinstall={() => handleReinstall(item)}
                   onEdit={() => setEditingItem(item)}
                   onDelete={() => setDeletingItem(item)}
-                  isAdmin={isAdmin}
                   localServerInstallationCount={localServers.length}
                   currentUserInstalledLocalServer={
                     currentUserInstalledLocalServer
@@ -626,7 +630,6 @@ export function InternalMCPCatalog({
         onInstall={handleNoAuthConfirm}
         catalogItem={noAuthCatalogItem}
         isInstalling={installMutation.isPending}
-        isAdmin={isAdmin}
       />
 
       <LocalServerInstallDialog

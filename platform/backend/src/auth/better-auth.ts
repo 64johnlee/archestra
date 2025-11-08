@@ -1,4 +1,10 @@
-import { ac, adminRole, allAvailableActions, memberRole } from "@shared";
+import {
+  ac,
+  adminRole,
+  allAvailableActions,
+  MEMBER_ROLE_NAME,
+  memberRole,
+} from "@shared";
 import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
@@ -38,6 +44,10 @@ export const auth = betterAuth({
       requireEmailVerificationOnInvitation: false,
       allowUserToCreateOrganization: false, // Disable organization creation by users
       ac,
+      dynamicAccessControl: {
+        enabled: true,
+        maximumRolesPerOrganization: 50, // Configurable limit for custom roles
+      },
       roles: {
         admin: adminRole,
         member: memberRole,
@@ -91,6 +101,7 @@ export const auth = betterAuth({
       user: schema.usersTable,
       session: schema.session,
       organization: schema.organizationsTable,
+      organizationRole: schema.organizationRolesTable,
       member: schema.member,
       invitation: schema.invitation,
       account: schema.account,
@@ -305,14 +316,14 @@ export const auth = betterAuth({
               id: crypto.randomUUID(),
               organizationId: invitation[0].organizationId,
               userId: user.id,
-              role: invitation[0].role || "member",
+              role: invitation[0].role || MEMBER_ROLE_NAME,
               createdAt: new Date(),
             });
 
             // Update user role to match the invitation role
             await db
               .update(schema.usersTable)
-              .set({ role: invitation[0].role || "member" })
+              .set({ role: invitation[0].role || MEMBER_ROLE_NAME })
               .where(eq(schema.usersTable.id, user.id));
 
             // Mark invitation as accepted
@@ -328,7 +339,7 @@ export const auth = betterAuth({
               .where(eq(schema.session.id, sessionId));
 
             logger.info(
-              `✅ Invitation accepted: user ${user.email} added to organization ${invitation[0].organizationId} as ${invitation[0].role || "member"}`,
+              `✅ Invitation accepted: user ${user.email} added to organization ${invitation[0].organizationId} as ${invitation[0].role || MEMBER_ROLE_NAME}`,
             );
           } catch (error) {
             logger.error(

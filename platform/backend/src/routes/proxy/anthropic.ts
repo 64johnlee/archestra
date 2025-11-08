@@ -1,5 +1,6 @@
 import AnthropicProvider from "@anthropic-ai/sdk";
 import fastifyHttpProxy from "@fastify/http-proxy";
+import { RouteId } from "@shared";
 import type { FastifyReply } from "fastify";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -10,8 +11,7 @@ import LimitValidationService from "@/services/limit-validation";
 import {
   type Agent,
   Anthropic,
-  ErrorResponseSchema,
-  RouteId,
+  constructResponseSchema,
   UuidIdSchema,
 } from "@/types";
 import { PROXY_API_PREFIX } from "./common";
@@ -885,13 +885,7 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
         tags: ["llm-proxy"],
         body: Anthropic.API.MessagesRequestSchema,
         headers: Anthropic.API.MessagesHeadersSchema,
-        response: {
-          200: Anthropic.API.MessagesResponseSchema,
-          400: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(Anthropic.API.MessagesResponseSchema),
       },
     },
     async ({ body, headers }, reply) => {
@@ -918,13 +912,7 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
         }),
         body: Anthropic.API.MessagesRequestSchema,
         headers: Anthropic.API.MessagesHeadersSchema,
-        response: {
-          200: Anthropic.API.MessagesResponseSchema,
-          400: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(Anthropic.API.MessagesResponseSchema),
       },
     },
     async ({ body, headers, params }, reply) => {

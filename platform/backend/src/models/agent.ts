@@ -61,7 +61,10 @@ class AgentModel {
     };
   }
 
-  static async findAll(userId?: string, isAdmin?: boolean): Promise<Agent[]> {
+  static async findAll(
+    userId?: string,
+    isAgentAdmin?: boolean,
+  ): Promise<Agent[]> {
     let query = db
       .select()
       .from(schema.agentsTable)
@@ -75,8 +78,8 @@ class AgentModel {
       )
       .$dynamic();
 
-    // Apply access control filtering for non-admins
-    if (userId && !isAdmin) {
+    // Apply access control filtering for non-agent admins
+    if (userId && !isAgentAdmin) {
       const accessibleAgentIds = await AgentTeamModel.getUserAccessibleAgentIds(
         userId,
         false,
@@ -132,7 +135,7 @@ class AgentModel {
     sorting?: SortingQuery,
     filters?: { name?: string },
     userId?: string,
-    isAdmin?: boolean,
+    isAgentAdmin?: boolean,
   ): Promise<PaginatedResult<Agent>> {
     // Determine the ORDER BY clause based on sorting params
     const orderByClause = AgentModel.getOrderByClause(sorting);
@@ -145,8 +148,8 @@ class AgentModel {
       whereConditions.push(ilike(schema.agentsTable.name, `%${filters.name}%`));
     }
 
-    // Apply access control filtering for non-admins
-    if (userId && !isAdmin) {
+    // Apply access control filtering for non-agent admins
+    if (userId && !isAgentAdmin) {
       const accessibleAgentIds = await AgentTeamModel.getUserAccessibleAgentIds(
         userId,
         false,
@@ -347,10 +350,10 @@ class AgentModel {
   static async findById(
     id: string,
     userId?: string,
-    isAdmin?: boolean,
+    isAgentAdmin?: boolean,
   ): Promise<Agent | null> {
-    // Check access control for non-admins
-    if (userId && !isAdmin) {
+    // Check access control for non-agent admins
+    if (userId && !isAgentAdmin) {
       const hasAccess = await AgentTeamModel.userHasAgentAccess(
         userId,
         id,

@@ -15,6 +15,7 @@ export { default as mcpServerInstallationRequestRoutes } from "./mcp-server-inst
 export { default as mcpToolCallRoutes } from "./mcp-tool-call";
 export { default as oauthRoutes } from "./oauth";
 export { default as organizationRoutes } from "./organization";
+export { default as organizationRoleRoutes } from "./organization-role";
 export { default as anthropicProxyRoutes } from "./proxy/anthropic";
 export { default as geminiProxyRoutes } from "./proxy/gemini";
 export { default as openAiProxyRoutes } from "./proxy/openai";

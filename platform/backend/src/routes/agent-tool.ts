@@ -1,5 +1,7 @@
+import { RouteId } from "@shared";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
+import { hasPermission } from "@/auth";
 import {
   AgentModel,
   AgentTeamModel,
@@ -10,14 +12,12 @@ import {
   UserModel,
 } from "@/models";
 import {
-  ErrorResponseSchema,
-  RouteId,
+  constructResponseSchema,
   SelectAgentToolSchema,
   SelectToolSchema,
   UpdateAgentToolSchema,
   UuidIdSchema,
 } from "@/types";
-import { getUserFromRequest } from "@/utils";
 
 const agentToolRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get(
@@ -27,28 +27,18 @@ const agentToolRoutes: FastifyPluginAsyncZod = async (fastify) => {
         operationId: RouteId.GetAllAgentTools,
         description: "Get all agent-tool relationships with details",
         tags: ["Agent Tools"],
-        response: {
-          200: z.array(SelectAgentToolSchema),
-          401: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(z.array(SelectAgentToolSchema)),
       },
     },
     async (request, reply) => {
       try {
-        const user = await getUserFromRequest(request);
-
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
-
-        const agentTools = await AgentToolModel.findAll(user.id, user.isAdmin);
-        return reply.send(agentTools);
+        const { success: isAgentAdmin } = await hasPermission(
+          { agent: ["admin"] },
+          request.headers,
+        );
+        return reply.send(
+          await AgentToolModel.findAll(request.user.id, isAgentAdmin),
+        );
       } catch (error) {
         fastify.log.error(error);
         return reply.status(500).send({
@@ -79,12 +69,7 @@ const agentToolRoutes: FastifyPluginAsyncZod = async (fastify) => {
             executionSourceMcpServerId: UuidIdSchema.nullable().optional(),
           })
           .nullish(),
-        response: {
-          200: z.object({ success: z.boolean() }),
-          400: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(z.object({ success: z.boolean() })),
       },
     },
     async (request, reply) => {
@@ -202,10 +187,7 @@ const agentToolRoutes: FastifyPluginAsyncZod = async (fastify) => {
           agentId: UuidIdSchema,
           toolId: UuidIdSchema,
         }),
-        response: {
-          200: z.object({ success: z.boolean() }),
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(z.object({ success: z.boolean() })),
       },
     },
     async (request, reply) => {
@@ -239,11 +221,7 @@ const agentToolRoutes: FastifyPluginAsyncZod = async (fastify) => {
         params: z.object({
           agentId: UuidIdSchema,
         }),
-        response: {
-          200: z.array(SelectToolSchema),
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(z.array(SelectToolSchema)),
       },
     },
     async (request, reply) => {
@@ -294,12 +272,7 @@ const agentToolRoutes: FastifyPluginAsyncZod = async (fastify) => {
           credentialSourceMcpServerId: true,
           executionSourceMcpServerId: true,
         }).partial(),
-        response: {
-          200: UpdateAgentToolSchema,
-          400: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(UpdateAgentToolSchema),
       },
     },
     async (request, reply) => {
@@ -427,8 +400,8 @@ const agentToolRoutes: FastifyPluginAsyncZod = async (fastify) => {
             .pipe(z.array(UuidIdSchema)),
           catalogId: UuidIdSchema.optional(),
         }),
-        response: {
-          200: z.array(
+        response: constructResponseSchema(
+          z.array(
             z.object({
               id: z.string(),
               name: z.string(),
@@ -448,26 +421,11 @@ const agentToolRoutes: FastifyPluginAsyncZod = async (fastify) => {
                 .optional(),
             }),
           ),
-          400: ErrorResponseSchema,
-          401: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        ),
       },
     },
     async (request, reply) => {
       try {
-        const user = await getUserFromRequest(request);
-
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
-
         const { agentIds, catalogId } = request.query;
 
         // Validate that at least one agent ID is provided
@@ -489,8 +447,16 @@ const agentToolRoutes: FastifyPluginAsyncZod = async (fastify) => {
           });
         }
 
+        const { success: isAgentAdmin } = await hasPermission(
+          { agent: ["admin"] },
+          request.headers,
+        );
+
         // Get all MCP servers accessible to the user
-        const allServers = await McpServerModel.findAll(user.id, user.isAdmin);
+        const allServers = await McpServerModel.findAll(
+          request.user.id,
+          isAgentAdmin,
+        );
 
         // Filter by catalogId if provided
         const filteredServers = catalogId
@@ -504,15 +470,31 @@ const agentToolRoutes: FastifyPluginAsyncZod = async (fastify) => {
             // Admin personal tokens can be used with any agent
             if (server.authType === "personal" && server.ownerId) {
               const ownerId = server.ownerId;
-              const owner = await UserModel.getUserById(ownerId);
-              if (owner?.role === "admin") {
+              // const owner = await UserModel.getById(ownerId);
+
+              /**
+               * NOTE: I'm doubtful this will work as intended, right now better-auth's
+               * hasPermissions API requires passing in request headers to do the authz check
+               * HOWEVER, in this particular context, we are looking at a user which may
+               * not necessarily be the user identified by the request.headers...
+               */
+              const { success: isAgentAdmin } = await hasPermission(
+                { agent: ["admin"] },
+                request.headers,
+              );
+
+              if (isAgentAdmin) {
                 return { server, valid: true };
               }
 
               // Member personal tokens: check if owner belongs to any of the agents' teams
               const hasAccessResults = await Promise.all(
                 agentIds.map((agentId) =>
-                  AgentTeamModel.userHasAgentAccess(ownerId, agentId, false),
+                  /**
+                   * NOTE: this is granting too much access here.. we should refactor this,
+                   * see the comment above the hasPermission call above for more context..
+                   */
+                  AgentTeamModel.userHasAgentAccess(ownerId, agentId, true),
                 ),
               );
               const hasAccessToAny = hasAccessResults.some(
@@ -597,7 +579,7 @@ async function validateCredentialSource(
 
   // Get the token owner's details
   const owner = mcpServer.ownerId
-    ? await UserModel.getUserById(mcpServer.ownerId)
+    ? await UserModel.getById(mcpServer.ownerId)
     : null;
   if (!owner) {
     return {
@@ -627,17 +609,17 @@ async function validateCredentialSource(
       };
     }
   } else if (mcpServer.authType === "personal") {
-    // For personal tokens: check if owner is admin OR if owner belongs to a team that the agent is assigned to
-    // Admins can use their tokens with any agent
-    if (owner.role === "admin") {
-      return null;
-    }
-
-    // Members must belong to a team that the agent is assigned to
+    /**
+     * For personal tokens: check if the user is an agent admin or if the owner belongs to a team that the agent
+     * is assigned to
+     *
+     * NOTE: this is granting too much access here.. we should refactor this,
+     * see the comment above the hasPermission call above for more context..
+     */
     const hasAccess = await AgentTeamModel.userHasAgentAccess(
       owner.id,
       agentId,
-      false, // isAdmin = false to check actual team membership
+      true,
     );
 
     if (!hasAccess) {

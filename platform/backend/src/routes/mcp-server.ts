@@ -1,5 +1,7 @@
+import { RouteId } from "@shared";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
+import { hasPermission } from "@/auth";
 import logger from "@/logging";
 import { McpServerRuntimeManager } from "@/mcp-server-runtime";
 import {
@@ -11,15 +13,13 @@ import {
   ToolModel,
 } from "@/models";
 import {
-  ErrorResponseSchema,
+  constructResponseSchema,
   InsertMcpServerSchema,
   type InternalMcpCatalogServerType,
   LocalMcpServerInstallationStatusSchema,
-  RouteId,
   SelectMcpServerSchema,
   UuidIdSchema,
 } from "@/types";
-import { getUserFromRequest } from "@/utils";
 
 const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get(
@@ -32,27 +32,12 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
           authType: z.enum(["personal", "team"]).optional(),
         }),
         tags: ["MCP Server"],
-        response: {
-          200: z.array(SelectMcpServerSchema),
-          401: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(z.array(SelectMcpServerSchema)),
       },
     },
     async (request, reply) => {
       try {
-        const user = await getUserFromRequest(request);
-
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
-
-        const allServers = await McpServerModel.findAll(user.id, user.isAdmin);
+        const allServers = await McpServerModel.findAll(request.user.id);
         const { authType } = request.query;
 
         // Filter by authType if provided
@@ -84,31 +69,14 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
         params: z.object({
           id: UuidIdSchema,
         }),
-        response: {
-          200: SelectMcpServerSchema,
-          401: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(SelectMcpServerSchema),
       },
     },
     async (request, reply) => {
       try {
-        const user = await getUserFromRequest(request);
-
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
-
         const server = await McpServerModel.findById(
           request.params.id,
-          user.id,
-          user.isAdmin,
+          request.user.id,
         );
 
         if (!server) {
@@ -153,17 +121,12 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
           // and we'll create a secret for it
           accessToken: z.string().optional(),
         }),
-        response: {
-          200: SelectMcpServerSchema,
-          400: ErrorResponseSchema,
-          401: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(SelectMcpServerSchema),
       },
     },
     async (request, reply) => {
       try {
+        const { user, headers } = request;
         let {
           agentIds,
           secretId,
@@ -179,17 +142,6 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
           serverType: "local",
         };
 
-        // Get the current user for personal auth
-        const user = await getUserFromRequest(request);
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
-
         // Set owner_id to current user
         serverData.ownerId = user.id;
 
@@ -198,11 +150,17 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
           serverData.authType = "personal";
           serverData.userId = user.id;
         } else {
-          // Team installation requires admin role
-          if (!user.isAdmin) {
+          const { success: isMcpServerAdmin } = await hasPermission(
+            { mcpServer: ["admin"] },
+            headers,
+          );
+
+          // Team installation requires MCP server admin role
+          if (!isMcpServerAdmin) {
             return reply.status(403).send({
               error: {
-                message: "Only admins can install MCP servers for teams",
+                message:
+                  "Only MCP server admins can install MCP servers for teams",
                 type: "forbidden",
               },
             });
@@ -502,11 +460,7 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
         params: z.object({
           id: UuidIdSchema,
         }),
-        response: {
-          200: z.object({ success: z.boolean() }),
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(z.object({ success: z.boolean() })),
       },
     },
     async (request, reply) => {
@@ -588,14 +542,12 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
         params: z.object({
           id: UuidIdSchema,
         }),
-        response: {
-          200: z.object({
+        response: constructResponseSchema(
+          z.object({
             localInstallationStatus: LocalMcpServerInstallationStatusSchema,
             localInstallationError: z.string().nullable(),
           }),
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        ),
       },
     },
     async (request, reply) => {
@@ -638,8 +590,8 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
         params: z.object({
           id: UuidIdSchema,
         }),
-        response: {
-          200: z.array(
+        response: constructResponseSchema(
+          z.array(
             z.object({
               id: z.string(),
               name: z.string(),
@@ -655,9 +607,7 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
               ),
             }),
           ),
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        ),
       },
     },
     async (request, reply) => {
@@ -709,16 +659,14 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
           lines: z.coerce.number().optional().default(100),
           follow: z.coerce.boolean().optional().default(false),
         }),
-        response: {
-          200: z.object({
+        response: constructResponseSchema(
+          z.object({
             logs: z.string(),
             containerName: z.string(),
             command: z.string(),
             namespace: z.string(),
           }),
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        ),
       },
     },
     async (request, reply) => {
@@ -783,14 +731,12 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
         params: z.object({
           id: UuidIdSchema,
         }),
-        response: {
-          200: z.object({
+        response: constructResponseSchema(
+          z.object({
             success: z.boolean(),
             message: z.string(),
           }),
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        ),
       },
     },
     async (request, reply) => {
@@ -841,11 +787,7 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
           catalogId: UuidIdSchema,
           userId: z.string(),
         }),
-        response: {
-          200: z.object({ success: z.boolean() }),
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(z.object({ success: z.boolean() })),
       },
     },
     async (request, reply) => {
@@ -903,30 +845,14 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
           teamIds: z.array(z.string()).min(1),
           userId: z.string().optional(), // Optional: specify which admin's token to use
         }),
-        response: {
-          200: z.object({ success: z.boolean() }),
-          400: ErrorResponseSchema,
-          401: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(z.object({ success: z.boolean() })),
       },
     },
     async (request, reply) => {
       try {
+        const { user } = request;
         const { catalogId } = request.params;
         const { userId: targetUserId } = request.body;
-
-        // Get the current user
-        const user = await getUserFromRequest(request);
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
 
         // Use the specified userId or default to current user
         const ownerIdToUse = targetUserId || user.id;
@@ -983,12 +909,7 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
           id: UuidIdSchema,
           teamId: z.string(),
         }),
-        response: {
-          200: z.object({ success: z.boolean() }),
-          403: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(z.object({ success: z.boolean() })),
       },
     },
     async (request, reply) => {
@@ -1094,28 +1015,13 @@ const mcpServerRoutes: FastifyPluginAsyncZod = async (fastify) => {
         params: z.object({
           catalogId: UuidIdSchema,
         }),
-        response: {
-          200: z.object({ success: z.boolean() }),
-          401: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(z.object({ success: z.boolean() })),
       },
     },
     async (request, reply) => {
       try {
+        const { user } = request;
         const { catalogId } = request.params;
-
-        // Get the current user
-        const user = await getUserFromRequest(request);
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
 
         // Find all servers with this catalogId
         const serversForCatalog =

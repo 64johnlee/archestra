@@ -1,8 +1,9 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { describe, expect, it, vi } from "vitest";
-import { authMiddleware } from "./auth";
+import { Authnz } from "./middleware";
 
-describe("AuthMiddleware", () => {
+describe("Authnz", () => {
+  const authnz = new Authnz();
+
   describe("shouldSkipAuthCheck", () => {
     it("should skip auth for ACME challenge paths", async () => {
       const mockRequest = {
@@ -17,7 +18,7 @@ describe("AuthMiddleware", () => {
       } as unknown as FastifyReply;
 
       // The middleware should not call reply.status() for ACME challenge paths
-      await authMiddleware.handle(mockRequest, mockReply);
+      await authnz.handle(mockRequest, mockReply);
 
       expect(mockReply.status).not.toHaveBeenCalled();
       expect(mockReply.send).not.toHaveBeenCalled();
@@ -43,7 +44,7 @@ describe("AuthMiddleware", () => {
           send: vi.fn(),
         } as unknown as FastifyReply;
 
-        await authMiddleware.handle(mockRequest, mockReply);
+        await authnz.handle(mockRequest, mockReply);
 
         expect(mockReply.status).not.toHaveBeenCalled();
         expect(mockReply.send).not.toHaveBeenCalled();
@@ -65,7 +66,7 @@ describe("AuthMiddleware", () => {
           send: vi.fn(),
         } as unknown as FastifyReply;
 
-        await authMiddleware.handle(mockRequest, mockReply);
+        await authnz.handle(mockRequest, mockReply);
 
         expect(mockReply.status).not.toHaveBeenCalled();
         expect(mockReply.send).not.toHaveBeenCalled();
@@ -78,7 +79,6 @@ describe("AuthMiddleware", () => {
         "/v1/openai/completions",
         "/v1/anthropic/messages",
         "/v1/gemini/generate",
-        "/json",
         "/openapi.json",
         "/health",
         "/api/features",
@@ -96,7 +96,7 @@ describe("AuthMiddleware", () => {
           send: vi.fn(),
         } as unknown as FastifyReply;
 
-        await authMiddleware.handle(mockRequest, mockReply);
+        await authnz.handle(mockRequest, mockReply);
 
         expect(mockReply.status).not.toHaveBeenCalled();
         expect(mockReply.send).not.toHaveBeenCalled();
@@ -129,7 +129,7 @@ describe("AuthMiddleware", () => {
           send: vi.fn(),
         } as unknown as FastifyReply;
 
-        await authMiddleware.handle(mockRequest, mockReply);
+        await authnz.handle(mockRequest, mockReply);
 
         // Should return 401 for unauthenticated requests to protected paths
         expect(mockReply.status).toHaveBeenCalledWith(401);

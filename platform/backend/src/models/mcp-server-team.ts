@@ -7,10 +7,10 @@ class McpServerTeamModel {
    */
   static async getUserAccessibleMcpServerIds(
     userId: string,
-    isAdmin: boolean,
+    isMcpServerAdmin: boolean,
   ): Promise<string[]> {
-    // Admins have access to all MCP servers
-    if (isAdmin) {
+    // MCP server admins have access to all MCP servers
+    if (isMcpServerAdmin) {
       const allServers = await db
         .select({ id: schema.mcpServersTable.id })
         .from(schema.mcpServersTable);
@@ -44,10 +44,10 @@ class McpServerTeamModel {
   static async userHasMcpServerAccess(
     userId: string,
     mcpServerId: string,
-    isAdmin: boolean,
+    isMcpServerAdmin: boolean,
   ): Promise<boolean> {
-    // Admins always have access
-    if (isAdmin) {
+    // MCP server admins always have access
+    if (isMcpServerAdmin) {
       return true;
     }
 

@@ -1,4 +1,4 @@
-import type { OrganizationAppearance } from "@shared";
+import type { AnyRoleName, OrganizationAppearance } from "@shared";
 import { archestraApiSdk } from "@shared";
 import {
   deleteOrganizationLogo,
@@ -120,10 +120,10 @@ export function useInvitationsList(organizationId: string | undefined) {
           return {
             id: inv.id,
             email: inv.email,
-            role: inv.role || "member",
+            role: inv.role,
             expiresAt,
             isExpired,
-            status: inv.status || "pending",
+            status: inv.status,
           };
         })
         .sort((a, b) => {
@@ -178,11 +178,18 @@ export function useCreateInvitation(organizationId: string | undefined) {
       role,
     }: {
       email: string;
-      role: "member" | "admin";
+      role: AnyRoleName;
     }) => {
       const response = await authClient.organization.inviteMember({
         email,
-        role,
+        /**
+         * TODO: it looks like better-auth authClient has strict typing here..
+         * and apparently, according to their docs, it can only be "owner", "admin", or "member".
+         * https://www.better-auth.com/docs/plugins/organization#send-invitation
+         */
+        role: role as NonNullable<
+          Parameters<typeof authClient.organization.inviteMember>[0]
+        >["role"],
         organizationId,
       });
 

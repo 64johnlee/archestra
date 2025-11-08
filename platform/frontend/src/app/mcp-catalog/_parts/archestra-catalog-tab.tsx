@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRole } from "@/lib/auth.hook";
+import { useHasPermissions } from "@/lib/auth.query";
 import {
   useMcpRegistryServersInfinite,
   useMcpServerCategories,
@@ -60,8 +60,6 @@ export function ArchestraCatalogTab({
     category: "all",
   });
 
-  const userRole = useRole();
-
   // Get catalog items for filtering (with live updates)
   const { data: catalogItems } = useInternalMcpCatalog({
     initialData: initialCatalogItems,
@@ -69,6 +67,10 @@ export function ArchestraCatalogTab({
 
   // Fetch available categories
   const { data: availableCategories = [] } = useMcpServerCategories();
+
+  const { data: userIsMcpServerAdmin = false } = useHasPermissions({
+    mcpServer: ["admin"],
+  });
 
   // Use server-side search and category filtering
   const {
@@ -319,7 +321,7 @@ export function ArchestraCatalogTab({
                     isAdding={createMutation.isPending}
                     onOpenReadme={setReadmeServer}
                     isInCatalog={catalogServerNames.has(server.name)}
-                    userRole={userRole}
+                    userIsMcpServerAdmin={userIsMcpServerAdmin}
                   />
                 ))}
               </div>
@@ -394,7 +396,7 @@ function ServerCard({
   isAdding,
   onOpenReadme,
   isInCatalog,
-  userRole,
+  userIsMcpServerAdmin,
 }: {
   server: archestraCatalogTypes.ArchestraMcpServerManifest;
   onAddToCatalog: (
@@ -408,9 +410,8 @@ function ServerCard({
     server: archestraCatalogTypes.ArchestraMcpServerManifest,
   ) => void;
   isInCatalog: boolean;
-  userRole: "admin" | "member";
+  userIsMcpServerAdmin: boolean;
 }) {
-  const isAdmin = userRole === "admin";
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -498,7 +499,9 @@ function ServerCard({
           </div>
           <Button
             onClick={() =>
-              isAdmin ? onAddToCatalog(server) : onRequestInstallation(server)
+              userIsMcpServerAdmin
+                ? onAddToCatalog(server)
+                : onRequestInstallation(server)
             }
             disabled={isAdding || isInCatalog}
             size="sm"
@@ -506,7 +509,7 @@ function ServerCard({
           >
             {isInCatalog
               ? "Added"
-              : isAdmin
+              : userIsMcpServerAdmin
                 ? "Add to Your Registry"
                 : "Request to add to internal registry"}
           </Button>

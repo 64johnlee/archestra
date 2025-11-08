@@ -1,4 +1,5 @@
 import fastifyHttpProxy from "@fastify/http-proxy";
+import { RouteId } from "@shared";
 import type { FastifyReply } from "fastify";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import OpenAIProvider from "openai";
@@ -9,9 +10,8 @@ import { AgentModel, InteractionModel } from "@/models";
 import LimitValidationService from "@/services/limit-validation";
 import {
   type Agent,
-  ErrorResponseSchema,
+  constructResponseSchema,
   OpenAi,
-  RouteId,
   UuidIdSchema,
 } from "@/types";
 import { PROXY_API_PREFIX } from "./common";
@@ -891,13 +891,9 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
         tags: ["llm-proxy"],
         body: OpenAi.API.ChatCompletionRequestSchema,
         headers: OpenAi.API.ChatCompletionsHeadersSchema,
-        response: {
-          200: OpenAi.API.ChatCompletionResponseSchema,
-          400: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(
+          OpenAi.API.ChatCompletionResponseSchema,
+        ),
       },
     },
     async ({ body, headers }, reply) => {
@@ -921,13 +917,9 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
         }),
         body: OpenAi.API.ChatCompletionRequestSchema,
         headers: OpenAi.API.ChatCompletionsHeadersSchema,
-        response: {
-          200: OpenAi.API.ChatCompletionResponseSchema,
-          400: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(
+          OpenAi.API.ChatCompletionResponseSchema,
+        ),
       },
     },
     async ({ body, headers, params }, reply) => {

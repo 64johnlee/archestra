@@ -119,7 +119,7 @@ class ToolModel {
   static async findById(
     id: string,
     userId?: string,
-    isAdmin?: boolean,
+    isAgentAdmin?: boolean,
   ): Promise<Tool | null> {
     const [tool] = await db
       .select()
@@ -130,8 +130,8 @@ class ToolModel {
       return null;
     }
 
-    // Check access control for non-admins
-    if (tool.agentId && userId && !isAdmin) {
+    // Check access control for non-agent admins
+    if (tool.agentId && userId && !isAgentAdmin) {
       const hasAccess = await AgentTeamModel.userHasAgentAccess(
         userId,
         tool.agentId,
@@ -147,7 +147,7 @@ class ToolModel {
 
   static async findAll(
     userId?: string,
-    isAdmin?: boolean,
+    isAgentAdmin?: boolean,
   ): Promise<ExtendedTool[]> {
     // Get all tools
     let query = db
@@ -181,12 +181,12 @@ class ToolModel {
       .$dynamic();
 
     /**
-     * Apply access control filtering for non-admins
+     * Apply access control filtering for users that are not agent admins
      *
      * If the user is not an admin, we basically allow them to see all tools that are assigned to agents
      * they have access to, plus all "MCP tools" (tools that are not assigned to any agent).
      */
-    if (userId && !isAdmin) {
+    if (userId && !isAgentAdmin) {
       const accessibleAgentIds = await AgentTeamModel.getUserAccessibleAgentIds(
         userId,
         false,
@@ -212,7 +212,7 @@ class ToolModel {
   static async findByName(
     name: string,
     userId?: string,
-    isAdmin?: boolean,
+    isAgentAdmin?: boolean,
   ): Promise<Tool | null> {
     const [tool] = await db
       .select()
@@ -224,7 +224,7 @@ class ToolModel {
     }
 
     // Check access control for non-admins
-    if (tool.agentId && userId && !isAdmin) {
+    if (tool.agentId && userId && !isAgentAdmin) {
       const hasAccess = await AgentTeamModel.userHasAgentAccess(
         userId,
         tool.agentId,

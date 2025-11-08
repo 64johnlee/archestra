@@ -9,14 +9,14 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useCallback, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { useRole } from "@/lib/auth.hook";
+import { useHasPermissions } from "@/lib/auth.query";
 import {
   useAddMcpServerInstallationRequestNote,
   useApproveMcpServerInstallationRequest,
@@ -30,8 +30,6 @@ export default function InstallationRequestDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const userRole = useRole();
-  const isAdmin = userRole === "admin";
 
   const { data: request, isLoading } = useMcpServerInstallationRequest(id);
   const approveMutation = useApproveMcpServerInstallationRequest();
@@ -43,23 +41,27 @@ export default function InstallationRequestDetailPage({
   const [showApprovalForm, setShowApprovalForm] = useState(false);
   const [showDeclineForm, setShowDeclineForm] = useState(false);
 
-  const handleApprove = async () => {
+  const { data: userIsMcpServerAdmin } = useHasPermissions({
+    mcpServer: ["admin"],
+  });
+
+  const handleApprove = useCallback(async () => {
     await approveMutation.mutateAsync({ id, adminResponse });
     setAdminResponse("");
     setShowApprovalForm(false);
-  };
+  }, [approveMutation, id, adminResponse]);
 
-  const handleDecline = async () => {
+  const handleDecline = useCallback(async () => {
     await declineMutation.mutateAsync({ id, adminResponse });
     setAdminResponse("");
     setShowDeclineForm(false);
-  };
+  }, [declineMutation, id, adminResponse]);
 
-  const handleAddNote = async () => {
+  const handleAddNote = useCallback(async () => {
     if (!newNote.trim()) return;
     await addNoteMutation.mutateAsync({ id, content: newNote });
     setNewNote("");
-  };
+  }, [addNoteMutation, id, newNote]);
 
   if (isLoading) {
     return (
@@ -360,7 +362,7 @@ export default function InstallationRequestDetailPage({
               </CardContent>
             </Card>
 
-            {isAdmin && isPending && (
+            {userIsMcpServerAdmin && isPending && (
               <Card>
                 <CardHeader>
                   <CardTitle>Admin Actions</CardTitle>

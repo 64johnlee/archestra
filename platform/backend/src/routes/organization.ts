@@ -1,78 +1,41 @@
-import { OrganizationAppearanceSchema } from "@shared";
+import { OrganizationAppearanceSchema, RouteId } from "@shared";
 import { eq } from "drizzle-orm";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import db, { schema } from "@/database";
 import { OrganizationModel } from "@/models";
-import { ErrorResponseSchema, RouteId } from "@/types";
-import { getUserFromRequest } from "@/utils";
+import { constructResponseSchema } from "@/types";
 
 const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
-  /**
-   * Update organization limit cleanup interval (Admin only)
-   */
   fastify.patch(
     "/api/organization/cleanup-interval",
     {
       schema: {
         operationId: RouteId.UpdateOrganizationCleanupInterval,
-        description: "Update organization limit cleanup interval (Admin only)",
+        description: "Update organization limit cleanup interval",
         tags: ["Organization"],
         body: z.object({
           limitCleanupInterval: z
             .enum(["1h", "12h", "24h", "1w", "1m"])
             .nullable(),
         }),
-        response: {
-          200: z.object({
+        response: constructResponseSchema(
+          z.object({
             limitCleanupInterval: z
               .enum(["1h", "12h", "24h", "1w", "1m"])
               .nullable(),
           }),
-          400: ErrorResponseSchema,
-          401: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        ),
       },
     },
-    async (request, reply) => {
+    async ({ organizationId, body: { limitCleanupInterval } }, reply) => {
       try {
-        const user = await getUserFromRequest(request);
-
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
-
-        if (!user.isAdmin) {
-          return reply.status(403).send({
-            error: {
-              message: "Only admins can update cleanup interval",
-              type: "forbidden",
-            },
-          });
-        }
-
-        if (!user.organizationId) {
-          return reply.status(400).send({
-            error: {
-              message: "No organization found",
-              type: "bad_request",
-            },
-          });
-        }
-
         const [organization] = await db
           .update(schema.organizationsTable)
           .set({
-            limitCleanupInterval: request.body.limitCleanupInterval,
+            limitCleanupInterval,
           })
-          .where(eq(schema.organizationsTable.id, user.organizationId))
+          .where(eq(schema.organizationsTable.id, organizationId))
           .returning({
             limitCleanupInterval:
               schema.organizationsTable.limitCleanupInterval,
@@ -92,9 +55,6 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
     },
   );
 
-  /**
-   * Get organization appearance settings
-   */
   fastify.get(
     "/api/organization/appearance",
     {
@@ -102,28 +62,11 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
         operationId: RouteId.GetOrganizationAppearance,
         description: "Get organization appearance settings",
         tags: ["Organization"],
-        response: {
-          200: OrganizationAppearanceSchema,
-          401: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(OrganizationAppearanceSchema),
       },
     },
-    async (request, reply) => {
+    async (_request, reply) => {
       try {
-        const user = await getUserFromRequest(request);
-
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
-
         // Get the organization
         const organization =
           await OrganizationModel.getOrCreateDefaultOrganization();
@@ -157,9 +100,6 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
     },
   );
 
-  /**
-   * Get organization details including cleanup interval
-   */
   fastify.get(
     "/api/organization",
     {
@@ -167,8 +107,8 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
         operationId: RouteId.GetOrganization,
         description: "Get organization details",
         tags: ["Organization"],
-        response: {
-          200: z.object({
+        response: constructResponseSchema(
+          z.object({
             id: z.string(),
             name: z.string(),
             slug: z.string(),
@@ -176,39 +116,15 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
               .enum(["1h", "12h", "24h", "1w", "1m"])
               .nullable(),
           }),
-          400: ErrorResponseSchema,
-          401: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        ),
       },
     },
-    async (request, reply) => {
+    async ({ organizationId }, reply) => {
       try {
-        const user = await getUserFromRequest(request);
-
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
-
-        if (!user.organizationId) {
-          return reply.status(400).send({
-            error: {
-              message: "No organization found",
-              type: "bad_request",
-            },
-          });
-        }
-
         const [organization] = await db
           .select()
           .from(schema.organizationsTable)
-          .where(eq(schema.organizationsTable.id, user.organizationId))
+          .where(eq(schema.organizationsTable.id, organizationId))
           .limit(1);
 
         if (!organization) {
@@ -239,9 +155,6 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
     },
   );
 
-  /**
-   * Update organization appearance settings
-   */
   fastify.put(
     "/api/organization/appearance",
     {
@@ -250,47 +163,11 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
         description: "Update organization appearance settings",
         tags: ["Organization"],
         body: OrganizationAppearanceSchema,
-        response: {
-          200: OrganizationAppearanceSchema,
-          400: ErrorResponseSchema,
-          401: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        response: constructResponseSchema(OrganizationAppearanceSchema),
       },
     },
-    async (request, reply) => {
+    async ({ body }, reply) => {
       try {
-        const user = await getUserFromRequest(request);
-
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
-
-        if (!user.organizationId) {
-          return reply.status(400).send({
-            error: {
-              message: "No organization found",
-              type: "bad_request",
-            },
-          });
-        }
-
-        // Only admins can update appearance settings
-        if (!user.isAdmin) {
-          return reply.status(403).send({
-            error: {
-              message: "Forbidden: Admin access required",
-              type: "forbidden",
-            },
-          });
-        }
-
         // Get the organization
         const organization =
           await OrganizationModel.getOrCreateDefaultOrganization();
@@ -298,7 +175,7 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
         // Update appearance settings
         const updatedOrg = await OrganizationModel.updateAppearance(
           organization.id,
-          request.body,
+          body,
         );
 
         if (!updatedOrg) {
@@ -339,41 +216,16 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
         body: z.object({
           logo: z.string(), // Base64 encoded image
         }),
-        response: {
-          200: z.object({
+        response: constructResponseSchema(
+          z.object({
             success: z.boolean(),
             logo: z.string().nullable(),
           }),
-          401: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          400: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        ),
       },
     },
     async (request, reply) => {
       try {
-        const user = await getUserFromRequest(request);
-
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
-
-        // Only admins can upload logos
-        if (!user.isAdmin) {
-          return reply.status(403).send({
-            error: {
-              message: "Forbidden: Admin access required",
-              type: "forbidden",
-            },
-          });
-        }
-
         const { logo } = request.body;
 
         // Validate logo is base64 encoded PNG
@@ -444,39 +296,15 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
         operationId: RouteId.DeleteOrganizationLogo,
         description: "Remove custom organization logo and revert to default",
         tags: ["Organization"],
-        response: {
-          200: z.object({
+        response: constructResponseSchema(
+          z.object({
             success: z.boolean(),
           }),
-          401: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
+        ),
       },
     },
-    async (request, reply) => {
+    async (_request, reply) => {
       try {
-        const user = await getUserFromRequest(request);
-
-        if (!user) {
-          return reply.status(401).send({
-            error: {
-              message: "Unauthorized",
-              type: "unauthorized",
-            },
-          });
-        }
-
-        // Only admins can delete logos
-        if (!user.isAdmin) {
-          return reply.status(403).send({
-            error: {
-              message: "Forbidden: Admin access required",
-              type: "forbidden",
-            },
-          });
-        }
-
         // Get the organization
         const organization =
           await OrganizationModel.getOrCreateDefaultOrganization();

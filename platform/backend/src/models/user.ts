@@ -1,20 +1,25 @@
-import type { Role } from "@shared";
-import { eq } from "drizzle-orm";
-import { auth } from "@/auth";
+import {
+  ADMIN_ROLE_NAME,
+  type Permissions,
+  type PredefinedRoleName,
+} from "@shared";
+import { and, eq, getTableColumns } from "drizzle-orm";
+import { betterAuth } from "@/auth";
 import config from "@/config";
 import db, { schema } from "@/database";
 import logger from "@/logging";
+import OrganizationRoleModel from "./organization-role";
 
-class User {
+class UserModel {
   static async createOrGetExistingDefaultAdminUser({
     email = config.auth.adminDefaultEmail,
     password = config.auth.adminDefaultPassword,
-    role = "admin",
+    role = ADMIN_ROLE_NAME,
     name = "Admin",
   }: {
     email?: string;
     password?: string;
-    role?: Role;
+    role?: PredefinedRoleName;
     name?: string;
   } = {}) {
     try {
@@ -27,7 +32,7 @@ class User {
         return existing[0];
       }
 
-      const result = await auth.api.signUpEmail({
+      const result = await betterAuth.api.signUpEmail({
         body: {
           email,
           password,
@@ -51,14 +56,47 @@ class User {
     }
   }
 
-  static async getUserById(id: string) {
+  static async getById(id: string) {
     const [user] = await db
-      .select()
+      .select({
+        ...getTableColumns(schema.usersTable),
+        organizationId: schema.member.organizationId,
+      })
       .from(schema.usersTable)
+      .innerJoin(schema.member, eq(schema.usersTable.id, schema.member.userId))
       .where(eq(schema.usersTable.id, id))
       .limit(1);
     return user;
   }
+
+  /**
+   * Get all permissions for a user
+   */
+  static async getUserPermissions(
+    userId: string,
+    organizationId: string,
+  ): Promise<Permissions> {
+    // Get user's member record to find their role
+    const memberRecord = await db
+      .select()
+      .from(schema.member)
+      .where(
+        and(
+          eq(schema.member.userId, userId),
+          eq(schema.member.organizationId, organizationId),
+        ),
+      )
+      .limit(1);
+
+    if (!memberRecord[0]) {
+      return {};
+    }
+
+    return OrganizationRoleModel.getPermissions(
+      memberRecord[0].role,
+      organizationId,
+    );
+  }
 }
 
-export default User;
+export default UserModel;
