@@ -55,6 +55,7 @@ class McpClient {
         await McpToolCallModel.create({
           agentId,
           mcpServerName: "unknown",
+          method: "tools/call",
           toolCall,
           toolResult: errorResult,
         });
@@ -86,6 +87,7 @@ class McpClient {
         await McpToolCallModel.create({
           agentId,
           mcpServerName: tool.mcpServerName || "unknown",
+          method: "tools/call",
           toolCall,
           toolResult: errorResult,
         });
@@ -136,6 +138,7 @@ class McpClient {
           await McpToolCallModel.create({
             agentId,
             mcpServerName: tool.mcpServerName || "unknown",
+            method: "tools/call",
             toolCall,
             toolResult: errorResult,
           });
@@ -166,6 +169,7 @@ class McpClient {
           await McpToolCallModel.create({
             agentId,
             mcpServerName: tool.mcpServerName || "unknown",
+            method: "tools/call",
             toolCall,
             toolResult: errorResult,
           });
@@ -202,6 +206,7 @@ class McpClient {
               await McpToolCallModel.create({
                 agentId,
                 mcpServerName: tool.mcpServerName || "unknown",
+                method: "tools/call",
                 toolCall,
                 toolResult: errorResult,
               });
@@ -267,6 +272,7 @@ class McpClient {
               const savedToolCall = await McpToolCallModel.create({
                 agentId,
                 mcpServerName: tool.mcpServerName || "unknown",
+                method: "tools/call",
                 toolCall,
                 toolResult,
               });
@@ -302,6 +308,7 @@ class McpClient {
               const savedToolCall = await McpToolCallModel.create({
                 agentId,
                 mcpServerName: tool.mcpServerName || "unknown",
+                method: "tools/call",
                 toolCall,
                 toolResult,
               });
@@ -397,6 +404,7 @@ class McpClient {
             const savedToolCall = await McpToolCallModel.create({
               agentId,
               mcpServerName: tool.mcpServerName || "unknown",
+              method: "tools/call",
               toolCall,
               toolResult,
             });
@@ -432,6 +440,7 @@ class McpClient {
             const savedToolCall = await McpToolCallModel.create({
               agentId,
               mcpServerName: tool.mcpServerName || "unknown",
+              method: "tools/call",
               toolCall,
               toolResult,
             });
@@ -468,6 +477,7 @@ class McpClient {
             await McpToolCallModel.create({
               agentId,
               mcpServerName: tool.mcpServerName || "unknown",
+              method: "tools/call",
               toolCall,
               toolResult: errorResult,
             });
@@ -543,6 +553,7 @@ class McpClient {
             const savedToolCall = await McpToolCallModel.create({
               agentId,
               mcpServerName: tool.mcpServerName || "unknown",
+              method: "tools/call",
               toolCall,
               toolResult,
             });
@@ -575,6 +586,7 @@ class McpClient {
             const savedToolCall = await McpToolCallModel.create({
               agentId,
               mcpServerName: tool.mcpServerName || "unknown",
+              method: "tools/call",
               toolCall,
               toolResult,
             });
@@ -609,6 +621,7 @@ class McpClient {
         await McpToolCallModel.create({
           agentId,
           mcpServerName: tool.mcpServerName || "unknown",
+          method: "tools/call",
           toolCall,
           toolResult,
         });
