@@ -16,6 +16,7 @@ import {
   UuidIdSchema,
 } from "@/types";
 import { PROXY_API_PREFIX } from "./common";
+import { MockAnthropicClient } from "./mock-anthropic-client";
 import * as utils from "./utils";
 
 const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
@@ -154,11 +155,13 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
     const { "x-api-key": anthropicApiKey } = headers;
 
-    const anthropicClient = new AnthropicProvider({
-      apiKey: anthropicApiKey,
-      baseURL: config.llm.anthropic.baseUrl,
-      fetch: getObservableFetch("anthropic", resolvedAgent),
-    });
+    const anthropicClient = config.benchmark.mockMode
+      ? (new MockAnthropicClient() as unknown as AnthropicProvider)
+      : new AnthropicProvider({
+          apiKey: anthropicApiKey,
+          baseURL: config.llm.anthropic.baseUrl,
+          fetch: getObservableFetch("anthropic", resolvedAgent),
+        });
 
     try {
       // Check if current usage limits are already exceeded
@@ -212,6 +215,32 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
       // Client declares tools they want to use - no injection needed
       // Clients handle tool execution via MCP Gateway
       const mergedTools = tools || [];
+
+      const baselineModel = body.model;
+      let model = baselineModel;
+      // Optimize model selection for cost if enabled using dynamic rules
+      if (resolvedAgent.optimizeCost) {
+        const hasTools = mergedTools.length > 0;
+        const optimizedModel = await utils.costOptimization.getOptimizedModel(
+          resolvedAgent,
+          body.messages,
+          "anthropic",
+          hasTools,
+        );
+
+        if (optimizedModel) {
+          model = optimizedModel;
+          fastify.log.info(
+            { resolvedAgentId, optimizedModel },
+            "Optimized model selected",
+          );
+        } else {
+          fastify.log.info(
+            { resolvedAgentId, baselineModel },
+            "No matching optimized model found, proceeding with baseline model",
+          );
+        }
+      }
 
       // Convert to common format and evaluate trusted data policies
       const commonMessages = utils.adapters.anthropic.toCommonFormat(
@@ -304,7 +333,7 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
         const messageStream = await utils.tracing.startActiveLlmSpan(
           "anthropic.messages",
           "anthropic",
-          body.model,
+          model,
           true,
           resolvedAgent,
           async (llmSpan) => {
@@ -567,9 +596,21 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
         const tokenUsage = utils.adapters.anthropic.getUsageTokens(usage);
 
         if (messageStartEvent?.message.usage) {
-          reportLLMTokens(
-            "anthropic",
-            resolvedAgent,
+          reportLLMTokens("anthropic", resolvedAgent, tokenUsage);
+        }
+
+        // Only calculate costs if cost optimization is enabled
+        let cost: number | undefined;
+        let baselineCost: number | undefined;
+
+        if (resolvedAgent.optimizeCost) {
+          cost = await utils.costOptimization.calculateCost(
+            model,
+            tokenUsage.input,
+            tokenUsage.output,
+          );
+          baselineCost = await utils.costOptimization.calculateCost(
+            body.model,
             tokenUsage.input,
             tokenUsage.output,
           );
@@ -585,14 +626,16 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
             type: "message",
             role: "assistant",
             content: responseContent,
-            model: body.model,
+            model: model,
             stop_reason: "end_turn",
             stop_sequence: null,
             usage,
           },
-          model: body.model,
+          model: model,
           inputTokens: tokenUsage.input,
           outputTokens: tokenUsage.output,
+          cost: cost?.toFixed(10) ?? null,
+          baselineCost: baselineCost?.toFixed(10) ?? null,
         });
 
         // Send message_delta with stop_reason and usage
@@ -628,7 +671,7 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
         const response = await utils.tracing.startActiveLlmSpan(
           "anthropic.messages",
           "anthropic",
-          body.model,
+          model,
           false,
           resolvedAgent,
           async (llmSpan) => {
@@ -674,14 +717,33 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
               ? utils.adapters.anthropic.getUsageTokens(response.usage)
               : { input: null, output: null };
 
+            // Only calculate costs if cost optimization is enabled
+            let cost: number | undefined;
+            let baselineCost: number | undefined;
+
+            if (resolvedAgent.optimizeCost) {
+              cost = await utils.costOptimization.calculateCost(
+                model,
+                tokenUsage.input,
+                tokenUsage.output,
+              );
+              baselineCost = await utils.costOptimization.calculateCost(
+                body.model,
+                tokenUsage.input,
+                tokenUsage.output,
+              );
+            }
+
             await InteractionModel.create({
               agentId: resolvedAgentId,
               type: "anthropic:messages",
               request: body,
               response: response,
-              model: body.model,
+              model: model,
               inputTokens: tokenUsage.input,
               outputTokens: tokenUsage.output,
+              cost: cost?.toFixed(10) ?? null,
+              baselineCost: baselineCost?.toFixed(10) ?? null,
             });
 
             return reply.send(response);
@@ -695,14 +757,34 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
           ? utils.adapters.anthropic.getUsageTokens(response.usage)
           : { input: null, output: null };
 
+        // Calculate costs using database pricing (TokenPriceModel)
+        // Only calculate costs if cost optimization is enabled
+        let cost: number | undefined;
+        let baselineCost: number | undefined;
+
+        if (resolvedAgent.optimizeCost) {
+          cost = await utils.costOptimization.calculateCost(
+            model,
+            tokenUsage.input,
+            tokenUsage.output,
+          );
+          baselineCost = await utils.costOptimization.calculateCost(
+            body.model,
+            tokenUsage.input,
+            tokenUsage.output,
+          );
+        }
+
         await InteractionModel.create({
           agentId: resolvedAgentId,
           type: "anthropic:messages",
           request: body,
           response: response,
-          model: body.model,
+          model: model,
           inputTokens: tokenUsage.input,
           outputTokens: tokenUsage.output,
+          cost: cost?.toFixed(10) ?? null,
+          baselineCost: baselineCost?.toFixed(10) ?? null,
         });
 
         return reply.send(response);
