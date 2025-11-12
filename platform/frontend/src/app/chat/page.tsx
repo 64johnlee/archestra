@@ -295,7 +295,11 @@ export default function ChatPage() {
                 </Alert>
               </div>
             )}
-            <ChatMessages messages={messages} hideToolCalls={hideToolCalls} />
+            <ChatMessages
+              messages={messages}
+              hideToolCalls={hideToolCalls}
+              status={status}
+            />
             <div className="border-t p-4">
               <div className="max-w-3xl mx-auto space-y-3">
                 {currentAgent && Object.keys(groupedTools).length > 0 && (
