@@ -2,7 +2,7 @@
 
 import { type UIMessage, useChat } from "@ai-sdk/react";
 import { MCP_SERVER_TOOL_NAME_SEPARATOR } from "@shared";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import { AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -35,8 +35,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  type ConversationWithAgent,
   useChatAgentMcpTools,
+  useConversation,
   useConversations,
   useCreateConversation,
   useDeleteConversation,
@@ -44,9 +44,9 @@ import {
 } from "@/lib/chat.query";
 import { useChatSettingsOptional } from "@/lib/chat-settings.query";
 
-interface ConversationWithMessages extends ConversationWithAgent {
-  messages: UIMessage[];
-}
+// Local storage key for persisting last conversation
+const LAST_CONVERSATION_KEY = "archestra-chat-last-conversation";
+const CONVERSATION_QUERY_PARAM = "conversation";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -56,15 +56,49 @@ export default function ChatPage() {
 
   const [conversationId, setConversationId] = useState<string>();
   const [hideToolCalls, setHideToolCalls] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const loadedConversationRef = useRef<string | undefined>(undefined);
   const pendingPromptRef = useRef<string | undefined>(undefined);
 
   // Check if API key is configured
   const { data: chatSettings } = useChatSettingsOptional();
 
+  // Fetch conversations with agent details
+  const { data: conversations = [] } = useConversations();
+
+  // Initialize and handle last conversation redirect
+  useEffect(() => {
+    if (hasInitialized) return;
+
+    const conversationParam = searchParams.get(CONVERSATION_QUERY_PARAM);
+
+    // If no conversation in URL, try to restore the last viewed conversation
+    if (!conversationParam) {
+      const lastConversationId = localStorage.getItem(LAST_CONVERSATION_KEY);
+      if (lastConversationId && conversations.length > 0) {
+        // Check if the last conversation still exists
+        const conversationExists = conversations.some(
+          (conv) => conv.id === lastConversationId,
+        );
+        if (conversationExists) {
+          router.replace(
+            `${pathname}?${CONVERSATION_QUERY_PARAM}=${lastConversationId}`,
+          );
+          setHasInitialized(true);
+          return;
+        } else {
+          // Clean up stale conversation ID
+          localStorage.removeItem(LAST_CONVERSATION_KEY);
+        }
+      }
+    }
+
+    setHasInitialized(true);
+  }, [hasInitialized, searchParams, conversations, pathname, router]);
+
   // Sync conversation ID with URL
   useEffect(() => {
-    const conversationParam = searchParams.get("conversation");
+    const conversationParam = searchParams.get(CONVERSATION_QUERY_PARAM);
     if (conversationParam !== conversationId) {
       setConversationId(conversationParam || undefined);
     }
@@ -74,45 +108,24 @@ export default function ChatPage() {
   const selectConversation = (id: string | undefined) => {
     setConversationId(id);
     if (id) {
-      router.push(`${pathname}?conversation=${id}`);
+      router.push(`${pathname}?${CONVERSATION_QUERY_PARAM}=${id}`);
+      // Save the conversation ID to localStorage for persistence
+      localStorage.setItem(LAST_CONVERSATION_KEY, id);
     } else {
       router.push(pathname);
+      // Clear the saved conversation when going to "New Chat"
+      localStorage.removeItem(LAST_CONVERSATION_KEY);
     }
   };
 
-  // Fetch conversations with agent details
-  const { data: conversations = [] } = useConversations();
-
   // Fetch conversation with messages
-  const { data: conversation } = useQuery<ConversationWithMessages>({
-    queryKey: ["conversation", conversationId],
-    queryFn: async () => {
-      if (!conversationId) return null;
-      const res = await fetch(`/api/chat/conversations/${conversationId}`);
-      if (!res.ok) {
-        // If conversation was deleted (404), clear the selection gracefully
-        if (res.status === 404) {
-          selectConversation(undefined);
-          return null;
-        }
-        throw new Error("Failed to fetch conversation");
-      }
-      return res.json();
-    },
-    enabled: !!conversationId,
-    staleTime: 0, // Always refetch to ensure we have the latest messages
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    refetchOnWindowFocus: false, // Don't refetch when window gains focus
-    retry: false, // Don't retry on error to avoid multiple 404s
-  });
+  const { data: conversation } = useConversation(conversationId);
 
   // Get current agent info
-  const currentAgent =
-    conversation?.agent ||
-    conversations.find((c) => c.id === conversationId)?.agent;
+  const currentAgentId = conversation?.agentId;
 
   // Fetch MCP tools from gateway (same as used in chat backend)
-  const { data: mcpTools = [] } = useChatAgentMcpTools(currentAgent?.id);
+  const { data: mcpTools = [] } = useChatAgentMcpTools(currentAgentId);
 
   // Group tools by MCP server name (everything before the last __)
   const groupedTools = mcpTools.reduce(
@@ -168,6 +181,12 @@ export default function ChatPage() {
       router.push(pathname);
     }
 
+    // Clear from localStorage if this was the last viewed conversation
+    const lastConversationId = localStorage.getItem(LAST_CONVERSATION_KEY);
+    if (lastConversationId === id) {
+      localStorage.removeItem(LAST_CONVERSATION_KEY);
+    }
+
     await deleteConversationMutation.mutateAsync(id);
   };
 
@@ -201,7 +220,7 @@ export default function ChatPage() {
       conversation.id === conversationId &&
       loadedConversationRef.current !== conversationId
     ) {
-      setMessages(conversation.messages);
+      setMessages(conversation.messages as UIMessage[]);
       loadedConversationRef.current = conversationId;
 
       // If there's a pending prompt and the conversation is empty, send it
@@ -271,7 +290,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen">
-      {/* Sidebar - Conversation List */}
       <ConversationList
         conversations={conversations}
         selectedConversationId={conversationId}
@@ -283,7 +301,6 @@ export default function ChatPage() {
         onToggleHideToolCalls={setHideToolCalls}
       />
 
-      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {!conversationId ? (
           <AllAgentsPrompts onSelectPrompt={handleSelectPromptFromAllAgents} />
@@ -305,7 +322,7 @@ export default function ChatPage() {
             />
             <div className="border-t p-4">
               <div className="max-w-3xl mx-auto space-y-3">
-                {currentAgent && Object.keys(groupedTools).length > 0 && (
+                {currentAgentId && Object.keys(groupedTools).length > 0 && (
                   <div className="text-xs text-muted-foreground">
                     <TooltipProvider>
                       <div className="flex flex-wrap gap-2">
