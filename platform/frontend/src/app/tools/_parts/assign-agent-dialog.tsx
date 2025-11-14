@@ -226,7 +226,7 @@ export function AssignAgentDialog({
                   onValueChange={setExecutionSourceMcpServerId}
                   className="w-full"
                   catalogId={catalogId}
-                  agentIds={selectedAgentIds}
+                  shouldSetDefaultValue
                 />
               </>
             ) : (
@@ -246,7 +246,7 @@ export function AssignAgentDialog({
                   onValueChange={setCredentialSourceMcpServerId}
                   className="w-full"
                   catalogId={catalogId}
-                  agentIds={selectedAgentIds}
+                  shouldSetDefaultValue
                 />
               </>
             )}

@@ -488,8 +488,8 @@ export function AssignedToolsTable({ onToolClick }: AssignedToolsTableProps) {
                   }
                 }}
                 catalogId={row.original.tool.catalogId ?? ""}
-                agentIds={[row.original.agent.id]}
                 className="h-8 w-[200px] text-xs"
+                shouldSetDefaultValue={false}
               />
             );
           }
@@ -507,8 +507,8 @@ export function AssignedToolsTable({ onToolClick }: AssignedToolsTableProps) {
                 }
               }}
               catalogId={row.original.tool.catalogId ?? ""}
-              agentIds={[row.original.agent.id]}
               className="h-8 w-[200px] text-xs"
+              shouldSetDefaultValue={false}
             />
           );
         },
