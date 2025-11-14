@@ -4,7 +4,7 @@ import { type UIMessage, useChat } from "@ai-sdk/react";
 import { MCP_SERVER_TOOL_NAME_SEPARATOR } from "@shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
@@ -18,7 +18,6 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { AllAgentsPrompts } from "@/components/chat/all-agents-prompts";
 import { ChatMessages } from "@/components/chat/chat-messages";
-import { ConversationList } from "@/components/chat/conversation-list";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,15 +36,10 @@ import {
 import {
   useChatAgentMcpTools,
   useConversation,
-  useConversations,
   useCreateConversation,
-  useDeleteConversation,
-  useUpdateConversation,
 } from "@/lib/chat.query";
 import { useChatSettingsOptional } from "@/lib/chat-settings.query";
 
-// Local storage key for persisting last conversation
-const LAST_CONVERSATION_KEY = "archestra-chat-last-conversation";
 const CONVERSATION_QUERY_PARAM = "conversation";
 
 export default function ChatPage() {
@@ -55,7 +49,13 @@ export default function ChatPage() {
   const queryClient = useQueryClient();
 
   const [conversationId, setConversationId] = useState<string>();
-  const [hideToolCalls, setHideToolCalls] = useState(false);
+  const [hideToolCalls, setHideToolCalls] = useState(() => {
+    // Initialize from localStorage
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("archestra-chat-hide-tool-calls") === "true";
+    }
+    return false;
+  });
   const [hasInitialized, setHasInitialized] = useState(false);
   const loadedConversationRef = useRef<string | undefined>(undefined);
   const pendingPromptRef = useRef<string | undefined>(undefined);
@@ -63,38 +63,11 @@ export default function ChatPage() {
   // Check if API key is configured
   const { data: chatSettings } = useChatSettingsOptional();
 
-  // Fetch conversations with agent details
-  const { data: conversations = [] } = useConversations();
-
-  // Initialize and handle last conversation redirect
+  // Initialize
   useEffect(() => {
     if (hasInitialized) return;
-
-    const conversationParam = searchParams.get(CONVERSATION_QUERY_PARAM);
-
-    // If no conversation in URL, try to restore the last viewed conversation
-    if (!conversationParam) {
-      const lastConversationId = localStorage.getItem(LAST_CONVERSATION_KEY);
-      if (lastConversationId && conversations.length > 0) {
-        // Check if the last conversation still exists
-        const conversationExists = conversations.some(
-          (conv) => conv.id === lastConversationId,
-        );
-        if (conversationExists) {
-          router.replace(
-            `${pathname}?${CONVERSATION_QUERY_PARAM}=${lastConversationId}`,
-          );
-          setHasInitialized(true);
-          return;
-        } else {
-          // Clean up stale conversation ID
-          localStorage.removeItem(LAST_CONVERSATION_KEY);
-        }
-      }
-    }
-
     setHasInitialized(true);
-  }, [hasInitialized, searchParams, conversations, pathname, router]);
+  }, [hasInitialized]);
 
   // Sync conversation ID with URL
   useEffect(() => {
@@ -109,12 +82,8 @@ export default function ChatPage() {
     setConversationId(id);
     if (id) {
       router.push(`${pathname}?${CONVERSATION_QUERY_PARAM}=${id}`);
-      // Save the conversation ID to localStorage for persistence
-      localStorage.setItem(LAST_CONVERSATION_KEY, id);
     } else {
       router.push(pathname);
-      // Clear the saved conversation when going to "New Chat"
-      localStorage.removeItem(LAST_CONVERSATION_KEY);
     }
   };
 
@@ -164,30 +133,11 @@ export default function ChatPage() {
     }
   };
 
-  // Update conversation mutation
-  const updateConversationMutation = useUpdateConversation();
-  const handleUpdateConversation = async (id: string, title: string) => {
-    await updateConversationMutation.mutateAsync({ id, title });
-  };
-
-  // Delete conversation mutation
-  const deleteConversationMutation = useDeleteConversation();
-  const handleDeleteConversation = async (id: string) => {
-    // If we're deleting the selected conversation, clear the selection first
-    // to prevent the query from trying to refetch a deleted conversation
-    if (conversationId === id) {
-      setConversationId(undefined);
-      setMessages([]);
-      router.push(pathname);
-    }
-
-    // Clear from localStorage if this was the last viewed conversation
-    const lastConversationId = localStorage.getItem(LAST_CONVERSATION_KEY);
-    if (lastConversationId === id) {
-      localStorage.removeItem(LAST_CONVERSATION_KEY);
-    }
-
-    await deleteConversationMutation.mutateAsync(id);
+  // Persist hide tool calls preference
+  const toggleHideToolCalls = () => {
+    const newValue = !hideToolCalls;
+    setHideToolCalls(newValue);
+    localStorage.setItem("archestra-chat-hide-tool-calls", String(newValue));
   };
 
   // useChat hook for streaming (AI SDK 5.0 - manages messages only)
@@ -289,23 +239,12 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen">
-      <ConversationList
-        conversations={conversations}
-        selectedConversationId={conversationId}
-        onSelectConversation={selectConversation}
-        onNewChat={() => selectConversation(undefined)}
-        onUpdateConversation={handleUpdateConversation}
-        onDeleteConversation={handleDeleteConversation}
-        hideToolCalls={hideToolCalls}
-        onToggleHideToolCalls={setHideToolCalls}
-      />
-
-      <div className="flex-1 flex flex-col">
+    <div className="flex h-screen w-full">
+      <div className="flex-1 flex flex-col w-full">
         {!conversationId ? (
           <AllAgentsPrompts onSelectPrompt={handleSelectPromptFromAllAgents} />
         ) : (
-          <>
+          <div className="flex flex-col h-full">
             {error && (
               <div className="border-b p-4 bg-destructive/5">
                 <Alert variant="destructive" className="max-w-3xl mx-auto">
@@ -315,12 +254,50 @@ export default function ChatPage() {
                 </Alert>
               </div>
             )}
-            <ChatMessages
-              messages={messages}
-              hideToolCalls={hideToolCalls}
-              status={status}
-            />
-            <div className="border-t p-4">
+
+            {/* Sticky top bar with agent name and toggle */}
+            <div className="sticky top-0 z-10 bg-background border-b p-2 flex items-center justify-between">
+              <div className="flex-1" />
+              {conversation?.agent?.name && (
+                <div className="flex-1 text-center">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {conversation.agent.name}
+                  </span>
+                </div>
+              )}
+              <div className="flex-1 flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleHideToolCalls}
+                  className="text-xs"
+                >
+                  {hideToolCalls ? (
+                    <>
+                      <Eye className="h-3 w-3 mr-1" />
+                      Show tool calls
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="h-3 w-3 mr-1" />
+                      Hide tool calls
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Scrollable messages area */}
+            <div className="flex-1 overflow-y-auto">
+              <ChatMessages
+                messages={messages}
+                hideToolCalls={hideToolCalls}
+                status={status}
+              />
+            </div>
+
+            {/* Sticky bottom input area */}
+            <div className="sticky bottom-0 bg-background border-t p-4">
               <div className="max-w-3xl mx-auto space-y-3">
                 {currentAgentId && Object.keys(groupedTools).length > 0 && (
                   <div className="text-xs text-muted-foreground">
@@ -392,7 +369,7 @@ export default function ChatPage() {
                 </PromptInput>
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
