@@ -2080,45 +2080,54 @@ export type GetAgentPromptsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -2170,45 +2179,54 @@ export type AssignAgentPromptsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -2245,45 +2263,54 @@ export type DeleteAgentPromptErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -2322,45 +2349,54 @@ export type GetAgentsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -2452,45 +2488,54 @@ export type CreateAgentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -2559,45 +2604,54 @@ export type GetAllAgentsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -2666,45 +2720,54 @@ export type GetDefaultAgentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -2775,45 +2838,54 @@ export type DeleteAgentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -2845,45 +2917,54 @@ export type GetAgentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -2967,45 +3048,54 @@ export type UpdateAgentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -3074,45 +3164,54 @@ export type GetLabelKeysErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -3145,45 +3244,54 @@ export type GetLabelValuesErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -3230,45 +3338,54 @@ export type GetAllAgentToolsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -3348,45 +3465,54 @@ export type UnassignToolFromAgentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -3422,45 +3548,54 @@ export type AssignToolToAgentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -3497,45 +3632,54 @@ export type BulkAssignToolsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -3579,45 +3723,54 @@ export type GetAgentToolsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -3677,45 +3830,54 @@ export type UpdateAgentToolErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -3756,45 +3918,54 @@ export type GetAgentAvailableTokensErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -3845,45 +4016,54 @@ export type AnthropicMessagesWithDefaultAgentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -3921,45 +4101,54 @@ export type AnthropicMessagesWithAgentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4048,45 +4237,54 @@ export type GetOperatorsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4117,45 +4315,54 @@ export type GetToolInvocationPoliciesErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4200,45 +4407,54 @@ export type CreateToolInvocationPolicyErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4278,45 +4494,54 @@ export type DeleteToolInvocationPolicyErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4348,45 +4573,54 @@ export type GetToolInvocationPolicyErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4433,45 +4667,54 @@ export type UpdateToolInvocationPolicyErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4509,45 +4752,54 @@ export type GetTrustedDataPoliciesErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4592,45 +4844,54 @@ export type CreateTrustedDataPolicyErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4670,45 +4931,54 @@ export type DeleteTrustedDataPolicyErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4740,45 +5010,54 @@ export type GetTrustedDataPolicyErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4825,45 +5104,54 @@ export type UpdateTrustedDataPolicyErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4905,45 +5193,54 @@ export type StreamChatErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -4962,45 +5259,54 @@ export type GetChatConversationsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5046,45 +5352,54 @@ export type CreateChatConversationErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5128,45 +5443,54 @@ export type DeleteChatConversationErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5198,45 +5522,54 @@ export type GetChatConversationErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5283,45 +5616,54 @@ export type UpdateChatConversationErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5365,45 +5707,54 @@ export type GetChatAgentMcpToolsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5437,45 +5788,54 @@ export type GetChatSettingsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5512,45 +5872,54 @@ export type UpdateChatSettingsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5584,45 +5953,54 @@ export type GetDefaultDualLlmConfigErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5659,45 +6037,54 @@ export type GetDualLlmConfigsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5740,45 +6127,54 @@ export type CreateDualLlmConfigErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5817,45 +6213,54 @@ export type DeleteDualLlmConfigErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5887,45 +6292,54 @@ export type GetDualLlmConfigErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -5970,45 +6384,54 @@ export type UpdateDualLlmConfigErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -6047,45 +6470,54 @@ export type GetDualLlmResultByToolCallIdErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -6124,45 +6556,54 @@ export type GetDualLlmResultsByInteractionErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -6232,45 +6673,54 @@ export type PostV1GeminiModelsByModelGenerateContentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -6313,45 +6763,54 @@ export type PostV1GeminiModelsByModelStreamGenerateContentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -6386,45 +6845,54 @@ export type PostV1GeminiByAgentIdModelsByModelGenerateContentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -6468,45 +6936,54 @@ export type PostV1GeminiByAgentIdModelsByModelStreamGenerateContentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -6534,45 +7011,54 @@ export type GetInteractionsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -6648,45 +7134,54 @@ export type GetInteractionErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -6750,45 +7245,54 @@ export type GetInternalMcpCatalogErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -6953,45 +7457,54 @@ export type CreateInternalMcpCatalogItemErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -7091,45 +7604,54 @@ export type DeleteInternalMcpCatalogItemErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -7161,45 +7683,54 @@ export type GetInternalMcpCatalogItemErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -7366,45 +7897,54 @@ export type UpdateInternalMcpCatalogItemErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -7506,45 +8046,54 @@ export type GetLimitsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -7595,45 +8144,54 @@ export type CreateLimitErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -7677,45 +8235,54 @@ export type DeleteLimitErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -7747,45 +8314,54 @@ export type GetLimitErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -7838,45 +8414,54 @@ export type UpdateLimitErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -7958,6 +8543,37 @@ export type PostV1McpResponses = {
     200: unknown;
 };
 
+export type DeleteV1McpSessionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/mcp/sessions';
+};
+
+export type DeleteV1McpSessionsErrors = {
+    /**
+     * Default Response
+     */
+    401: {
+        error: string;
+        message: string;
+    };
+};
+
+export type DeleteV1McpSessionsError = DeleteV1McpSessionsErrors[keyof DeleteV1McpSessionsErrors];
+
+export type DeleteV1McpSessionsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        message: string;
+        clearedCount: number;
+    };
+};
+
+export type DeleteV1McpSessionsResponse = DeleteV1McpSessionsResponses[keyof DeleteV1McpSessionsResponses];
+
 export type GetMcpServerInstallationRequestsData = {
     body?: never;
     path?: never;
@@ -7975,45 +8591,54 @@ export type GetMcpServerInstallationRequestsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -8170,45 +8795,54 @@ export type CreateMcpServerInstallationRequestErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -8310,45 +8944,54 @@ export type DeleteMcpServerInstallationRequestErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -8380,45 +9023,54 @@ export type GetMcpServerInstallationRequestErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -8587,45 +9239,54 @@ export type UpdateMcpServerInstallationRequestErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -8729,45 +9390,54 @@ export type ApproveMcpServerInstallationRequestErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -8871,45 +9541,54 @@ export type DeclineMcpServerInstallationRequestErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9013,45 +9692,54 @@ export type AddMcpServerInstallationRequestNoteErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9153,45 +9841,54 @@ export type GetMcpServersErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9265,45 +9962,54 @@ export type InstallMcpServerErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9360,45 +10066,54 @@ export type DeleteMcpServerErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9430,45 +10145,54 @@ export type GetMcpServerErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9525,45 +10249,54 @@ export type GetMcpServerInstallationStatusErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9596,45 +10329,54 @@ export type GetMcpServerToolsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9680,45 +10422,54 @@ export type GetMcpServerLogsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9753,45 +10504,54 @@ export type RestartMcpServerErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9825,45 +10585,54 @@ export type RevokeUserMcpServerAccessErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9895,45 +10664,54 @@ export type RevokeAllTeamsMcpServerAccessErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -9968,45 +10746,54 @@ export type GrantTeamMcpServerAccessErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -10039,45 +10826,54 @@ export type RevokeTeamMcpServerAccessErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -10116,45 +10912,54 @@ export type GetMcpToolCallsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -10171,6 +10976,9 @@ export type GetMcpToolCallsResponses = {
             agentId: string;
             mcpServerName: string;
             method: string;
+            /**
+             * Represents a tool call in a provider-agnostic way
+             */
             toolCall: {
                 id: string;
                 name: string;
@@ -10208,45 +11016,54 @@ export type GetMcpToolCallErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -10262,6 +11079,9 @@ export type GetMcpToolCallResponses = {
         agentId: string;
         mcpServerName: string;
         method: string;
+        /**
+         * Represents a tool call in a provider-agnostic way
+         */
         toolCall: {
             id: string;
             name: string;
@@ -10291,45 +11111,54 @@ export type InitiateOAuthErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -10363,45 +11192,54 @@ export type HandleOAuthCallbackErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -10425,80 +11263,6 @@ export type HandleOAuthCallbackResponses = {
 
 export type HandleOAuthCallbackResponse = HandleOAuthCallbackResponses[keyof HandleOAuthCallbackResponses];
 
-export type GetOnboardingLogsStatusData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/onboarding/logs-status';
-};
-
-export type GetOnboardingLogsStatusErrors = {
-    /**
-     * Default Response
-     */
-    401: {
-        error: string | {
-            message: string;
-            type: string;
-        };
-    };
-};
-
-export type GetOnboardingLogsStatusError = GetOnboardingLogsStatusErrors[keyof GetOnboardingLogsStatusErrors];
-
-export type GetOnboardingLogsStatusResponses = {
-    /**
-     * Default Response
-     */
-    200: {
-        hasLlmProxyLogs: boolean;
-        hasMcpGatewayLogs: boolean;
-    };
-};
-
-export type GetOnboardingLogsStatusResponse = GetOnboardingLogsStatusResponses[keyof GetOnboardingLogsStatusResponses];
-
-export type CompleteOnboardingData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/onboarding/complete';
-};
-
-export type CompleteOnboardingErrors = {
-    /**
-     * Default Response
-     */
-    401: {
-        error: string | {
-            message: string;
-            type: string;
-        };
-    };
-    /**
-     * Default Response
-     */
-    500: {
-        error: string | {
-            message: string;
-            type: string;
-        };
-    };
-};
-
-export type CompleteOnboardingError = CompleteOnboardingErrors[keyof CompleteOnboardingErrors];
-
-export type CompleteOnboardingResponses = {
-    /**
-     * Default Response
-     */
-    200: {
-        success: boolean;
-    };
-};
-
-export type CompleteOnboardingResponse = CompleteOnboardingResponses[keyof CompleteOnboardingResponses];
-
 export type OpenAiChatCompletionsWithDefaultAgentData = {
     body?: OpenAiChatCompletionRequestInput;
     headers: {
@@ -10521,45 +11285,54 @@ export type OpenAiChatCompletionsWithDefaultAgentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -10599,45 +11372,54 @@ export type OpenAiChatCompletionsWithAgentErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -10662,6 +11444,65 @@ export type GetOptimizationRulesData = {
     url: '/api/agents/{agentId}/optimization-rules';
 };
 
+export type GetOptimizationRulesErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type GetOptimizationRulesError = GetOptimizationRulesErrors[keyof GetOptimizationRulesErrors];
+
 export type GetOptimizationRulesResponses = {
     /**
      * Default Response
@@ -10669,9 +11510,13 @@ export type GetOptimizationRulesResponses = {
     200: Array<{
         id: string;
         agentId: string;
-        ruleType: string;
-        conditions: unknown;
-        provider: string;
+        ruleType: 'content_length' | 'tool_presence';
+        conditions: {
+            maxLength: number;
+        } | {
+            hasTools: boolean;
+        };
+        provider: SupportedProviders;
         targetModel: string;
         priority: number;
         enabled: boolean;
@@ -10684,16 +11529,19 @@ export type GetOptimizationRulesResponse = GetOptimizationRulesResponses[keyof G
 
 export type CreateOptimizationRuleData = {
     body: {
-        ruleType: string;
+        id?: string;
+        ruleType: 'content_length' | 'tool_presence';
         conditions: {
             maxLength: number;
         } | {
             hasTools: boolean;
         };
-        provider: string;
+        provider: SupportedProvidersInput;
         targetModel: string;
         priority?: number;
         enabled?: boolean;
+        createdAt?: unknown;
+        updatedAt?: unknown;
     };
     path: {
         agentId: string;
@@ -10702,16 +11550,79 @@ export type CreateOptimizationRuleData = {
     url: '/api/agents/{agentId}/optimization-rules';
 };
 
+export type CreateOptimizationRuleErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type CreateOptimizationRuleError = CreateOptimizationRuleErrors[keyof CreateOptimizationRuleErrors];
+
 export type CreateOptimizationRuleResponses = {
     /**
      * Default Response
      */
-    201: {
+    200: {
         id: string;
         agentId: string;
-        ruleType: string;
-        conditions: unknown;
-        provider: string;
+        ruleType: 'content_length' | 'tool_presence';
+        conditions: {
+            maxLength: number;
+        } | {
+            hasTools: boolean;
+        };
+        provider: SupportedProviders;
         targetModel: string;
         priority: number;
         enabled: boolean;
@@ -10735,8 +11646,56 @@ export type DeleteOptimizationRuleErrors = {
     /**
      * Default Response
      */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
     404: {
-        message: string;
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
     };
 };
 
@@ -10746,23 +11705,29 @@ export type DeleteOptimizationRuleResponses = {
     /**
      * Default Response
      */
-    204: null;
+    200: {
+        success: boolean;
+    };
 };
 
 export type DeleteOptimizationRuleResponse = DeleteOptimizationRuleResponses[keyof DeleteOptimizationRuleResponses];
 
 export type UpdateOptimizationRuleData = {
     body?: {
-        ruleType?: string;
+        id?: string;
+        agentId?: string;
+        ruleType?: 'content_length' | 'tool_presence';
         conditions?: {
             maxLength: number;
         } | {
             hasTools: boolean;
         };
-        provider?: string;
+        provider?: SupportedProvidersInput;
         targetModel?: string;
         priority?: number;
         enabled?: boolean;
+        createdAt?: unknown;
+        updatedAt?: unknown;
     };
     path: {
         id: string;
@@ -10775,8 +11740,56 @@ export type UpdateOptimizationRuleErrors = {
     /**
      * Default Response
      */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
     404: {
-        message: string;
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
     };
 };
 
@@ -10789,9 +11802,13 @@ export type UpdateOptimizationRuleResponses = {
     200: {
         id: string;
         agentId: string;
-        ruleType: string;
-        conditions: unknown;
-        provider: string;
+        ruleType: 'content_length' | 'tool_presence';
+        conditions: {
+            maxLength: number;
+        } | {
+            hasTools: boolean;
+        };
+        provider: SupportedProviders;
         targetModel: string;
         priority: number;
         enabled: boolean;
@@ -10814,45 +11831,54 @@ export type GetRolesErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -10895,45 +11921,54 @@ export type CreateRoleErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -10976,45 +12011,54 @@ export type DeleteRoleErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11049,45 +12093,54 @@ export type GetRoleErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11135,45 +12188,54 @@ export type UpdateRoleErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11211,45 +12273,54 @@ export type GetOrganizationErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11268,9 +12339,9 @@ export type GetOrganizationResponses = {
         createdAt: string;
         metadata: string | null;
         limitCleanupInterval: '1h' | '12h' | '24h' | '1w' | '1m';
+        onboardingComplete: boolean;
         theme: 'modern-minimal' | 'graphite' | 'clean-slate' | 'mono' | 'elegant-luxury' | 'claymorphism' | 't3-chat' | 'twitter' | 'bubblegum' | 'tangerine' | 'quantum-rose' | 'candyland' | 'pastel-dreams' | 'retro-arcade' | 'caffeine' | 'amber-minimal' | 'cosmic-night' | 'doom-64' | 'catppuccin' | 'perpetuity' | 'midnight-bloom' | 'starry-night' | 'cyberpunk' | 'mocha-mousse' | 'kodama-grove' | 'nature' | 'ocean-breeze' | 'sunset-horizon' | 'solar-dusk' | 'bold-tech' | 'neo-brutalism' | 'supabase' | 'vercel' | 'claude' | 'northern-lights' | 'vintage-paper';
         customFont: 'lato' | 'inter' | 'open-sans' | 'roboto' | 'source-sans-pro';
-        onboardingComplete: boolean;
     };
 };
 
@@ -11282,6 +12353,7 @@ export type UpdateOrganizationData = {
         customFont?: 'lato' | 'inter' | 'open-sans' | 'roboto' | 'source-sans-pro';
         limitCleanupInterval?: '1h' | '12h' | '24h' | '1w' | '1m';
         logo?: string | null;
+        onboardingComplete?: boolean;
     };
     path?: never;
     query?: never;
@@ -11293,45 +12365,54 @@ export type UpdateOrganizationErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11350,12 +12431,91 @@ export type UpdateOrganizationResponses = {
         createdAt: string;
         metadata: string | null;
         limitCleanupInterval: '1h' | '12h' | '24h' | '1w' | '1m';
+        onboardingComplete: boolean;
         theme: 'modern-minimal' | 'graphite' | 'clean-slate' | 'mono' | 'elegant-luxury' | 'claymorphism' | 't3-chat' | 'twitter' | 'bubblegum' | 'tangerine' | 'quantum-rose' | 'candyland' | 'pastel-dreams' | 'retro-arcade' | 'caffeine' | 'amber-minimal' | 'cosmic-night' | 'doom-64' | 'catppuccin' | 'perpetuity' | 'midnight-bloom' | 'starry-night' | 'cyberpunk' | 'mocha-mousse' | 'kodama-grove' | 'nature' | 'ocean-breeze' | 'sunset-horizon' | 'solar-dusk' | 'bold-tech' | 'neo-brutalism' | 'supabase' | 'vercel' | 'claude' | 'northern-lights' | 'vintage-paper';
         customFont: 'lato' | 'inter' | 'open-sans' | 'roboto' | 'source-sans-pro';
     };
 };
 
 export type UpdateOrganizationResponse = UpdateOrganizationResponses[keyof UpdateOrganizationResponses];
+
+export type GetOnboardingStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/organization/onboarding-status';
+};
+
+export type GetOnboardingStatusErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type GetOnboardingStatusError = GetOnboardingStatusErrors[keyof GetOnboardingStatusErrors];
+
+export type GetOnboardingStatusResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        hasLlmProxyLogs: boolean;
+        hasMcpGatewayLogs: boolean;
+    };
+};
+
+export type GetOnboardingStatusResponse = GetOnboardingStatusResponses[keyof GetOnboardingStatusResponses];
 
 export type GetPromptsData = {
     body?: never;
@@ -11371,45 +12531,54 @@ export type GetPromptsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11457,45 +12626,54 @@ export type CreatePromptErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11541,45 +12719,54 @@ export type DeletePromptErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11611,45 +12798,54 @@ export type GetPromptErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11698,45 +12894,54 @@ export type UpdatePromptErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11782,45 +12987,54 @@ export type GetPromptVersionsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11866,45 +13080,54 @@ export type GetTeamStatisticsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -11947,45 +13170,54 @@ export type GetAgentStatisticsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12027,45 +13259,54 @@ export type GetModelStatisticsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12106,45 +13347,54 @@ export type GetOverviewStatisticsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12179,45 +13429,54 @@ export type GetTeamsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12263,45 +13522,54 @@ export type CreateTeamErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12346,45 +13614,54 @@ export type DeleteTeamErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12416,45 +13693,54 @@ export type GetTeamErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12502,45 +13788,54 @@ export type UpdateTeamErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12585,45 +13880,54 @@ export type GetTeamMembersErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12662,45 +13966,54 @@ export type AddTeamMemberErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12737,45 +14050,54 @@ export type RemoveTeamMemberErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12805,45 +14127,54 @@ export type GetTokenPricesErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12882,54 +14213,54 @@ export type CreateTokenPriceErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
         };
     };
     /**
      * Default Response
      */
     409: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -12966,45 +14297,54 @@ export type DeleteTokenPriceErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -13036,45 +14376,54 @@ export type GetTokenPriceErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -13115,45 +14464,54 @@ export type UpdateTokenPriceErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };
@@ -13188,45 +14546,54 @@ export type GetToolsErrors = {
      * Default Response
      */
     400: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_validation_error';
         };
     };
     /**
      * Default Response
      */
     401: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authentication_error';
         };
     };
     /**
      * Default Response
      */
     403: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_authorization_error';
         };
     };
     /**
      * Default Response
      */
     404: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
         };
     };
     /**
      * Default Response
      */
     500: {
-        error: string | {
+        error: {
             message: string;
-            type: string;
+            type: 'api_internal_server_error';
         };
     };
 };

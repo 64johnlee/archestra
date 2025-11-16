@@ -1,45 +1,20 @@
 import { and, asc, eq } from "drizzle-orm";
-import db from "@/database";
-import { optimizationRulesTable } from "@/database/schemas";
+import db, { schema } from "@/database";
 import type {
-  ContentLengthConditions,
-  RuleConditions,
-  ToolPresenceConditions,
-} from "@/database/schemas/optimization-rule";
-
-export type OptimizationRule = typeof optimizationRulesTable.$inferSelect;
-export type NewOptimizationRule = typeof optimizationRulesTable.$inferInsert;
-
-// Allow any string for rule type and provider to support future types without migration
-export type OptimizationRuleType = string;
-export type LlmProvider = string;
+  InsertOptimizationRule,
+  OptimizationRule,
+  OptimizationRuleContentLengthConditions,
+  OptimizationRuleToolPresenceConditions,
+  SupportedProvider,
+  UpdateOptimizationRule,
+} from "@/types";
 
 class OptimizationRuleModel {
-  static async create(data: {
-    agentId: string;
-    ruleType: OptimizationRuleType;
-    conditions: RuleConditions;
-    provider: LlmProvider;
-    targetModel: string;
-    priority?: number;
-    enabled?: boolean;
-  }): Promise<OptimizationRule> {
+  static async create(data: InsertOptimizationRule): Promise<OptimizationRule> {
     const [rule] = await db
-      .insert(optimizationRulesTable)
-      .values({
-        agentId: data.agentId,
-        ruleType: data.ruleType,
-        conditions: data.conditions,
-        provider: data.provider,
-        targetModel: data.targetModel,
-        priority: data.priority ?? 0,
-        enabled: data.enabled ?? true,
-      })
+      .insert(schema.optimizationRulesTable)
+      .values(data)
       .returning();
-
-    if (!rule) {
-      throw new Error("Failed to create optimization rule");
-    }
 
     return rule;
   }
@@ -47,65 +22,58 @@ class OptimizationRuleModel {
   static async findByAgentId(agentId: string): Promise<OptimizationRule[]> {
     const rules = await db
       .select()
-      .from(optimizationRulesTable)
-      .where(eq(optimizationRulesTable.agentId, agentId))
-      .orderBy(asc(optimizationRulesTable.priority));
+      .from(schema.optimizationRulesTable)
+      .where(eq(schema.optimizationRulesTable.agentId, agentId))
+      .orderBy(asc(schema.optimizationRulesTable.priority));
 
     return rules;
   }
 
   static async findByAgentIdAndProvider(
     agentId: string,
-    provider: LlmProvider,
+    provider: SupportedProvider,
   ): Promise<OptimizationRule[]> {
     const rules = await db
       .select()
-      .from(optimizationRulesTable)
+      .from(schema.optimizationRulesTable)
       .where(
         and(
-          eq(optimizationRulesTable.agentId, agentId),
-          eq(optimizationRulesTable.provider, provider),
+          eq(schema.optimizationRulesTable.agentId, agentId),
+          eq(schema.optimizationRulesTable.provider, provider),
         ),
       )
-      .orderBy(asc(optimizationRulesTable.priority));
+      .orderBy(asc(schema.optimizationRulesTable.priority));
 
     return rules;
   }
 
   static async findEnabledByAgentIdAndProvider(
     agentId: string,
-    provider: LlmProvider,
+    provider: SupportedProvider,
   ): Promise<OptimizationRule[]> {
     const rules = await db
       .select()
-      .from(optimizationRulesTable)
+      .from(schema.optimizationRulesTable)
       .where(
         and(
-          eq(optimizationRulesTable.agentId, agentId),
-          eq(optimizationRulesTable.provider, provider),
-          eq(optimizationRulesTable.enabled, true),
+          eq(schema.optimizationRulesTable.agentId, agentId),
+          eq(schema.optimizationRulesTable.provider, provider),
+          eq(schema.optimizationRulesTable.enabled, true),
         ),
       )
-      .orderBy(asc(optimizationRulesTable.priority));
+      .orderBy(asc(schema.optimizationRulesTable.priority));
 
     return rules;
   }
 
   static async update(
     id: string,
-    data: Partial<{
-      ruleType: OptimizationRuleType;
-      conditions: RuleConditions;
-      provider: LlmProvider;
-      targetModel: string;
-      priority: number;
-      enabled: boolean;
-    }>,
+    data: Partial<UpdateOptimizationRule>,
   ): Promise<OptimizationRule | undefined> {
     const [rule] = await db
-      .update(optimizationRulesTable)
+      .update(schema.optimizationRulesTable)
       .set(data)
-      .where(eq(optimizationRulesTable.id, id))
+      .where(eq(schema.optimizationRulesTable.id, id))
       .returning();
 
     return rule;
@@ -113,8 +81,8 @@ class OptimizationRuleModel {
 
   static async delete(id: string): Promise<boolean> {
     const result = await db
-      .delete(optimizationRulesTable)
-      .where(eq(optimizationRulesTable.id, id));
+      .delete(schema.optimizationRulesTable)
+      .where(eq(schema.optimizationRulesTable.id, id));
 
     return result.rowCount !== null && result.rowCount > 0;
   }
@@ -134,12 +102,14 @@ class OptimizationRuleModel {
 
       switch (rule.ruleType) {
         case "content_length": {
-          const conditions = rule.conditions as ContentLengthConditions;
+          const conditions =
+            rule.conditions as OptimizationRuleContentLengthConditions;
           matches = context.contentLength <= conditions.maxLength;
           break;
         }
         case "tool_presence": {
-          const conditions = rule.conditions as ToolPresenceConditions;
+          const conditions =
+            rule.conditions as OptimizationRuleToolPresenceConditions;
           matches = context.hasTools === conditions.hasTools;
           break;
         }
