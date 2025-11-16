@@ -29,7 +29,7 @@ interface McpLogsDialogProps {
   command: string;
   isLoading: boolean;
   error?: Error | null;
-  onRefresh?: () => void;
+  onRefresh: () => unknown;
 }
 
 export function McpLogsDialog({
@@ -49,6 +49,7 @@ export function McpLogsDialog({
   const [streamedLogs, setStreamedLogs] = useState("");
   const [streamError, setStreamError] = useState<string | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -208,6 +209,18 @@ export function McpLogsDialog({
     }
   }, []);
 
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+      toast.success("Logs refreshed");
+    } catch (_error) {
+      toast.error("Failed to refresh logs");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [onRefresh]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
@@ -239,12 +252,15 @@ export function McpLogsDialog({
                       Follow
                     </Button>
                     <Button
+                      type="button"
                       variant="outline"
                       size="sm"
-                      onClick={onRefresh}
-                      disabled={displayIsLoading || !onRefresh}
+                      onClick={handleRefresh}
+                      disabled={displayIsLoading || isRefreshing}
                     >
-                      <RefreshCw className="mr-2 h-3 w-3" />
+                      <RefreshCw
+                        className={`mr-2 h-3 w-3 ${displayIsLoading || isRefreshing ? "animate-spin" : ""}`}
+                      />
                       Refresh
                     </Button>
                   </>

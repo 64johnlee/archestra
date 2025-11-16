@@ -635,7 +635,7 @@ export function McpServerCard({
         command={logsData?.command ?? "No command available"}
         isLoading={isLoadingLogs}
         error={logsError}
-        onRefresh={() => refetchLogs()}
+        onRefresh={refetchLogs}
       />
 
       <BulkAssignAgentDialog
