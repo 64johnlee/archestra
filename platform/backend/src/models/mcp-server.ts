@@ -127,13 +127,10 @@ class McpServerModel {
   ): Promise<McpServer | null> {
     // Check access control for non-MCP server admins
     if (userId && !isMcpServerAdmin) {
-      const hasTeamAccess = await McpServerTeamModel.userHasMcpServerAccess(
-        userId,
-        id,
-        false,
-      );
-      const hasPersonalAccess =
-        await McpServerUserModel.userHasPersonalMcpServerAccess(userId, id);
+      const [hasTeamAccess, hasPersonalAccess] = await Promise.all([
+        McpServerTeamModel.userHasMcpServerAccess(userId, id, false),
+        McpServerUserModel.userHasPersonalMcpServerAccess(userId, id),
+      ]);
 
       if (!hasTeamAccess && !hasPersonalAccess) {
         return null;
@@ -156,8 +153,10 @@ class McpServerModel {
       return null;
     }
 
-    const teamDetails = await McpServerTeamModel.getTeamDetailsForMcpServer(id);
-    const userDetails = await McpServerUserModel.getUserDetailsForMcpServer(id);
+    const [teamDetails, userDetails] = await Promise.all([
+      McpServerTeamModel.getTeamDetailsForMcpServer(id),
+      McpServerUserModel.getUserDetailsForMcpServer(id),
+    ]);
 
     return {
       ...result.server,
