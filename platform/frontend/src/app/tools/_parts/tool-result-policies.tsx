@@ -173,7 +173,7 @@ export function ToolResultPolicies({
             to mark tool results as &ldquo;trusted&rdquo; or
             &ldquo;untrusted&rdquo; to prevent agent acting on untrusted data.{" "}
             <a
-              href="https://www.archestra.ai/docs/platform-dynamic-tools"
+              href="https://archestra.ai/docs/platform-dynamic-tools"
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-foreground"

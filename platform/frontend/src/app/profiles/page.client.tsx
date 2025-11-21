@@ -442,7 +442,7 @@ function Agents() {
                 <br />A profile can be: an N8N workflow, a custom application,
                 or a team sharing an MCP gateway.{" "}
                 <a
-                  href="https://www.archestra.ai/docs/platform-agents"
+                  href="https://archestra.ai/docs/platform-agents"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline hover:text-foreground"
