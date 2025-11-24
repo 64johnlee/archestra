@@ -2615,7 +2615,9 @@ export type CreateAgentResponse = CreateAgentResponses[keyof CreateAgentResponse
 export type GetAllAgentsData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        useInChat?: boolean;
+    };
     url: '/api/agents/all';
 };
 
