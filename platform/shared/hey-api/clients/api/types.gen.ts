@@ -7359,6 +7359,8 @@ export type GetInternalMcpCatalogResponses = {
                 type: 'plain_text' | 'secret' | 'boolean' | 'number';
                 value?: string;
                 promptOnInstallation: boolean;
+                required?: boolean;
+                description?: string;
             }>;
             dockerImage?: string;
             transportType?: 'stdio' | 'streamable-http';
@@ -7434,6 +7436,8 @@ export type CreateInternalMcpCatalogItemData = {
                 type: 'plain_text' | 'secret' | 'boolean' | 'number';
                 value?: string;
                 promptOnInstallation: boolean;
+                required?: boolean;
+                description?: string;
             }>;
             dockerImage?: string;
             transportType?: 'stdio' | 'streamable-http';
@@ -7571,6 +7575,8 @@ export type CreateInternalMcpCatalogItemResponses = {
                 type: 'plain_text' | 'secret' | 'boolean' | 'number';
                 value?: string;
                 promptOnInstallation: boolean;
+                required?: boolean;
+                description?: string;
             }>;
             dockerImage?: string;
             transportType?: 'stdio' | 'streamable-http';
@@ -7797,6 +7803,8 @@ export type GetInternalMcpCatalogItemResponses = {
                 type: 'plain_text' | 'secret' | 'boolean' | 'number';
                 value?: string;
                 promptOnInstallation: boolean;
+                required?: boolean;
+                description?: string;
             }>;
             dockerImage?: string;
             transportType?: 'stdio' | 'streamable-http';
@@ -7872,6 +7880,8 @@ export type UpdateInternalMcpCatalogItemData = {
                 type: 'plain_text' | 'secret' | 'boolean' | 'number';
                 value?: string;
                 promptOnInstallation: boolean;
+                required?: boolean;
+                description?: string;
             }>;
             dockerImage?: string;
             transportType?: 'stdio' | 'streamable-http';
@@ -8011,6 +8021,8 @@ export type UpdateInternalMcpCatalogItemResponses = {
                 type: 'plain_text' | 'secret' | 'boolean' | 'number';
                 value?: string;
                 promptOnInstallation: boolean;
+                required?: boolean;
+                description?: string;
             }>;
             dockerImage?: string;
             transportType?: 'stdio' | 'streamable-http';
@@ -8729,6 +8741,8 @@ export type GetMcpServerInstallationRequestsResponses = {
                     type: 'plain_text' | 'secret' | 'boolean' | 'number';
                     value?: string;
                     promptOnInstallation: boolean;
+                    required?: boolean;
+                    description?: string;
                 }>;
                 dockerImage?: string;
                 transportType?: 'stdio' | 'streamable-http';
@@ -8804,6 +8818,8 @@ export type CreateMcpServerInstallationRequestData = {
                     type: 'plain_text' | 'secret' | 'boolean' | 'number';
                     value?: string;
                     promptOnInstallation: boolean;
+                    required?: boolean;
+                    description?: string;
                 }>;
                 dockerImage?: string;
                 transportType?: 'stdio' | 'streamable-http';
@@ -8933,6 +8949,8 @@ export type CreateMcpServerInstallationRequestResponses = {
                     type: 'plain_text' | 'secret' | 'boolean' | 'number';
                     value?: string;
                     promptOnInstallation: boolean;
+                    required?: boolean;
+                    description?: string;
                 }>;
                 dockerImage?: string;
                 transportType?: 'stdio' | 'streamable-http';
@@ -9161,6 +9179,8 @@ export type GetMcpServerInstallationRequestResponses = {
                     type: 'plain_text' | 'secret' | 'boolean' | 'number';
                     value?: string;
                     promptOnInstallation: boolean;
+                    required?: boolean;
+                    description?: string;
                 }>;
                 dockerImage?: string;
                 transportType?: 'stdio' | 'streamable-http';
@@ -9236,6 +9256,8 @@ export type UpdateMcpServerInstallationRequestData = {
                     type: 'plain_text' | 'secret' | 'boolean' | 'number';
                     value?: string;
                     promptOnInstallation: boolean;
+                    required?: boolean;
+                    description?: string;
                 }>;
                 dockerImage?: string;
                 transportType?: 'stdio' | 'streamable-http';
@@ -9377,6 +9399,8 @@ export type UpdateMcpServerInstallationRequestResponses = {
                     type: 'plain_text' | 'secret' | 'boolean' | 'number';
                     value?: string;
                     promptOnInstallation: boolean;
+                    required?: boolean;
+                    description?: string;
                 }>;
                 dockerImage?: string;
                 transportType?: 'stdio' | 'streamable-http';
@@ -9528,6 +9552,8 @@ export type ApproveMcpServerInstallationRequestResponses = {
                     type: 'plain_text' | 'secret' | 'boolean' | 'number';
                     value?: string;
                     promptOnInstallation: boolean;
+                    required?: boolean;
+                    description?: string;
                 }>;
                 dockerImage?: string;
                 transportType?: 'stdio' | 'streamable-http';
@@ -9679,6 +9705,8 @@ export type DeclineMcpServerInstallationRequestResponses = {
                     type: 'plain_text' | 'secret' | 'boolean' | 'number';
                     value?: string;
                     promptOnInstallation: boolean;
+                    required?: boolean;
+                    description?: string;
                 }>;
                 dockerImage?: string;
                 transportType?: 'stdio' | 'streamable-http';
@@ -9830,6 +9858,8 @@ export type AddMcpServerInstallationRequestNoteResponses = {
                     type: 'plain_text' | 'secret' | 'boolean' | 'number';
                     value?: string;
                     promptOnInstallation: boolean;
+                    required?: boolean;
+                    description?: string;
                 }>;
                 dockerImage?: string;
                 transportType?: 'stdio' | 'streamable-http';

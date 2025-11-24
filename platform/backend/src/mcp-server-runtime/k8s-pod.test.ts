@@ -547,6 +547,25 @@ describe("K8sPod.sanitizeMetadataLabels", () => {
       input: {},
       expected: {},
     },
+    {
+      name: "truncates label values to 63 characters",
+      input: {
+        "long-value": "a".repeat(100),
+      },
+      expected: {
+        "long-value": "a".repeat(63),
+      },
+    },
+    {
+      name: "removes trailing non-alphanumeric after truncation",
+      input: {
+        // 62 'a's followed by a hyphen = 63 chars. Truncation keeps the hyphen, regex should remove it.
+        "trailing-hyphen": `${"a".repeat(62)}-`,
+      },
+      expected: {
+        "trailing-hyphen": "a".repeat(62),
+      },
+    },
   ])("$name", ({ input, expected }) => {
     const result = K8sPod.sanitizeMetadataLabels(
       input as Record<string, string>,
@@ -563,7 +582,11 @@ describe("K8sPod.sanitizeMetadataLabels", () => {
 
 describe("K8sPod.generatePodSpec", () => {
   // Helper function to create a mock K8sPod instance
-  function createMockK8sPod(mcpServer: McpServer): K8sPod {
+  function createMockK8sPod(
+    mcpServer: McpServer,
+    userConfigValues?: Record<string, string>,
+    environmentValues?: Record<string, string>,
+  ): K8sPod {
     const mockK8sApi = {} as k8s.CoreV1Api;
     const mockK8sAttach = {} as k8s.Attach;
     const mockK8sLog = {} as k8s.Log;
@@ -575,6 +598,9 @@ describe("K8sPod.generatePodSpec", () => {
       mockK8sAttach,
       mockK8sLog,
       namespace,
+      null, // catalogItem
+      userConfigValues,
+      environmentValues,
     );
   }
 
@@ -703,18 +729,25 @@ describe("K8sPod.generatePodSpec", () => {
       command: "node",
       arguments: ["app.js"],
       environment: [
-        { key: "API_KEY", type: "secret", promptOnInstallation: true },
+        {
+          key: "API_KEY",
+          type: "secret",
+          promptOnInstallation: true,
+          required: false,
+        },
         {
           key: "PORT",
           type: "plain_text",
           value: "3000",
           promptOnInstallation: false,
+          required: false,
         },
         {
           key: "DEBUG",
           type: "plain_text",
           value: "true",
           promptOnInstallation: false,
+          required: false,
         },
       ],
     };
@@ -852,6 +885,186 @@ describe("K8sPod.generatePodSpec", () => {
     expect(container?.args).toEqual([]);
   });
 
+  test("generates podSpec with interpolated user_config values in arguments", () => {
+    const mcpServer: McpServer = {
+      id: "args-interpolation-id",
+      name: "args-interpolation-server",
+      catalogId: "catalog-args-interpolation",
+      // biome-ignore lint/suspicious/noExplicitAny: Mock data for testing
+    } as any;
+
+    const userConfigValues = {
+      api_json_path: "/path/to/api.json",
+      output_dir: "/output",
+    };
+
+    const k8sPod = createMockK8sPod(mcpServer, userConfigValues);
+
+    const dockerImage = "test:latest";
+    const localConfig: z.infer<typeof LocalConfigSchema> = {
+      command: "npx",
+      arguments: [
+        "-y",
+        "mcp-typescribe@latest",
+        "run-server",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing interpolation of placeholders
+        "${user_config.api_json_path}",
+        "--output",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing interpolation of placeholders
+        "${user_config.output_dir}",
+      ],
+    };
+    const needsHttp = false;
+    const httpPort = 8080;
+
+    const podSpec = k8sPod.generatePodSpec(
+      dockerImage,
+      localConfig,
+      needsHttp,
+      httpPort,
+    );
+
+    const container = podSpec.spec?.containers[0];
+    expect(container?.args).toEqual([
+      "-y",
+      "mcp-typescribe@latest",
+      "run-server",
+      "/path/to/api.json",
+      "--output",
+      "/output",
+    ]);
+  });
+
+  test("generates podSpec with arguments without interpolation when no user config values provided", () => {
+    const mcpServer: McpServer = {
+      id: "no-interpolation-id",
+      name: "no-interpolation-server",
+      catalogId: "catalog-no-interpolation",
+      // biome-ignore lint/suspicious/noExplicitAny: Mock data for testing
+    } as any;
+
+    // No userConfigValues provided
+    const k8sPod = createMockK8sPod(mcpServer);
+
+    const dockerImage = "test:latest";
+    const localConfig: z.infer<typeof LocalConfigSchema> = {
+      command: "node",
+      arguments: [
+        "index.js",
+        "--file",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing placeholder is preserved when no user config
+        "${user_config.file_path}",
+      ],
+    };
+    const needsHttp = false;
+    const httpPort = 8080;
+
+    const podSpec = k8sPod.generatePodSpec(
+      dockerImage,
+      localConfig,
+      needsHttp,
+      httpPort,
+    );
+
+    const container = podSpec.spec?.containers[0];
+    // Should keep placeholder as-is when no user config values
+    expect(container?.args).toEqual([
+      "index.js",
+      "--file",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing placeholder is preserved when no user config
+      "${user_config.file_path}",
+    ]);
+  });
+
+  test("generates podSpec with interpolated environment values in arguments (filesystem server case)", () => {
+    const mcpServer: McpServer = {
+      id: "env-interpolation-id",
+      name: "env-interpolation-server",
+      catalogId: "catalog-env-interpolation",
+      // biome-ignore lint/suspicious/noExplicitAny: Mock data for testing
+    } as any;
+
+    // Use environmentValues instead of userConfigValues (internal catalog pattern)
+    const environmentValues = {
+      allowed_directories: "/home/user/documents",
+      read_only: "false",
+    };
+
+    const k8sPod = createMockK8sPod(mcpServer, undefined, environmentValues);
+
+    const dockerImage = "test:latest";
+    const localConfig: z.infer<typeof LocalConfigSchema> = {
+      command: "npx",
+      arguments: [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing interpolation of placeholders
+        "${user_config.allowed_directories}",
+      ],
+    };
+    const needsHttp = false;
+    const httpPort = 8080;
+
+    const podSpec = k8sPod.generatePodSpec(
+      dockerImage,
+      localConfig,
+      needsHttp,
+      httpPort,
+    );
+
+    const container = podSpec.spec?.containers[0];
+    expect(container?.args).toEqual([
+      "-y",
+      "@modelcontextprotocol/server-filesystem",
+      "/home/user/documents",
+    ]);
+  });
+
+  test("generates podSpec with environmentValues taking precedence over userConfigValues in arguments", () => {
+    const mcpServer: McpServer = {
+      id: "precedence-id",
+      name: "precedence-server",
+      catalogId: "catalog-precedence",
+      // biome-ignore lint/suspicious/noExplicitAny: Mock data for testing
+    } as any;
+
+    const userConfigValues = {
+      path: "/old/path",
+    };
+
+    const environmentValues = {
+      path: "/new/path",
+    };
+
+    const k8sPod = createMockK8sPod(
+      mcpServer,
+      userConfigValues,
+      environmentValues,
+    );
+
+    const dockerImage = "test:latest";
+    const localConfig: z.infer<typeof LocalConfigSchema> = {
+      command: "test",
+      arguments: [
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing interpolation of placeholders
+        "${user_config.path}",
+      ],
+    };
+    const needsHttp = false;
+    const httpPort = 8080;
+
+    const podSpec = k8sPod.generatePodSpec(
+      dockerImage,
+      localConfig,
+      needsHttp,
+      httpPort,
+    );
+
+    const container = podSpec.spec?.containers[0];
+    // environmentValues should take precedence
+    expect(container?.args).toEqual(["/new/path"]);
+  });
+
   test("generates podSpec with custom HTTP port", () => {
     const mcpServer: McpServer = {
       id: "custom-port-id",
@@ -901,19 +1114,31 @@ describe("K8sPod.generatePodSpec", () => {
       command: "python",
       arguments: ["-m", "uvicorn", "main:app"],
       environment: [
-        { key: "API_KEY", type: "secret", promptOnInstallation: true },
-        { key: "DATABASE_URL", type: "secret", promptOnInstallation: true },
+        {
+          key: "API_KEY",
+          type: "secret",
+          promptOnInstallation: true,
+          required: false,
+        },
+        {
+          key: "DATABASE_URL",
+          type: "secret",
+          promptOnInstallation: true,
+          required: false,
+        },
         {
           key: "WORKERS",
           type: "plain_text",
           value: "4",
           promptOnInstallation: false,
+          required: false,
         },
         {
           key: "DEBUG",
           type: "plain_text",
           value: "false",
           promptOnInstallation: false,
+          required: false,
         },
       ],
       transportType: "streamable-http",
