@@ -2430,6 +2430,7 @@ export type GetAgentsResponses = {
             optimizeCost: boolean;
             considerContextUntrusted: boolean;
             useInChat: boolean;
+            convertToolResultsToToon: boolean;
             createdAt: string;
             updatedAt: string;
             tools: Array<{
@@ -2486,6 +2487,7 @@ export type CreateAgentData = {
         optimizeCost?: boolean;
         considerContextUntrusted?: boolean;
         useInChat?: boolean;
+        convertToolResultsToToon?: boolean;
         teams: Array<string>;
         labels?: Array<{
             key: string;
@@ -2570,6 +2572,7 @@ export type CreateAgentResponses = {
         optimizeCost: boolean;
         considerContextUntrusted: boolean;
         useInChat: boolean;
+        convertToolResultsToToon: boolean;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -2687,6 +2690,7 @@ export type GetAllAgentsResponses = {
         optimizeCost: boolean;
         considerContextUntrusted: boolean;
         useInChat: boolean;
+        convertToolResultsToToon: boolean;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -2804,6 +2808,7 @@ export type GetDefaultAgentResponses = {
         optimizeCost: boolean;
         considerContextUntrusted: boolean;
         useInChat: boolean;
+        convertToolResultsToToon: boolean;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -3002,6 +3007,7 @@ export type GetAgentResponses = {
         optimizeCost: boolean;
         considerContextUntrusted: boolean;
         useInChat: boolean;
+        convertToolResultsToToon: boolean;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -3049,6 +3055,7 @@ export type UpdateAgentData = {
         optimizeCost?: boolean;
         considerContextUntrusted?: boolean;
         useInChat?: boolean;
+        convertToolResultsToToon?: boolean;
         teams?: Array<string>;
         labels?: Array<{
             key: string;
@@ -3135,6 +3142,7 @@ export type UpdateAgentResponses = {
         optimizeCost: boolean;
         considerContextUntrusted: boolean;
         useInChat: boolean;
+        convertToolResultsToToon: boolean;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -7177,6 +7185,7 @@ export type GetInteractionsResponses = {
             id: string;
             agentId: string;
             request: OpenAiChatCompletionRequest;
+            processedRequest?: OpenAiChatCompletionRequest | null;
             response: OpenAiChatCompletionResponse;
             type: 'openai:chatCompletions';
             model: string | null;
@@ -7184,11 +7193,14 @@ export type GetInteractionsResponses = {
             outputTokens: number | null;
             baselineCost: string | null;
             cost: string | null;
+            toonTokensBefore: number | null;
+            toonTokensAfter: number | null;
             createdAt: string;
         } | {
             id: string;
             agentId: string;
             request: GeminiGenerateContentRequest;
+            processedRequest?: GeminiGenerateContentRequest | null;
             response: GeminiGenerateContentResponse;
             type: 'gemini:generateContent';
             model: string | null;
@@ -7196,11 +7208,14 @@ export type GetInteractionsResponses = {
             outputTokens: number | null;
             baselineCost: string | null;
             cost: string | null;
+            toonTokensBefore: number | null;
+            toonTokensAfter: number | null;
             createdAt: string;
         } | {
             id: string;
             agentId: string;
             request: AnthropicMessagesRequest;
+            processedRequest?: AnthropicMessagesRequest | null;
             response: AnthropicMessagesResponse;
             type: 'anthropic:messages';
             model: string | null;
@@ -7208,6 +7223,8 @@ export type GetInteractionsResponses = {
             outputTokens: number | null;
             baselineCost: string | null;
             cost: string | null;
+            toonTokensBefore: number | null;
+            toonTokensAfter: number | null;
             createdAt: string;
         }>;
         pagination: {
@@ -7299,6 +7316,7 @@ export type GetInteractionResponses = {
         id: string;
         agentId: string;
         request: OpenAiChatCompletionRequest;
+        processedRequest?: OpenAiChatCompletionRequest | null;
         response: OpenAiChatCompletionResponse;
         type: 'openai:chatCompletions';
         model: string | null;
@@ -7306,11 +7324,14 @@ export type GetInteractionResponses = {
         outputTokens: number | null;
         baselineCost: string | null;
         cost: string | null;
+        toonTokensBefore: number | null;
+        toonTokensAfter: number | null;
         createdAt: string;
     } | {
         id: string;
         agentId: string;
         request: GeminiGenerateContentRequest;
+        processedRequest?: GeminiGenerateContentRequest | null;
         response: GeminiGenerateContentResponse;
         type: 'gemini:generateContent';
         model: string | null;
@@ -7318,11 +7339,14 @@ export type GetInteractionResponses = {
         outputTokens: number | null;
         baselineCost: string | null;
         cost: string | null;
+        toonTokensBefore: number | null;
+        toonTokensAfter: number | null;
         createdAt: string;
     } | {
         id: string;
         agentId: string;
         request: AnthropicMessagesRequest;
+        processedRequest?: AnthropicMessagesRequest | null;
         response: AnthropicMessagesResponse;
         type: 'anthropic:messages';
         model: string | null;
@@ -7330,6 +7354,8 @@ export type GetInteractionResponses = {
         outputTokens: number | null;
         baselineCost: string | null;
         cost: string | null;
+        toonTokensBefore: number | null;
+        toonTokensAfter: number | null;
         createdAt: string;
     };
 };
