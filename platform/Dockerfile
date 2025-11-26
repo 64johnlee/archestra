@@ -1,4 +1,4 @@
-FROM node:24-alpine AS base
+FROM node:24.11.1-alpine3.22 AS base
 
 # Enable pnpm
 ENV PNPM_HOME="/pnpm"
