@@ -4,6 +4,7 @@ import type { archestraApiTypes } from "@shared";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { McpToolsDisplay } from "@/components/chat/mcp-tools-display";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -84,6 +85,7 @@ export function PromptDialog({
         await updatePrompt.mutateAsync({
           id: prompt.id,
           data: {
+            name,
             agentId,
             userPrompt: userPrompt || undefined,
             systemPrompt: systemPrompt || undefined,
@@ -132,23 +134,15 @@ export function PromptDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          {!prompt && (
-            <div className="space-y-2">
-              <Label htmlFor="promptName">Name *</Label>
-              <Input
-                id="promptName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter prompt name"
-              />
-            </div>
-          )}
-          {prompt && (
-            <div className="space-y-2">
-              <Label>Name</Label>
-              <div className="text-sm font-medium">{prompt.name}</div>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="promptName">Name *</Label>
+            <Input
+              id="promptName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter prompt name"
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="agentId">Profile *</Label>
             <Select value={agentId} onValueChange={setAgentId}>
@@ -163,6 +157,12 @@ export function PromptDialog({
                 ))}
               </SelectContent>
             </Select>
+            {agentId && (
+              <McpToolsDisplay
+                agentId={agentId}
+                className="text-xs text-muted-foreground"
+              />
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="systemPrompt">System Prompt</Label>
