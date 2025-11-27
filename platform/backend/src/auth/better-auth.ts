@@ -3,6 +3,7 @@ import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
 import { admin, apiKey, organization, twoFactor } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import config from "@/config";
 import db, { schema } from "@/database";
@@ -227,8 +228,8 @@ export const auth = betterAuth({
         const userId = body.userId;
 
         if (userId) {
+          // Delete all sessions for this user
           try {
-            // Delete all sessions for this user
             await SessionModel.deleteAllByUserId(userId);
             logger.info(`✅ All sessions for user ${userId} invalidated`);
           } catch (error) {
@@ -293,6 +294,34 @@ export const auth = betterAuth({
         if (newSession?.user && newSession?.session) {
           const sessionId = newSession.session.id;
           const userId = newSession.user.id;
+          const { user, session } = newSession;
+
+          // Auto-accept any pending invitations for this user's email
+          try {
+            const pendingInvitations = await db
+              .select()
+              .from(schema.invitationsTable)
+              .where(
+                eq(schema.invitationsTable.email, user.email.toLowerCase()),
+              );
+
+            const pendingInvitation = pendingInvitations.find(
+              (inv) => inv.status === "pending",
+            );
+
+            if (pendingInvitation) {
+              logger.info(
+                `🔗 Auto-accepting pending invitation ${pendingInvitation.id} for user ${user.email}`,
+              );
+              await InvitationModel.accept(session, user, pendingInvitation.id);
+              return;
+            }
+          } catch (error) {
+            logger.error(
+              { err: error },
+              "❌ Failed to auto-accept invitation:",
+            );
+          }
 
           try {
             if (!newSession.session.activeOrganizationId) {
