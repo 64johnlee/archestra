@@ -1,5 +1,6 @@
 import { and, eq, getTableColumns, or } from "drizzle-orm";
 import db, { schema } from "@/database";
+import getDefaultModelPrice from "@/default-model-prices";
 import type {
   ContentLengthConditions,
   InsertOptimizationRule,
@@ -168,20 +169,17 @@ class OptimizationRuleModel {
   static async ensureDefaultOptimizationRules(
     organizationId: string,
   ): Promise<void> {
-    // Define prices per provider
     const pricesByProvider: Record<SupportedProvider, InsertTokenPrice[]> = {
       openai: [
         {
-          model: "gpt-4o-mini",
-          pricePerMillionInput: "0.15",
-          pricePerMillionOutput: "0.60",
+          model: "gpt-5-mini",
+          ...getDefaultModelPrice("gpt-5-mini"),
         },
       ],
       anthropic: [
         {
-          model: "claude-3-5-sonnet",
-          pricePerMillionInput: "3.00",
-          pricePerMillionOutput: "15.00",
+          model: "claude-haiku-4-5",
+          ...getDefaultModelPrice("claude-haiku-4-5"),
         },
       ],
       gemini: [],
@@ -197,7 +195,7 @@ class OptimizationRuleModel {
             ruleType: "tool_presence",
             conditions: { hasTools: false },
             provider: "openai",
-            targetModel: "gpt-4o-mini",
+            targetModel: "gpt-5-mini",
             enabled: true,
           },
           {
@@ -206,7 +204,7 @@ class OptimizationRuleModel {
             ruleType: "content_length",
             conditions: { maxLength: 1000 },
             provider: "openai",
-            targetModel: "gpt-4o-mini",
+            targetModel: "gpt-5-mini",
             enabled: true,
           },
         ],
@@ -217,7 +215,7 @@ class OptimizationRuleModel {
             ruleType: "tool_presence",
             conditions: { hasTools: false },
             provider: "anthropic",
-            targetModel: "claude-3-5-sonnet",
+            targetModel: "claude-haiku-4-5",
             enabled: true,
           },
           {
@@ -226,7 +224,7 @@ class OptimizationRuleModel {
             ruleType: "content_length",
             conditions: { maxLength: 1000 },
             provider: "anthropic",
-            targetModel: "claude-3-5-sonnet",
+            targetModel: "claude-haiku-4-5",
             enabled: true,
           },
         ],

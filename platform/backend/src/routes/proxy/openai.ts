@@ -5,12 +5,18 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import OpenAIProvider from "openai";
 import { z } from "zod";
 import config from "@/config";
+import getDefaultPricing from "@/default-model-prices";
 import {
   getObservableFetch,
   reportBlockedTools,
   reportLLMTokens,
 } from "@/llm-metrics";
-import { AgentModel, InteractionModel, LimitValidationService } from "@/models";
+import {
+  AgentModel,
+  InteractionModel,
+  LimitValidationService,
+  TokenPriceModel,
+} from "@/models";
 import {
   type Agent,
   constructResponseSchema,
@@ -223,6 +229,15 @@ const openAiProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
           { resolvedAgentId, baselineModel },
           "No matching optimized model found, proceeding with baseline model",
         );
+      }
+
+      // Ensure TokenPrice records exist for both baseline and optimized models
+      const baselinePricing = getDefaultPricing(baselineModel);
+      await TokenPriceModel.createIfNotExists(baselineModel, baselinePricing);
+
+      if (model !== baselineModel) {
+        const optimizedPricing = getDefaultPricing(model);
+        await TokenPriceModel.createIfNotExists(model, optimizedPricing);
       }
 
       // Convert to common format and evaluate trusted data policies
