@@ -55,7 +55,6 @@ export function ProfileActions({
             considerContextUntrusted: agent.considerContextUntrusted,
             createdAt: agent.createdAt,
             updatedAt: agent.updatedAt,
-            useInChat: agent.useInChat,
           });
         }}
       >
