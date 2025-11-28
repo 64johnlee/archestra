@@ -114,10 +114,6 @@ export function AuthPageWithInvitationCheck({ path }: { path: string }) {
               ? `${path === "sign-in" ? "/auth/sign-in" : "/auth/sign-up"}?invitationId=${invitationId}`
               : undefined
           }
-          classNames={{
-            footer: "hidden",
-            form: { forgotPasswordLink: "hidden" },
-          }}
         />
       </div>
     </main>
