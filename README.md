@@ -119,11 +119,12 @@ Metrics, traces and logs allowing to come to a conclusion about per-org, per-age
 1. Start with Docker
 
    ```bash
-   docker pull archestra/platform:latest;
-   docker run -p 9000:9000 -p 3000:3000 archestra/platform
+  docker pull archestra/platform:latest;
+  docker run -p 9000:9000 -p 3000:3000 \
+    -v archestra-postgres-data:/var/lib/postgresql/data \
+    -v archestra-app-data:/app/data \
+    archestra/platform;
    ```
-   > **Note:** If you use Safari browser, you need to run: 
-   `docker run -p 9000:9000 -p 3000:3000 -e ARCHESTRA_FRONTEND_URL=http://localhost:3000 archestra/platform`
 
 2. Open <http://localhost:3000>
 
