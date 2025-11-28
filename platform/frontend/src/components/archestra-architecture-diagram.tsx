@@ -78,7 +78,7 @@ export function ArchestraArchitectureDiagram() {
         Below are instructions for how to connect to Archestra using a default
         agent. If you'd like to configure a specific agent, you can do so in the{" "}
         <Link href="/agents" className="text-blue-500">
-          Agents
+          Profiles
         </Link>{" "}
         page.
       </p>
