@@ -146,7 +146,7 @@ export function PromptDialog({
           <DialogDescription>
             {prompt
               ? "This will create a new version of the prompt"
-              : "Create a new prompt for a profile"}
+              : "Create a new prompt for a profile. It will be shared across your organization."}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -160,7 +160,7 @@ export function PromptDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="agentId">Profile *</Label>
+            <Label htmlFor="agentId">Profile with tools*</Label>
             <Select value={agentId} onValueChange={setProfileId}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a profile" />
