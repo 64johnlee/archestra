@@ -11,9 +11,10 @@ export interface SecretManager {
   /**
    * Create a new secret
    * @param secretValue - The secret value as JSON
+   * @param name - Human-readable name to identify the secret in external storage
    * @returns The created secret with generated ID
    */
-  createSecret(secretValue: SecretValue): Promise<SelectSecret>;
+  createSecret(secretValue: SecretValue, name: string): Promise<SelectSecret>;
 
   /**
    * Delete a secret by ID
@@ -63,8 +64,12 @@ export interface VaultConfig {
  * Stores secrets in PostgreSQL database using SecretModel
  */
 export class DbSecretsManager implements SecretManager {
-  async createSecret(secretValue: SecretValue): Promise<SelectSecret> {
+  async createSecret(
+    secretValue: SecretValue,
+    name: string,
+  ): Promise<SelectSecret> {
     return await SecretModel.create({
+      name,
       secret: secretValue,
     });
   }
@@ -90,6 +95,31 @@ export class DbSecretsManager implements SecretManager {
 }
 
 /**
+ * Sanitize a name to conform to Vault secret naming rules:
+ * - Must be between 1 and 64 characters
+ * - Must start with ASCII letter or '_'
+ * - Must only contain ASCII letters, digits, or '_'
+ */
+function sanitizeVaultSecretName(name: string): string {
+  if (!name || name.trim().length === 0) {
+    return "secret";
+  }
+
+  // Replace any non-alphanumeric character (except underscore) with underscore
+  let sanitized = name.replace(/[^a-zA-Z0-9_]/g, "_");
+
+  // Ensure it starts with a letter or underscore
+  if (!/^[a-zA-Z_]/.test(sanitized)) {
+    sanitized = `_${sanitized}`;
+  }
+
+  // Trim to 64 characters
+  sanitized = sanitized.slice(0, 64);
+
+  return sanitized;
+}
+
+/**
  * Vault-backed implementation of SecretManager
  * Stores secret metadata in PostgreSQL with isVault=true, actual secrets in HashiCorp Vault
  */
@@ -103,21 +133,28 @@ export class VaultSecretManager implements SecretManager {
     });
   }
 
-  private getVaultPath(secid: string): string {
-    return `secret/data/archestra/${secid}`;
+  private getVaultPath(name: string, id: string): string {
+    return `secret/data/archestra/${name}-${id}`;
   }
 
-  private getVaultMetadataPath(secid: string): string {
-    return `secret/metadata/archestra/${secid}`;
+  private getVaultMetadataPath(name: string, id: string): string {
+    return `secret/metadata/archestra/${name}-${id}`;
   }
 
-  async createSecret(secretValue: SecretValue): Promise<SelectSecret> {
+  async createSecret(
+    secretValue: SecretValue,
+    name: string,
+  ): Promise<SelectSecret> {
+    // Sanitize name to conform to Vault naming rules
+    const sanitizedName = sanitizeVaultSecretName(name);
+
     const dbRecord = await SecretModel.create({
+      name: sanitizedName,
       secret: {},
       isVault: true,
     });
 
-    const vaultPath = this.getVaultPath(dbRecord.id);
+    const vaultPath = this.getVaultPath(dbRecord.name, dbRecord.id);
     try {
       await this.client.write(vaultPath, {
         data: { value: JSON.stringify(secretValue) },
@@ -148,7 +185,7 @@ export class VaultSecretManager implements SecretManager {
     }
 
     if (dbRecord.isVault) {
-      const metadataPath = this.getVaultMetadataPath(secid);
+      const metadataPath = this.getVaultMetadataPath(dbRecord.name, secid);
       try {
         // Delete metadata to permanently remove all versions of the secret
         await this.client.delete(metadataPath);
@@ -182,7 +219,7 @@ export class VaultSecretManager implements SecretManager {
       return dbRecord;
     }
 
-    const vaultPath = this.getVaultPath(secid);
+    const vaultPath = this.getVaultPath(dbRecord.name, secid);
     try {
       const vaultResponse = await this.client.read(vaultPath);
       const secretValue = JSON.parse(
@@ -219,7 +256,7 @@ export class VaultSecretManager implements SecretManager {
       return await SecretModel.update(secid, { secret: secretValue });
     }
 
-    const vaultPath = this.getVaultPath(secid);
+    const vaultPath = this.getVaultPath(dbRecord.name, secid);
     try {
       await this.client.write(vaultPath, {
         data: { value: JSON.stringify(secretValue) },
