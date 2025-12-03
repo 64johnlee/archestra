@@ -149,8 +149,16 @@ ARCHESTRA_LOGGING_LEVEL=info  # Options: trace, debug, info, warn, error, fatal
 
 # Secrets Manager Configuration
 ARCHESTRA_SECRETS_MANAGER=DB  # Options: DB (default), Vault
-HASHICORP_VAULT_ADDR=http://localhost:8200  # Required when ARCHESTRA_SECRETS_MANAGER=Vault
-HASHICORP_VAULT_TOKEN=dev-root-token  # Required when ARCHESTRA_SECRETS_MANAGER=Vault
+ARCHESTRA_HASHICORP_VAULT_ADDR=http://localhost:8200  # Required when ARCHESTRA_SECRETS_MANAGER=Vault
+ARCHESTRA_HASHICORP_VAULT_AUTH_METHOD=token  # Options: "token" (default) or "k8s"
+
+# Vault Token Authentication (ARCHESTRA_HASHICORP_VAULT_AUTH_METHOD=token or not set)
+ARCHESTRA_HASHICORP_VAULT_TOKEN=dev-root-token  # Required for token auth
+
+# Vault Kubernetes Authentication (ARCHESTRA_HASHICORP_VAULT_AUTH_METHOD=k8s)
+ARCHESTRA_HASHICORP_VAULT_K8S_ROLE=  # Required for k8s auth: Vault role bound to K8s service account
+ARCHESTRA_HASHICORP_VAULT_K8S_TOKEN_PATH=  # Optional: Path to SA token (default: /var/run/secrets/kubernetes.io/serviceaccount/token)
+ARCHESTRA_HASHICORP_VAULT_K8S_MOUNT_POINT=  # Optional: Vault K8s auth mount point (default: kubernetes)
 
 # Sentry Error Tracking (optional - leave empty to disable)
 ARCHESTRA_SENTRY_BACKEND_DSN=  # Backend error tracking DSN
