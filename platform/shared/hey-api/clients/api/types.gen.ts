@@ -13381,6 +13381,16 @@ export type GetSsoProvidersResponses = {
                 };
             };
         };
+        roleMapping?: {
+            rules?: Array<{
+                expression: string;
+                role: string;
+            }>;
+            defaultRole?: string;
+            dataSource?: 'userInfo' | 'token' | 'combined';
+            strictMode?: boolean;
+            skipRoleSync?: boolean;
+        };
         userId: string | null;
         providerId: string;
         organizationId: string | null;
@@ -13482,6 +13492,16 @@ export type CreateSsoProviderData = {
                     [key: string]: string;
                 };
             };
+        };
+        roleMapping?: {
+            rules?: Array<{
+                expression: string;
+                role: string;
+            }>;
+            defaultRole?: string;
+            dataSource?: 'userInfo' | 'token' | 'combined';
+            strictMode?: boolean;
+            skipRoleSync?: boolean;
         };
         userId?: string | null;
         providerId: string;
@@ -13647,6 +13667,16 @@ export type CreateSsoProviderResponses = {
                     [key: string]: string;
                 };
             };
+        };
+        roleMapping?: {
+            rules?: Array<{
+                expression: string;
+                role: string;
+            }>;
+            defaultRole?: string;
+            dataSource?: 'userInfo' | 'token' | 'combined';
+            strictMode?: boolean;
+            skipRoleSync?: boolean;
         };
         userId: string | null;
         providerId: string;
@@ -13901,6 +13931,16 @@ export type GetSsoProviderResponses = {
                 };
             };
         };
+        roleMapping?: {
+            rules?: Array<{
+                expression: string;
+                role: string;
+            }>;
+            defaultRole?: string;
+            dataSource?: 'userInfo' | 'token' | 'combined';
+            strictMode?: boolean;
+            skipRoleSync?: boolean;
+        };
         userId: string | null;
         providerId: string;
         organizationId: string | null;
@@ -14002,6 +14042,16 @@ export type UpdateSsoProviderData = {
                     [key: string]: string;
                 };
             };
+        };
+        roleMapping?: {
+            rules?: Array<{
+                expression: string;
+                role: string;
+            }>;
+            defaultRole?: string;
+            dataSource?: 'userInfo' | 'token' | 'combined';
+            strictMode?: boolean;
+            skipRoleSync?: boolean;
         };
         providerId?: string;
         domain?: string;
@@ -14168,6 +14218,16 @@ export type UpdateSsoProviderResponses = {
                     [key: string]: string;
                 };
             };
+        };
+        roleMapping?: {
+            rules?: Array<{
+                expression: string;
+                role: string;
+            }>;
+            defaultRole?: string;
+            dataSource?: 'userInfo' | 'token' | 'combined';
+            strictMode?: boolean;
+            skipRoleSync?: boolean;
         };
         userId: string | null;
         providerId: string;

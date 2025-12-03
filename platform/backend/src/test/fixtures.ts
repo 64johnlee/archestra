@@ -393,7 +393,9 @@ async function makeInternalMcpCatalog(
 async function makeInvitation(
   organizationId: string,
   inviterId: string,
-  overrides: Partial<Pick<InsertInvitation, "email" | "role" | "status">> = {},
+  overrides: Partial<
+    Pick<InsertInvitation, "email" | "role" | "status" | "expiresAt">
+  > = {},
 ) {
   const [invitation] = await db
     .insert(schema.invitationsTable)
@@ -622,6 +624,7 @@ async function makeSsoProvider(
     domain?: string;
     oidcConfig?: Record<string, unknown>;
     samlConfig?: Record<string, unknown>;
+    roleMapping?: Record<string, unknown>;
     userId?: string | null;
   } = {},
 ) {
@@ -643,6 +646,9 @@ async function makeSsoProvider(
         : undefined,
       samlConfig: overrides.samlConfig
         ? (JSON.stringify(overrides.samlConfig) as unknown as undefined)
+        : undefined,
+      roleMapping: overrides.roleMapping
+        ? (JSON.stringify(overrides.roleMapping) as unknown as undefined)
         : undefined,
       userId: overrides.userId ?? null,
       // WORKAROUND: With domainVerification enabled, all SSO providers need domainVerified: true
