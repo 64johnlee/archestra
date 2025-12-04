@@ -105,7 +105,13 @@ const parseAllowedOrigins = (): string[] => {
     return [];
   }
 
-  return [frontendBaseUrl];
+  // ARCHESTRA_FRONTEND_URL if set
+  const frontendUrl = process.env.ARCHESTRA_FRONTEND_URL?.trim();
+  if (frontendUrl && frontendUrl !== "") {
+    return [frontendUrl];
+  }
+
+  return [];
 };
 
 /**
