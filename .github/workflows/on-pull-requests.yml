@@ -41,27 +41,20 @@ jobs:
             echo "✅ No release freeze active. Release-please PR can proceed."
           fi
 
-      - name: Post freeze comment to PR
+      - name: Checkout repository
         if: steps.check-freeze.outputs.frozen == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "## ❄️ Release Freeze Active
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
-          A release freeze is currently in effect. This PR cannot be merged until the freeze is lifted.
-
-          ### How to unfreeze
-
-          1. Go to **Actions** → **Toggle Release Freeze** → **Run workflow**
-          2. Select \`false\` from the dropdown
-          3. Click **Run workflow**
-
-          Alternatively, set the \`RELEASE_FREEZE\` repository variable to \`false\` in:
-          **Settings** → **Secrets and variables** → **Actions** → **Variables**
-
-          ---
-          *This comment was posted automatically by the Release Freeze Check workflow.*"
+      - name: Request changes on PR
+        if: steps.check-freeze.outputs.frozen == 'true'
+        uses: ./.github/actions/release-freeze-review
+        with:
+          action: freeze
+          app-id: ${{ secrets.ARCHESTRA_RELEASE_FREEZE_CHECKER_GITHUB_APP_ID }}
+          private-key: ${{ secrets.ARCHESTRA_RELEASE_FREEZE_CHECKER_GITHUB_APP_PRIVATE_KEY }}
+          pr-number: ${{ github.event.pull_request.number }}
 
       - name: Fail if frozen
         if: steps.check-freeze.outputs.frozen == 'true'
