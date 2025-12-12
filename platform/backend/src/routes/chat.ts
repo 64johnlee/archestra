@@ -114,6 +114,11 @@ async function getSmartDefaultModel(
     return "gemini-2.0-flash-exp";
   }
 
+  // Check if Vertex AI is enabled - use Gemini without API key
+  if (isVertexAiEnabled()) {
+    return "gemini-2.0-flash-exp";
+  }
+
   // Ultimate fallback - use configured default
   return config.chat.defaultModel;
 }
