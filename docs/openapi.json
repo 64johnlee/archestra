@@ -24584,8 +24584,8 @@
             },
             "in": "header",
             "name": "x-goog-api-key",
-            "required": true,
-            "description": "API key for Google Gemini"
+            "required": false,
+            "description": "API key for Google Gemini. Required for Google AI Studio mode, optional for Vertex AI mode (uses ADC)."
           }
         ],
         "responses": {
@@ -24853,8 +24853,8 @@
             },
             "in": "header",
             "name": "x-goog-api-key",
-            "required": true,
-            "description": "API key for Google Gemini"
+            "required": false,
+            "description": "API key for Google Gemini. Required for Google AI Studio mode, optional for Vertex AI mode (uses ADC)."
           }
         ],
         "responses": {
@@ -25122,8 +25122,8 @@
             },
             "in": "header",
             "name": "x-goog-api-key",
-            "required": true,
-            "description": "API key for Google Gemini"
+            "required": false,
+            "description": "API key for Google Gemini. Required for Google AI Studio mode, optional for Vertex AI mode (uses ADC)."
           }
         ],
         "responses": {
@@ -25401,8 +25401,8 @@
             },
             "in": "header",
             "name": "x-goog-api-key",
-            "required": true,
-            "description": "API key for Google Gemini"
+            "required": false,
+            "description": "API key for Google Gemini. Required for Google AI Studio mode, optional for Vertex AI mode (uses ADC)."
           }
         ],
         "responses": {
