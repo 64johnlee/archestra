@@ -146,13 +146,19 @@ jobs:
             # which causes generated files (like docs/openapi.json) to be out of date
             if [ "$IS_RELEASE_PLEASE_PR" == "true" ]; then
               echo "📦 Release-please PR with codegen changes detected. Auto-committing..."
+
               git config user.name "github-actions[bot]"
               git config user.email "github-actions[bot]@users.noreply.github.com"
-              # Add all changes from repo root (docs/openapi.json is outside platform/)
-              git -C "$GITHUB_WORKSPACE" add -A
-              git commit -m "chore: update generated files for release"
+
+              # Only add docs/openapi.json - this is the only file that should change
+              # due to version bumps from release-please
+              git -C "$GITHUB_WORKSPACE" add docs/openapi.json
+
+              git commit -m "chore: update docs/openapi.json version for release"
               git push
+
               echo "✅ Changes committed. Workflow will be re-triggered."
+
               # Exit early - the push triggers a new workflow run with the updated code
               exit 0
             else
