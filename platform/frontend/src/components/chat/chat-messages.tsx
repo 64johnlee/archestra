@@ -23,6 +23,7 @@ import {
 } from "@/components/ai-elements/tool";
 import { useUpdateChatMessage } from "@/lib/chat-message.query";
 import { parsePolicyDenied } from "@/lib/llmProviders/common";
+import { cn } from "@/lib/utils";
 import { EditableAssistantMessage } from "./editable-assistant-message";
 import { EditableUserMessage } from "./editable-user-message";
 import { InlineChatError } from "./inline-chat-error";
@@ -185,17 +186,13 @@ export function ChatMessages({
       <ConversationContent>
         <div className="max-w-4xl mx-auto">
           {messages.map((message, idx) => {
-            // Hide messages below the one being edited (for user messages only)
-            if (
-              editingMessageIndex !== -1 &&
-              idx > editingMessageIndex &&
-              editingPartKey?.startsWith(messages[editingMessageIndex].id)
-            ) {
-              return null;
-            }
-
+            const isDimmed =
+              editingMessageIndex !== -1 && idx > editingMessageIndex;
             return (
-              <div key={message.id || idx}>
+              <div
+                key={message.id || idx}
+                className={cn(isDimmed && "opacity-40 transition-opacity")}
+              >
                 {message.parts?.map((part, i) => {
                   // Skip tool result parts that immediately follow a tool invocation with same toolCallId
                   if (
