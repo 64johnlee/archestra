@@ -181,6 +181,8 @@ export function ChatMessages({
     return nextMessage.role !== "assistant";
   });
 
+  const isResponseInProgress = status === "streaming" || status === "submitted";
+
   return (
     <Conversation className="h-full">
       <ConversationContent>
@@ -269,6 +271,7 @@ export function ChatMessages({
                               text={part.text}
                               isEditing={editingPartKey === partKey}
                               showActions={showActions}
+                              editDisabled={isResponseInProgress}
                               onStartEdit={handleStartEdit}
                               onCancelEdit={handleCancelEdit}
                               onSave={handleSaveAssistantMessage}
@@ -287,6 +290,7 @@ export function ChatMessages({
                               partKey={partKey}
                               text={part.text}
                               isEditing={editingPartKey === partKey}
+                              editDisabled={isResponseInProgress}
                               onStartEdit={handleStartEdit}
                               onCancelEdit={handleCancelEdit}
                               onSave={handleSaveUserMessage}
