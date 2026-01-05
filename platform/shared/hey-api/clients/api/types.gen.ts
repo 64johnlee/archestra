@@ -6592,6 +6592,10 @@ export type GetChatConversationsResponses = {
         title: string | null;
         selectedModel: string;
         hasCustomToolSelection: boolean;
+        todoList: string | number | boolean | null | {
+            [key: string]: unknown;
+        } | Array<unknown> | null;
+        artifact: string | null;
         createdAt: string;
         updatedAt: string;
         agent: {
@@ -6690,6 +6694,10 @@ export type CreateChatConversationResponses = {
         title: string | null;
         selectedModel: string;
         hasCustomToolSelection: boolean;
+        todoList: string | number | boolean | null | {
+            [key: string]: unknown;
+        } | Array<unknown> | null;
+        artifact: string | null;
         createdAt: string;
         updatedAt: string;
         agent: {
@@ -6863,6 +6871,10 @@ export type GetChatConversationResponses = {
         title: string | null;
         selectedModel: string;
         hasCustomToolSelection: boolean;
+        todoList: string | number | boolean | null | {
+            [key: string]: unknown;
+        } | Array<unknown> | null;
+        artifact: string | null;
         createdAt: string;
         updatedAt: string;
         agent: {
@@ -6881,6 +6893,7 @@ export type UpdateChatConversationData = {
         selectedModel?: string;
         chatApiKeyId?: string | null;
         agentId?: string;
+        artifact?: string | null;
     };
     path: {
         id: string;
@@ -6962,6 +6975,10 @@ export type UpdateChatConversationResponses = {
         title: string | null;
         selectedModel: string;
         hasCustomToolSelection: boolean;
+        todoList: string | number | boolean | null | {
+            [key: string]: unknown;
+        } | Array<unknown> | null;
+        artifact: string | null;
         createdAt: string;
         updatedAt: string;
         agent: {
@@ -7144,6 +7161,10 @@ export type GenerateChatConversationTitleResponses = {
         title: string | null;
         selectedModel: string;
         hasCustomToolSelection: boolean;
+        todoList: string | number | boolean | null | {
+            [key: string]: unknown;
+        } | Array<unknown> | null;
+        artifact: string | null;
         createdAt: string;
         updatedAt: string;
         agent: {
@@ -7242,6 +7263,10 @@ export type UpdateChatMessageResponses = {
         title: string | null;
         selectedModel: string;
         hasCustomToolSelection: boolean;
+        todoList: string | number | boolean | null | {
+            [key: string]: unknown;
+        } | Array<unknown> | null;
+        artifact: string | null;
         createdAt: string;
         updatedAt: string;
         agent: {
