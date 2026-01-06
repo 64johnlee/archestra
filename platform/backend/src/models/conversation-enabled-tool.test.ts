@@ -3,7 +3,7 @@ import ConversationModel from "./conversation";
 import ConversationEnabledToolModel from "./conversation-enabled-tool";
 
 describe("ConversationEnabledToolModel", () => {
-  test("returns empty array for conversation with no custom selection", async ({
+  test("returns todo_write and artifact_write tools enabled by default", async ({
     makeUser,
     makeOrganization,
     makeAgent,
@@ -24,10 +24,11 @@ describe("ConversationEnabledToolModel", () => {
       conversation.id,
     );
 
-    expect(enabledTools).toEqual([]);
+    // Should have todo_write and artifact_write enabled by default
+    expect(enabledTools).toHaveLength(2);
   });
 
-  test("hasCustomSelection returns false for new conversation", async ({
+  test("hasCustomSelection returns true for new conversation (Archestra tools disabled by default)", async ({
     makeUser,
     makeOrganization,
     makeAgent,
@@ -48,7 +49,8 @@ describe("ConversationEnabledToolModel", () => {
       conversation.id,
     );
 
-    expect(hasCustom).toBe(false);
+    // New conversations have custom selection because Archestra tools are disabled by default
+    expect(hasCustom).toBe(true);
   });
 
   test("can set enabled tools for a conversation", async ({
@@ -202,7 +204,7 @@ describe("ConversationEnabledToolModel", () => {
     expect(enabledTools).toEqual([]);
   });
 
-  test("setEnabledTools with empty array clears custom selection", async ({
+  test("setEnabledTools with empty array maintains custom selection", async ({
     makeUser,
     makeOrganization,
     makeAgent,
@@ -225,13 +227,14 @@ describe("ConversationEnabledToolModel", () => {
       tool.id,
     ]);
 
-    // Set to empty array
+    // Set to empty array - this still maintains custom selection (to explicitly disable all tools)
     await ConversationEnabledToolModel.setEnabledTools(conversation.id, []);
 
     const hasCustom = await ConversationEnabledToolModel.hasCustomSelection(
       conversation.id,
     );
-    expect(hasCustom).toBe(false);
+    // Should still have custom selection, just with zero tools enabled
+    expect(hasCustom).toBe(true);
   });
 
   test("findByConversations returns map of tool IDs per conversation", async ({
@@ -281,7 +284,7 @@ describe("ConversationEnabledToolModel", () => {
     expect(toolsMap.get(conversation2.id)).not.toContain(tool1.id);
   });
 
-  test("findByConversations returns empty arrays for conversations without custom selection", async ({
+  test("findByConversations returns todo_write and artifact_write for conversations by default", async ({
     makeUser,
     makeOrganization,
     makeAgent,
@@ -311,8 +314,9 @@ describe("ConversationEnabledToolModel", () => {
       conversation2.id,
     ]);
 
-    expect(toolsMap.get(conversation1.id)).toEqual([]);
-    expect(toolsMap.get(conversation2.id)).toEqual([]);
+    // Should have todo_write and artifact_write enabled by default
+    expect(toolsMap.get(conversation1.id)).toHaveLength(2);
+    expect(toolsMap.get(conversation2.id)).toHaveLength(2);
   });
 
   test("findByConversations returns empty map for empty input", async () => {
@@ -361,11 +365,11 @@ describe("ConversationEnabledToolModel", () => {
     );
     expect(tools1).toHaveLength(2);
 
-    // Conversation 2 should not have any custom selection
+    // Conversation 2 has custom selection with todo_write and artifact_write by default
     const tools2 = await ConversationEnabledToolModel.findByConversation(
       conversation2.id,
     );
-    expect(tools2).toEqual([]);
+    expect(tools2).toHaveLength(2); // todo_write and artifact_write
 
     const hasCustom1 = await ConversationEnabledToolModel.hasCustomSelection(
       conversation1.id,
@@ -375,6 +379,7 @@ describe("ConversationEnabledToolModel", () => {
     );
 
     expect(hasCustom1).toBe(true);
-    expect(hasCustom2).toBe(false);
+    // Conversation 2 also has custom selection due to default Archestra tool disabling
+    expect(hasCustom2).toBe(true);
   });
 });

@@ -14,6 +14,7 @@ const {
   updateConversationEnabledTools,
   deleteConversationEnabledTools,
   getAgentTools,
+  getPromptTools,
 } = archestraApiSdk;
 
 export function useConversation(conversationId?: string) {
@@ -83,15 +84,17 @@ export function useUpdateConversation() {
       title,
       selectedModel,
       chatApiKeyId,
+      agentId,
     }: {
       id: string;
       title?: string | null;
       selectedModel?: string;
       chatApiKeyId?: string | null;
+      agentId?: string;
     }) => {
       const { data, error } = await updateChatConversation({
         path: { id },
-        body: { title, selectedModel, chatApiKeyId },
+        body: { title, selectedModel, chatApiKeyId, agentId },
       });
       if (error) throw new Error("Failed to update conversation");
       return data;
@@ -267,6 +270,27 @@ export function useProfileToolsWithIds(agentId: string | undefined) {
       return data;
     },
     enabled: !!agentId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
+/**
+ * Get agent delegation tools for a prompt
+ * Returns tools created from prompt agents with real database IDs
+ */
+export function usePromptTools(promptId: string | undefined) {
+  return useQuery({
+    queryKey: ["prompts", promptId, "tools"],
+    queryFn: async () => {
+      if (!promptId) return [];
+      const { data, error } = await getPromptTools({
+        path: { id: promptId },
+      });
+      if (error) throw new Error("Failed to fetch prompt tools");
+      return data;
+    },
+    enabled: !!promptId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000,
   });

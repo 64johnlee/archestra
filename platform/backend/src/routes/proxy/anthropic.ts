@@ -1,3 +1,13 @@
+/**
+ * @deprecated LEGACY V1 ROUTE - LLM Proxy v2 is now the default
+ *
+ * This is the legacy v1 Anthropic proxy route handler.
+ *
+ * The new unified LLM proxy handler (./llm-proxy-handler.ts) is now the default.
+ * V2 routes are located at: ./routesv2/anthropic.ts
+ *
+ * This file should be removed after full migration to v2 routes.
+ */
 import AnthropicProvider from "@anthropic-ai/sdk";
 import fastifyHttpProxy from "@fastify/http-proxy";
 import { RouteId } from "@shared";
@@ -29,6 +39,7 @@ import {
   constructResponseSchema,
   UuidIdSchema,
 } from "@/types";
+import { convertToolResultsToToon } from "./adapterV2/anthropic";
 import { PROXY_API_PREFIX, PROXY_BODY_LIMIT } from "./common";
 import { MockAnthropicClient } from "./mock-anthropic-client";
 import * as utils from "./utils";
@@ -185,7 +196,8 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
       "[AnthropicProxy] Agent resolved",
     );
 
-    const { "x-api-key": anthropicApiKey } = headers;
+    const { "x-api-key": anthropicApiKey, "anthropic-beta": anthropicBeta } =
+      headers;
 
     const anthropicClient = config.benchmark.mockMode
       ? (new MockAnthropicClient() as unknown as AnthropicProvider)
@@ -197,6 +209,9 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
             resolvedAgent,
             externalAgentId,
           ),
+          defaultHeaders: anthropicBeta
+            ? { "anthropic-beta": anthropicBeta }
+            : undefined,
         });
 
     try {
@@ -422,10 +437,7 @@ const anthropicProxyRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
       if (shouldApplyToonCompression) {
         const { messages: convertedMessages, stats } =
-          await utils.adapters.anthropic.convertToolResultsToToon(
-            filteredMessages,
-            model,
-          );
+          await convertToolResultsToToon(filteredMessages, model);
         filteredMessages = convertedMessages;
         toonTokensBefore = stats.toonTokensBefore;
         toonTokensAfter = stats.toonTokensAfter;

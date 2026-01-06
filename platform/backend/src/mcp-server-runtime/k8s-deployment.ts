@@ -55,8 +55,13 @@ export async function fetchPlatformPodNodeSelector(
 
   try {
     // Try to find the current pod by reading the POD_NAME environment variable
-    // which is typically set via the Kubernetes downward API
-    const podName = process.env.POD_NAME || process.env.HOSTNAME;
+    // which is typically set via the Kubernetes downward API.
+    // Only attempt this when running inside K8s cluster - otherwise HOSTNAME
+    // will be the Docker container ID which won't exist as a K8s pod.
+    const podName = config.orchestrator.kubernetes
+      .loadKubeconfigFromCurrentCluster
+      ? process.env.POD_NAME || process.env.HOSTNAME
+      : process.env.POD_NAME;
 
     if (podName) {
       // Read the current pod's spec directly
@@ -487,11 +492,10 @@ export default class K8sDeployment {
     const podSpec: k8s.V1PodSpec = {
       // Fast shutdown for stateless MCP servers (default is 30s)
       terminationGracePeriodSeconds: 5,
-      // Use dedicated service account if requested
+      // Use dedicated service account if specified (value used directly from catalog)
       ...(localConfig.serviceAccount
         ? {
-            serviceAccountName:
-              config.orchestrator.kubernetes.mcpK8sServiceAccountName,
+            serviceAccountName: localConfig.serviceAccount,
           }
         : {}),
       // Apply nodeSelector if provided (e.g., inherited from archestra-platform pod)
