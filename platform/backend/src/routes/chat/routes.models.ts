@@ -15,7 +15,13 @@ import {
   isVertexAiEnabled,
 } from "@/routes/proxy/utils/gemini-client";
 import { getSecretValueForLlmProviderApiKey } from "@/secrets-manager";
-import { constructResponseSchema, SupportedChatProviderSchema } from "@/types";
+import {
+  type Anthropic,
+  constructResponseSchema,
+  type Gemini,
+  type OpenAi,
+  SupportedChatProviderSchema,
+} from "@/types";
 
 /** TTL for caching chat models from provider APIs */
 const CHAT_MODELS_CACHE_TTL_MS = TimeInMs.Hour * 2;
@@ -40,7 +46,7 @@ export interface ModelInfo {
  * Fetch models from Anthropic API
  */
 async function fetchAnthropicModels(apiKey: string): Promise<ModelInfo[]> {
-  const baseUrl = config.chat.anthropic.baseUrl;
+  const baseUrl = config.llm.anthropic.baseUrl;
   const url = `${baseUrl}/v1/models?limit=100`;
 
   const response = await fetch(url, {
@@ -60,11 +66,7 @@ async function fetchAnthropicModels(apiKey: string): Promise<ModelInfo[]> {
   }
 
   const data = (await response.json()) as {
-    data: Array<{
-      id: string;
-      display_name: string;
-      created_at?: string;
-    }>;
+    data: Anthropic.Types.Model[];
   };
 
   // All Anthropic models are chat models, no filtering needed
@@ -80,7 +82,7 @@ async function fetchAnthropicModels(apiKey: string): Promise<ModelInfo[]> {
  * Fetch models from OpenAI API
  */
 async function fetchOpenAiModels(apiKey: string): Promise<ModelInfo[]> {
-  const baseUrl = config.chat.openai.baseUrl;
+  const baseUrl = config.llm.openai.baseUrl;
   const url = `${baseUrl}/models`;
 
   const response = await fetch(url, {
@@ -99,11 +101,7 @@ async function fetchOpenAiModels(apiKey: string): Promise<ModelInfo[]> {
   }
 
   const data = (await response.json()) as {
-    data: Array<{
-      id: string;
-      created: number;
-      owned_by: string;
-    }>;
+    data: (OpenAi.Types.Model | OpenAi.Types.OrlandoModel)[];
   };
 
   // Filter to only chat-compatible models
@@ -125,19 +123,40 @@ async function fetchOpenAiModels(apiKey: string): Promise<ModelInfo[]> {
       );
       return !hasExcludedPattern;
     })
-    .map((model) => ({
-      id: model.id,
-      displayName: model.id, // OpenAI doesn't provide display names
-      provider: "openai" as const,
-      createdAt: new Date(model.created * 1000).toISOString(),
-    }));
+    .map(mapOpenAiModelToModelInfo);
+}
+
+export function mapOpenAiModelToModelInfo(
+  model: OpenAi.Types.Model | OpenAi.Types.OrlandoModel,
+): ModelInfo {
+  // by default it's openai
+  let provider: SupportedProvider = "openai";
+  // but if it's an orlando model (we identify that by missing owned_by property)
+  if (!("owned_by" in model)) {
+    // then we need to determine the provider based on the model id (falling back to default openai)
+    if (model.id.startsWith("claude-")) {
+      provider = "anthropic";
+    } else if (model.id.startsWith("gemini-")) {
+      provider = "gemini";
+    }
+  }
+
+  return {
+    id: model.id,
+    displayName: "name" in model ? model.name : model.id,
+    provider,
+    createdAt:
+      "created" in model
+        ? new Date(model.created * 1000).toISOString()
+        : undefined,
+  };
 }
 
 /**
  * Fetch models from Gemini API (Google AI Studio - API key mode)
  */
 export async function fetchGeminiModels(apiKey: string): Promise<ModelInfo[]> {
-  const baseUrl = config.chat.gemini.baseUrl;
+  const baseUrl = config.llm.gemini.baseUrl;
   const url = `${baseUrl}/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=100`;
 
   const response = await fetch(url);
@@ -152,11 +171,7 @@ export async function fetchGeminiModels(apiKey: string): Promise<ModelInfo[]> {
   }
 
   const data = (await response.json()) as {
-    models: Array<{
-      name: string;
-      displayName: string;
-      supportedGenerationMethods?: string[];
-    }>;
+    models: Gemini.Types.Model[];
   };
 
   // Filter to only models that support generateContent (chat)
@@ -170,7 +185,7 @@ export async function fetchGeminiModels(apiKey: string): Promise<ModelInfo[]> {
       const modelId = model.name.replace("models/", "");
       return {
         id: modelId,
-        displayName: model.displayName,
+        displayName: model.displayName ?? modelId,
         provider: "gemini" as const,
       };
     });
