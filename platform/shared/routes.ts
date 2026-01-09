@@ -117,6 +117,8 @@ export const RouteId = {
   GetTrustedDataPolicy: "getTrustedDataPolicy",
   UpdateTrustedDataPolicy: "updateTrustedDataPolicy",
   DeleteTrustedDataPolicy: "deleteTrustedDataPolicy",
+  BulkUpsertDefaultCallPolicy: "bulkUpsertDefaultCallPolicy",
+  BulkUpsertDefaultResultPolicy: "bulkUpsertDefaultResultPolicy",
   GetPolicyConfigSubagentPrompt: "getPolicyConfigSubagentPrompt",
 
   // Dual LLM Config Routes
@@ -180,6 +182,7 @@ export const RouteId = {
   DeleteAgentPrompt: "deleteAgentPrompt",
 
   // Prompt Agent Routes (agent assignment to prompts)
+  GetAllPromptAgentConnections: "getAllPromptAgentConnections",
   GetPromptAgents: "getPromptAgents",
   SyncPromptAgents: "syncPromptAgents",
   DeletePromptAgent: "deletePromptAgent",
@@ -195,6 +198,9 @@ export const RouteId = {
   GetOrganization: "getOrganization",
   UpdateOrganization: "updateOrganization",
   GetOnboardingStatus: "getOnboardingStatus",
+
+  // Appearance Routes (public/unauthenticated)
+  GetPublicAppearance: "getPublicAppearance",
 
   // SSO Provider Routes
   GetPublicSsoProviders: "getPublicSsoProviders",
