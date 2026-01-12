@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.19](https://github.com/archestra-ai/archestra/compare/platform-v1.0.18...platform-v1.0.19) (2026-01-12)
+
+
+### Miscellaneous Chores
+
+* add error details to 403 error ([4573a87](https://github.com/archestra-ai/archestra/commit/4573a874aeecb3e22b1ba05c2c82081afbca9a70))
+* allow call chat with no model selected ([#2068](https://github.com/archestra-ai/archestra/issues/2068)) ([b935596](https://github.com/archestra-ai/archestra/commit/b935596eb19b7a069a72782188b14e483a561174))
+* allow to use chat if no model selected ([b5a8841](https://github.com/archestra-ai/archestra/commit/b5a8841d761594e427e03e7c98bf500f0e8a0134))
+* detailed logs for fetch models error ([#2069](https://github.com/archestra-ai/archestra/issues/2069)) ([fb0c01f](https://github.com/archestra-ai/archestra/commit/fb0c01fcdbf93f9005a36f98c68492cf3e96962a))
+
 ## [1.0.18](https://github.com/archestra-ai/archestra/compare/platform-v1.0.17...platform-v1.0.18) (2026-01-12)
 
 
