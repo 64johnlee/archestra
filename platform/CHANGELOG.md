@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.18](https://github.com/archestra-ai/archestra/compare/platform-v1.0.17...platform-v1.0.18) (2026-01-12)
+
+
+### Bug Fixes
+
+* disable model caching ([#2065](https://github.com/archestra-ai/archestra/issues/2065)) ([73179e6](https://github.com/archestra-ai/archestra/commit/73179e6e5a8c1ebab0ab98e78fea9ce2368946af))
+
 ## [1.0.17](https://github.com/archestra-ai/archestra/compare/platform-v1.0.16...platform-v1.0.17) (2026-01-12)
 
 
