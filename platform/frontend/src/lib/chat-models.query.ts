@@ -18,14 +18,18 @@ export function useChatModels() {
   return useSuspenseQuery({
     queryKey: ["chat-models"],
     queryFn: async () => {
+      console.log("[DEBUG chat-models] Fetching chat models...");
       const { data, error } = await getChatModels();
+      console.log("[DEBUG chat-models] API response:", { data, error });
       if (error) {
+        console.error("[DEBUG chat-models] API error:", error);
         throw new Error(
           typeof error.error === "string"
             ? error.error
             : error.error?.message || "Failed to fetch chat models",
         );
       }
+      console.log("[DEBUG chat-models] Returning models:", data);
       return (data ?? []) as ChatModel[];
     },
   });
@@ -40,7 +44,11 @@ export function useModelsByProvider() {
 
   // Memoize to prevent creating new object reference on every render
   const modelsByProvider = useMemo(() => {
-    return query.data.reduce(
+    console.log(
+      "[DEBUG modelsByProvider] Computing from query.data:",
+      query.data,
+    );
+    const result = query.data.reduce(
       (acc, model) => {
         if (!acc[model.provider]) {
           acc[model.provider] = [];
@@ -50,6 +58,8 @@ export function useModelsByProvider() {
       },
       {} as Record<SupportedProvider, ChatModel[]>,
     );
+    console.log("[DEBUG modelsByProvider] Computed result:", result);
+    return result;
   }, [query.data]);
 
   return {
