@@ -634,20 +634,20 @@ export default function ChatPage() {
         initialModel,
         isPending: createConversationMutation.isPending,
       });
-      // if (
-      //   !message.text?.trim() ||
-      //   !initialAgentId ||
-      //   !initialModel ||
-      //   createConversationMutation.isPending
-      // ) {
-      //   console.log("[DEBUG handleInitialSubmit] Early return - missing requirements:", {
-      //     hasMessageText: !!message.text?.trim(),
-      //     hasInitialAgentId: !!initialAgentId,
-      //     hasInitialModel: !!initialModel,
-      //     isPending: createConversationMutation.isPending,
-      //   });
-      //   return;
-      // }
+      if (
+        !message.text?.trim() ||
+        !initialAgentId ||
+        // !initialModel ||
+        createConversationMutation.isPending
+      ) {
+        console.log("[DEBUG handleInitialSubmit] Early return - missing requirements:", {
+          hasMessageText: !!message.text?.trim(),
+          hasInitialAgentId: !!initialAgentId,
+          hasInitialModel: !!initialModel,
+          isPending: createConversationMutation.isPending,
+        });
+        return;
+      }
       console.log("[DEBUG handleInitialSubmit] Proceeding with conversation creation");
 
       // Store the message to send after conversation is created
