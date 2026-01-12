@@ -44,7 +44,10 @@ export function useModelsByProvider() {
 
   // Memoize to prevent creating new object reference on every render
   const modelsByProvider = useMemo(() => {
-    console.log("[DEBUG modelsByProvider] Computing from query.data:", query.data);
+    console.log(
+      "[DEBUG modelsByProvider] Computing from query.data:",
+      query.data,
+    );
     const result = query.data.reduce(
       (acc, model) => {
         if (!acc[model.provider]) {
