@@ -13,7 +13,6 @@ export interface ChatModel {
 
 /**
  * Fetch available chat models from all configured providers.
- * Models are cached server-side for 12 hours.
  */
 export function useChatModels() {
   return useSuspenseQuery({
@@ -29,8 +28,6 @@ export function useChatModels() {
       }
       return (data ?? []) as ChatModel[];
     },
-    // Frontend cache for 5 minutes (server caches for 12 hours)
-    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -80,6 +77,5 @@ export function useChatModelsQuery(conversationId?: string) {
       }
       return (data ?? []) as ChatModel[];
     },
-    staleTime: 5 * 60 * 1000,
   });
 }
