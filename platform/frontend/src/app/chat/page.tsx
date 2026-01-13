@@ -676,7 +676,7 @@ export default function ChatPage() {
       if (
         (!hasText && !hasFiles) ||
         !initialAgentId ||
-        !initialModel ||
+        // !initialModel ||
         createConversationMutation.isPending
       ) {
         return;
