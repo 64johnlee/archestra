@@ -26,9 +26,6 @@
 * dev to main ([#2099](https://github.com/archestra-ai/archestra/issues/2099)) ([597be0e](https://github.com/archestra-ai/archestra/commit/597be0ec30814c96249b04c6098323324518d984))
 * improve auth methods for remote mcp servers ([#2094](https://github.com/archestra-ai/archestra/issues/2094)) ([59123c8](https://github.com/archestra-ai/archestra/commit/59123c801b3b9a31d1385fd0ef27093f12fce274))
 * improve e2e stability and ci speed ([#2067](https://github.com/archestra-ai/archestra/issues/2067)) ([00bb0a3](https://github.com/archestra-ai/archestra/commit/00bb0a30e586e5ffb5aba4d4b1a4abe42ce6b545))
-* main to dev ([#2084](https://github.com/archestra-ai/archestra/issues/2084)) ([eded21e](https://github.com/archestra-ai/archestra/commit/eded21e9b56c26a4f6309226a8ce0121bbee494a))
-* solve main to dev conflicts ([#2102](https://github.com/archestra-ai/archestra/issues/2102)) ([cace222](https://github.com/archestra-ai/archestra/commit/cace222e66304eb95bad25a77b8a3c5826dd3dd6))
-* solve main to dev conflicts2 ([#2108](https://github.com/archestra-ai/archestra/issues/2108)) ([b65b5a1](https://github.com/archestra-ai/archestra/commit/b65b5a12d094aed377a4b9af800287da2d40bf93))
 
 ## [1.0.19](https://github.com/archestra-ai/archestra/compare/platform-v1.0.18...platform-v1.0.19) (2026-01-12)
 
