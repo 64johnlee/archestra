@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.22](https://github.com/archestra-ai/archestra/compare/platform-v1.0.21...platform-v1.0.22) (2026-01-14)
+
+
+### Features
+
+* Queued messages for chat ([#1734](https://github.com/archestra-ai/archestra/issues/1734)) ([8e4dfcb](https://github.com/archestra-ai/archestra/commit/8e4dfcb853dc7ed914004dca566d6e2b86351ffd))
+
+
+### Bug Fixes
+
+* fix subagents and artifact overlap ([#2125](https://github.com/archestra-ai/archestra/issues/2125)) ([5d905b7](https://github.com/archestra-ai/archestra/commit/5d905b756de25899e95ba3aaa281bcf0f6002092))
+* policy AI autoconfigure ([#2120](https://github.com/archestra-ai/archestra/issues/2120)) ([9864ae5](https://github.com/archestra-ai/archestra/commit/9864ae5b4bc6b5b29bdd2cbda6d11625fa8a38f9))
+
+
+### Miscellaneous Chores
+
+* add indexes to interactions table ([#2119](https://github.com/archestra-ai/archestra/issues/2119)) ([c855609](https://github.com/archestra-ai/archestra/commit/c855609d04e2ca01a1d7d75dfab72d340bc75c02))
+* dev -&gt; main ([#2126](https://github.com/archestra-ai/archestra/issues/2126)) ([d8f4ae9](https://github.com/archestra-ai/archestra/commit/d8f4ae9ac4ea6023ab09b8dd7577a40288d10735))
+* improve CI speed ([#2087](https://github.com/archestra-ai/archestra/issues/2087)) ([8df86ec](https://github.com/archestra-ai/archestra/commit/8df86ec3256ebfce5ae15418efda30a87a5b1f7e))
+
 ## [1.0.21](https://github.com/archestra-ai/archestra/compare/platform-v1.0.20...platform-v1.0.21) (2026-01-14)
 
 
