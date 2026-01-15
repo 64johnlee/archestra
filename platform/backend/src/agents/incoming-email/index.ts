@@ -11,13 +11,18 @@ import type {
   IncomingEmail,
   SubscriptionInfo,
 } from "@/types";
-import { EMAIL_DEDUP_CACHE_TTL_MS } from "./constants";
+import {
+  DEFAULT_AGENT_EMAIL_NAME,
+  EMAIL_DEDUP_CACHE_TTL_MS,
+} from "./constants";
 import { OutlookEmailProvider } from "./outlook-provider";
 
 export type {
   AgentIncomingEmailProvider,
+  ConversationMessage,
   EmailProviderConfig,
   EmailProviderType,
+  EmailReplyOptions,
   IncomingEmail,
   SubscriptionInfo,
 } from "@/types";
@@ -434,12 +439,29 @@ export function getEmailProviderInfo(): {
 }
 
 /**
+ * Options for processing incoming emails
+ */
+export interface ProcessIncomingEmailOptions {
+  /**
+   * Whether to send the agent's response back via email reply
+   * @default false
+   */
+  sendReply?: boolean;
+}
+
+/**
  * Process an incoming email and invoke the appropriate agent
+ * @param email - The incoming email to process
+ * @param provider - The email provider instance
+ * @param options - Optional processing options
+ * @returns The agent's response text if sendReply is enabled
  */
 export async function processIncomingEmail(
   email: IncomingEmail,
   provider: AgentIncomingEmailProvider | null,
-): Promise<void> {
+  options: ProcessIncomingEmailOptions = {},
+): Promise<string | undefined> {
+  const { sendReply: shouldSendReply = false } = options;
   if (!provider) {
     throw new Error("No email provider configured");
   }
@@ -451,7 +473,7 @@ export async function processIncomingEmail(
       { messageId: email.messageId },
       "[IncomingEmail] Skipping duplicate email (already processed recently)",
     );
-    return;
+    return undefined;
   }
 
   // Mark as processed immediately to prevent concurrent processing
@@ -499,9 +521,63 @@ export async function processIncomingEmail(
   }
   const organization = teams[0].organizationId;
 
+  // Fetch conversation history if this is part of a thread
+  let conversationContext = "";
+  if (email.conversationId && provider.getConversationHistory) {
+    try {
+      const history = await provider.getConversationHistory(
+        email.conversationId,
+        email.messageId,
+      );
+
+      if (history.length > 0) {
+        logger.info(
+          {
+            messageId: email.messageId,
+            conversationId: email.conversationId,
+            historyCount: history.length,
+          },
+          "[IncomingEmail] Including conversation history in agent context",
+        );
+
+        // Format conversation history for the agent
+        const formattedHistory = history
+          .map((msg) => {
+            const role = msg.isAgentMessage ? "You (Agent)" : "User";
+            const name = msg.fromName ? ` (${msg.fromName})` : "";
+            return `[${role}${name}]: ${msg.body.trim()}`;
+          })
+          .join("\n\n---\n\n");
+
+        conversationContext = `<conversation_history>
+The following is the previous conversation in this email thread. Use this context to understand the full conversation.
+
+${formattedHistory}
+</conversation_history>
+
+`;
+      }
+    } catch (error) {
+      logger.warn(
+        {
+          messageId: email.messageId,
+          conversationId: email.conversationId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "[IncomingEmail] Failed to fetch conversation history, continuing without it",
+      );
+    }
+  }
+
   // Use email body as the message to invoke the agent
   // If body is empty, use the subject line
-  let message = email.body.trim() || email.subject || "No message content";
+  const currentMessage =
+    email.body.trim() || email.subject || "No message content";
+
+  // Combine conversation context with current message
+  let message = conversationContext
+    ? `${conversationContext}[Current message from user]: ${currentMessage}`
+    : currentMessage;
 
   // Truncate message if it exceeds the maximum size to prevent excessive LLM context usage
   const { MAX_EMAIL_BODY_SIZE } = await import("./constants");
@@ -528,6 +604,7 @@ export async function processIncomingEmail(
       agentId: prompt.agentId,
       organizationId: organization,
       messageLength: message.length,
+      hasConversationHistory: conversationContext.length > 0,
     },
     "[IncomingEmail] Invoking agent with email content",
   );
@@ -550,6 +627,41 @@ export async function processIncomingEmail(
     "[IncomingEmail] Agent execution completed",
   );
 
-  // TODO: Optionally send the response back via email
-  // This would require implementing reply functionality in the provider
+  // Optionally send the agent's response back via email reply
+  if (shouldSendReply && result.text) {
+    try {
+      // Use the prompt (agent) name for the email reply
+      const agentName = prompt.name || DEFAULT_AGENT_EMAIL_NAME;
+
+      const replyId = await provider.sendReply({
+        originalEmail: email,
+        body: result.text,
+        agentName,
+      });
+
+      logger.info(
+        {
+          promptId,
+          originalMessageId: email.messageId,
+          replyId,
+        },
+        "[IncomingEmail] Sent email reply with agent response",
+      );
+    } catch (error) {
+      // Log but don't fail the entire operation if reply fails
+      logger.error(
+        {
+          promptId,
+          originalMessageId: email.messageId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "[IncomingEmail] Failed to send email reply",
+      );
+    }
+
+    return result.text;
+  }
+
+  // No reply sent - return undefined explicitly for clarity
+  return undefined;
 }
