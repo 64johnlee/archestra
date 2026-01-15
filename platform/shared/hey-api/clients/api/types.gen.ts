@@ -11538,6 +11538,14 @@ export type GetInteractionsData = {
          * Filter by session ID
          */
         sessionId?: string;
+        /**
+         * Filter by start date (ISO 8601 format)
+         */
+        startDate?: string;
+        /**
+         * Filter by end date (ISO 8601 format)
+         */
+        endDate?: string;
         limit?: number;
         offset?: number;
         sortBy?: 'createdAt' | 'profileId' | 'externalAgentId' | 'model' | 'userId';
@@ -11768,6 +11776,14 @@ export type GetInteractionSessionsData = {
          * Filter by session ID
          */
         sessionId?: string;
+        /**
+         * Filter by start date (ISO 8601 format)
+         */
+        startDate?: string;
+        /**
+         * Filter by end date (ISO 8601 format)
+         */
+        endDate?: string;
         limit?: number;
         offset?: number;
     };
@@ -15922,6 +15938,14 @@ export type GetMcpToolCallsData = {
          * Filter by agent ID
          */
         agentId?: string;
+        /**
+         * Filter by start date (ISO 8601 format)
+         */
+        startDate?: string;
+        /**
+         * Filter by end date (ISO 8601 format)
+         */
+        endDate?: string;
         limit?: number;
         offset?: number;
         sortBy?: 'createdAt' | 'agentId' | 'mcpServerName' | 'method';
