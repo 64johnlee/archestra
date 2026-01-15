@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: false
+      is-fork-pr:
+        description: "Whether this PR is from a fork (uses artifacts instead of GHCR)"
+        required: false
+        type: boolean
+        default: false
     secrets:
       TURBOREPO_REMOTE_CACHING_TOKEN:
         required: true
@@ -173,13 +178,17 @@ jobs:
           echo "✅ All validation checks passed"
 
   # Build platform Docker image once for all e2e tests
-  # Uses GitHub artifacts to share the image between jobs (works for fork PRs)
+  # Non-fork PRs: Push to GHCR (faster)
+  # Fork PRs: Upload as artifact (no package write permissions needed)
   platform-e2e-build:
     name: Build Platform Image
     runs-on: blacksmith-16vcpu-ubuntu-2404
     if: ${{ inputs.should-skip-running-and-always-succeed != true }}
     permissions:
       contents: read
+      packages: write
+    outputs:
+      image-source: ${{ inputs.is-fork-pr && 'artifact' || 'ghcr' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -191,7 +200,28 @@ jobs:
         with:
           working-directory: ./platform
 
-      - name: Build Docker image
+      - name: Login to GHCR
+        if: ${{ !inputs.is-fork-pr }}
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Non-fork PRs: Build and push to GHCR
+      - name: Build and push Docker image to GHCR
+        if: ${{ !inputs.is-fork-pr }}
+        uses: ./.github/actions/build-platform-docker-image
+        with:
+          context: ./platform
+          push: "true"
+          tags: ghcr.io/${{ github.repository }}/platform:${{ github.sha }}
+          turbo-team: ${{ secrets.TURBOREPO_REMOTE_CACHING_TEAM }}
+          turbo-token: ${{ secrets.TURBOREPO_REMOTE_CACHING_TOKEN }}
+
+      # Fork PRs: Build locally and export as artifact
+      - name: Build Docker image locally
+        if: ${{ inputs.is-fork-pr }}
         uses: ./.github/actions/build-platform-docker-image
         with:
           context: ./platform
@@ -202,11 +232,13 @@ jobs:
           turbo-token: ${{ secrets.TURBOREPO_REMOTE_CACHING_TOKEN }}
 
       - name: Export Docker image as tarball
+        if: ${{ inputs.is-fork-pr }}
         run: |
           docker save archestra-platform:${{ github.sha }} | gzip > /tmp/platform-image.tar.gz
           ls -lh /tmp/platform-image.tar.gz
 
       - name: Upload Docker image artifact
+        if: ${{ inputs.is-fork-pr }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: platform-docker-image
@@ -224,6 +256,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -268,15 +301,30 @@ jobs:
         with:
           working-directory: ./platform
 
+      # Non-fork PRs: Pull from GHCR
+      - name: Login to GHCR
+        if: ${{ inputs.should-skip-running-and-always-succeed != true && !inputs.is-fork-pr }}
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull platform image from GHCR
+        if: ${{ inputs.should-skip-running-and-always-succeed != true && !inputs.is-fork-pr }}
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/platform:${{ github.sha }}
+
+      # Fork PRs: Download artifact and load
       - name: Download platform image artifact
-        if: ${{ inputs.should-skip-running-and-always-succeed != true }}
+        if: ${{ inputs.should-skip-running-and-always-succeed != true && inputs.is-fork-pr }}
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: platform-docker-image
           path: /tmp
 
       - name: Load platform Docker image
-        if: ${{ inputs.should-skip-running-and-always-succeed != true }}
+        if: ${{ inputs.should-skip-running-and-always-succeed != true && inputs.is-fork-pr }}
         run: |
           gunzip -c /tmp/platform-image.tar.gz | docker load
           docker images
@@ -290,7 +338,7 @@ jobs:
           helm-values-path: .github/values-ci.yaml
           deploy-e2e-dependencies: "true"
           build-platform-image: "false"
-          platform-image-tag: archestra-platform:${{ github.sha }}
+          platform-image-tag: ${{ inputs.is-fork-pr && format('archestra-platform:{0}', github.sha) || format('ghcr.io/{0}/platform:{1}', github.repository, github.sha) }}
           platform-context: ./platform
 
       - name: Resolve Playwright version
@@ -420,16 +468,32 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: read
     steps:
+      # Non-fork PRs: Pull from GHCR
+      - name: Login to GHCR
+        if: ${{ github.event_name == 'merge_group' && !inputs.is-fork-pr }}
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull platform image from GHCR
+        if: ${{ github.event_name == 'merge_group' && !inputs.is-fork-pr }}
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/platform:${{ github.sha }}
+
+      # Fork PRs: Download artifact and load
       - name: Download platform image artifact
-        if: ${{ github.event_name == 'merge_group' }}
+        if: ${{ github.event_name == 'merge_group' && inputs.is-fork-pr }}
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: platform-docker-image
           path: /tmp
 
       - name: Load platform Docker image
-        if: ${{ github.event_name == 'merge_group' }}
+        if: ${{ github.event_name == 'merge_group' && inputs.is-fork-pr }}
         run: |
           gunzip -c /tmp/platform-image.tar.gz | docker load
           docker images
@@ -443,11 +507,11 @@ jobs:
       # NOTE: Skipped for fork PRs because GitHub doesn't expose repository secrets
       # to workflows triggered by fork PRs. Docker Scout requires Docker Hub auth.
       - name: Docker Scout CVE Check
-        if: ${{ github.event_name == 'merge_group' && github.event.pull_request.head.repo.fork != true }}
+        if: ${{ github.event_name == 'merge_group' && !inputs.is-fork-pr }}
         uses: docker/scout-action@f8c776824083494ab0d56b8105ba2ca85c86e4de # v1.18.2
         with:
           command: cves
-          image: archestra-platform:${{ github.sha }}
+          image: ghcr.io/${{ github.repository }}/platform:${{ github.sha }}
           dockerhub-user: ${{ secrets.DOCKER_USERNAME }}
           dockerhub-password: ${{ secrets.DOCKER_PASSWORD }}
           only-severities: critical,high
