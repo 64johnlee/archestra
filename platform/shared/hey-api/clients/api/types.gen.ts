@@ -9333,7 +9333,9 @@ export type StreamChatError = StreamChatErrors[keyof StreamChatErrors];
 export type GetChatConversationsData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        search?: string;
+    };
     url: '/api/chat/conversations';
 };
 

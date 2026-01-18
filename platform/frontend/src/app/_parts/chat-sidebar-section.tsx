@@ -5,6 +5,7 @@ import {
   ChevronRight,
   MoreHorizontal,
   Pencil,
+  Search,
   Sparkles,
   Trash2,
 } from "lucide-react";
@@ -31,6 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import {
   SidebarGroup,
+  SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
@@ -195,9 +197,31 @@ export function ChatSidebarSection() {
     await generateTitleMutation.mutateAsync({ id, regenerate: true });
   };
 
+  const openConversationSearch = () => {
+    window.dispatchEvent(new CustomEvent("open-conversation-search"));
+  };
+
   return (
-    <SidebarGroup className="px-4 py-0">
-      <SidebarGroupLabel>Recent Chats</SidebarGroupLabel>
+    <SidebarGroup className="px-4 py-0 group-data-[collapsible=icon]:hidden">
+      <SidebarGroupLabel className="w-full justify-between pr-0">
+        Recent Chats
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <SidebarGroupAction
+                onClick={openConversationSearch}
+                className="relative top-auto right-auto transform-none h-6 w-6 text-sidebar-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+              >
+                <Search className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span className="sr-only">Search conversations (⌘K)</span>
+              </SidebarGroupAction>
+            </TooltipTrigger>
+            <TooltipContent side="right" align="center">
+              Search conversations (⌘K)
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </SidebarGroupLabel>
 
       <SidebarGroupContent>
         <SidebarMenu>
