@@ -166,15 +166,6 @@ Incoming email is disabled by default for all agents. When enabled, you must cho
 | **Internal** | Only emails from a specified domain are accepted. Configure an allowed domain (e.g., `company.com`) to restrict access to your organization's email addresses. Note: This performs an exact domain match—subdomains are not automatically included (e.g., if `company.com` is allowed, emails from `sub.company.com` will be rejected). |
 | **Public** | Any email address can invoke the agent. Use with caution as this exposes the agent to external senders. |
 
-To configure incoming email security:
-
-1. Go to **Agents** page
-2. Click **Edit** on the desired agent
-3. Check **Enable incoming email**
-4. Select a **Security Mode**
-5. For Internal mode, enter the **Allowed Domain**
-6. Save changes
-
 When security validation fails, the email is rejected with an appropriate error and no agent execution occurs.
 
 ## ChatOps: Microsoft Teams
