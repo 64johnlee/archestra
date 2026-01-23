@@ -365,9 +365,6 @@ function ChatSettingsContent() {
 
   return (
     <div className="space-y-4">
-      <span id="chunk-test" style={{ visibility: "hidden" }}>
-        {" "}
-      </span>
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-lg font-semibold">LLM Provider API Keys</h2>

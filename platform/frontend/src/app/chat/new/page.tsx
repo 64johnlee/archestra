@@ -26,9 +26,5 @@ export default function ChatNewPage() {
     router.replace(`/chat?${params.toString()}`);
   }, [searchParams, router]);
 
-  return (
-    <span id="chunk-test" style={{ visibility: "hidden" }}>
-      {" "}
-    </span>
-  );
+  return null;
 }

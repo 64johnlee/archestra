@@ -39,9 +39,6 @@ export function ChatPage({
 }) {
   return (
     <div className="w-full h-full overflow-y-auto">
-      <span id="chunk-test" style={{ visibility: "hidden" }}>
-        {" "}
-      </span>
       <ErrorBoundary>
         <Suspense fallback={<LoadingSpinner />}>
           <LogDetail initialData={initialData} id={id} />

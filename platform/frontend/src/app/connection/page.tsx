@@ -26,9 +26,6 @@ export default function ConnectionPage() {
 
   return (
     <>
-      <span id="chunk-test" style={{ visibility: "hidden" }}>
-        {" "}
-      </span>
       <PermissivePolicyBar />
       <PageLayout
         title="Connect"

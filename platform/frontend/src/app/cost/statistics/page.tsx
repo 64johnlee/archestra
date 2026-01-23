@@ -406,9 +406,6 @@ export default function StatisticsPage() {
 
   return (
     <div className="space-y-6">
-      <span id="chunk-test" style={{ visibility: "hidden" }}>
-        {" "}
-      </span>
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <a

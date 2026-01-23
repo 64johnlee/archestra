@@ -48,9 +48,6 @@ export default function McpGatewayLogsPage({
 }) {
   return (
     <div>
-      <span id="chunk-test" style={{ visibility: "hidden" }}>
-        {" "}
-      </span>
       <ErrorBoundary>
         <McpToolCallsTable initialData={initialData} />
       </ErrorBoundary>

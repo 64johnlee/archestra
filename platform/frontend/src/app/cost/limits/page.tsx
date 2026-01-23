@@ -752,9 +752,6 @@ export default function LimitsPage() {
 
   return (
     <div className="space-y-6">
-      <span id="chunk-test" style={{ visibility: "hidden" }}>
-        {" "}
-      </span>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

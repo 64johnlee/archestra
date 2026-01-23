@@ -75,9 +75,6 @@ export default function ProfilesPage({
 }) {
   return (
     <div className="w-full h-full">
-      <span id="chunk-test" style={{ visibility: "hidden" }}>
-        {" "}
-      </span>
       <PermissivePolicyBar />
       <ErrorBoundary>
         <Suspense fallback={<LoadingSpinner />}>

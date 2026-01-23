@@ -31,9 +31,6 @@ export function ToolsClient({
 
   return (
     <div className="w-full h-full">
-      <span id="chunk-test" style={{ visibility: "hidden" }}>
-        {" "}
-      </span>
       <ErrorBoundary>
         <Suspense fallback={<LoadingSpinner className="mt-[30vh]" />}>
           <ToolsList initialData={initialData} />

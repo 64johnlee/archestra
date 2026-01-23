@@ -300,9 +300,6 @@ export default function LlmProxyLogsPage({
 }) {
   return (
     <div>
-      <span id="chunk-test" style={{ visibility: "hidden" }}>
-        {" "}
-      </span>
       <ErrorBoundary>
         <SessionsTable initialData={initialData} />
       </ErrorBoundary>

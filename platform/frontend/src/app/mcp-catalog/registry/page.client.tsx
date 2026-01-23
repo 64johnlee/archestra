@@ -13,9 +13,6 @@ export default function McpRegistryClient({
 }) {
   return (
     <div>
-      <span id="chunk-test" style={{ visibility: "hidden" }}>
-        {" "}
-      </span>
       <InternalMCPCatalog
         initialData={initialData.catalog}
         installedServers={initialData.servers}
