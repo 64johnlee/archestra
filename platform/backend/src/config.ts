@@ -464,6 +464,13 @@ export default {
         process.env.ARCHESTRA_ZHIPUAI_BASE_URL ||
         "https://api.z.ai/api/paas/v4",
     },
+    bedrock: {
+      enabled: Boolean(process.env.ARCHESTRA_BEDROCK_BASE_URL),
+      baseUrl: process.env.ARCHESTRA_BEDROCK_BASE_URL || "",
+      /** Prefix for cross-region inference profile models (e.g., "us." or "eu.") */
+      inferenceProfilePrefix:
+        process.env.ARCHESTRA_BEDROCK_INFERENCE_PROFILE_PREFIX || "",
+    },
   },
   chat: {
     openai: {
@@ -503,6 +510,9 @@ export default {
       baseUrl:
         process.env.ARCHESTRA_CHAT_ZHIPUAI_BASE_URL ||
         "https://api.z.ai/api/paas/v4",
+    },
+    bedrock: {
+      apiKey: process.env.ARCHESTRA_CHAT_BEDROCK_API_KEY || "",
     },
     mcp: {
       remoteServerUrl: process.env.ARCHESTRA_CHAT_MCP_SERVER_URL || "",

@@ -1,4 +1,5 @@
 import anthropicProxyRoutesV2 from "./proxy/routesv2/anthropic";
+import bedrockProxyRoutesV2 from "./proxy/routesv2/bedrock";
 import cerebrasProxyRoutesV2 from "./proxy/routesv2/cerebras";
 import cohereProxyRoutesV2 from "./proxy/routesv2/cohere";
 import geminiProxyRoutesV2 from "./proxy/routesv2/gemini";
@@ -45,6 +46,8 @@ export const openAiProxyRoutes = openAiProxyRoutesV2;
 export const vllmProxyRoutes = vllmProxyRoutesV2;
 export const ollamaProxyRoutes = ollamaProxyRoutesV2;
 export const zhipuaiProxyRoutes = zhipuaiProxyRoutesV2;
+// Bedrock proxy routes - V2 only (unified handler, AWS Converse API)
+export const bedrockProxyRoutes = bedrockProxyRoutesV2;
 export { default as secretsRoutes } from "./secrets";
 export { default as statisticsRoutes } from "./statistics";
 export { default as teamRoutes } from "./team";
