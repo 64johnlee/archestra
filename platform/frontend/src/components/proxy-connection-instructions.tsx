@@ -79,6 +79,13 @@ export function ProxyConnectionInstructions({
         >
           Claude Code
         </Button>
+        <Button
+          variant={selectedProvider === "mistral" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedProvider("mistral")}
+        >
+          Mistral
+        </Button>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm">
