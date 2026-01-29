@@ -1,3 +1,4 @@
+import { MODEL_MARKER_PATTERNS, type SupportedProvider } from "@shared";
 import { asc, eq, inArray, sql } from "drizzle-orm";
 import db, { schema } from "@/database";
 import type { ChatApiKey, Model } from "@/types";
@@ -75,10 +76,16 @@ class ApiKeyModelModel {
   /**
    * Sync models for an API key.
    * This replaces all existing model links with the new set.
+   * Also detects and marks the "fastest" and "best" models for the provider.
+   *
+   * @param apiKeyId - The database ID of the API key
+   * @param models - Array of models with their database ID and modelId string
+   * @param provider - The provider for pattern matching
    */
   static async syncModelsForApiKey(
     apiKeyId: string,
-    modelIds: string[],
+    models: Array<{ id: string; modelId: string }>,
+    provider: SupportedProvider,
   ): Promise<void> {
     await db.transaction(async (tx) => {
       // Delete existing links for this API key
@@ -87,17 +94,37 @@ class ApiKeyModelModel {
         .where(eq(schema.apiKeyModelsTable.apiKeyId, apiKeyId));
 
       // Insert new links
-      if (modelIds.length > 0) {
+      if (models.length > 0) {
+        // Detect fastest and best models using pattern matching
+        // Patterns are checked in order (first pattern = highest priority)
+        const patterns = MODEL_MARKER_PATTERNS[provider];
+        const sorted = [...models].sort((a, b) =>
+          a.modelId.localeCompare(b.modelId),
+        );
+
+        // Find first matching model respecting pattern priority order
+        const fastestModel = findFirstMatchByPatternPriority(
+          sorted,
+          patterns.fastest,
+        );
+        const bestModel = findFirstMatchByPatternPriority(
+          sorted,
+          patterns.best,
+        );
+
+        // Build values with markers
+        const values = models.map((model) => ({
+          apiKeyId,
+          modelId: model.id,
+          isFastest: model.id === fastestModel?.id,
+          isBest: model.id === bestModel?.id,
+        }));
+
+        // Batch insert
         const BATCH_SIZE = 500;
-
-        for (let i = 0; i < modelIds.length; i += BATCH_SIZE) {
-          const batch = modelIds.slice(i, i + BATCH_SIZE);
-          const values = batch.map((modelId) => ({
-            apiKeyId,
-            modelId,
-          }));
-
-          await tx.insert(schema.apiKeyModelsTable).values(values);
+        for (let i = 0; i < values.length; i += BATCH_SIZE) {
+          const batch = values.slice(i, i + BATCH_SIZE);
+          await tx.insert(schema.apiKeyModelsTable).values(batch);
         }
       }
     });
@@ -106,10 +133,13 @@ class ApiKeyModelModel {
   /**
    * Get all models with their linked API keys.
    * Only returns models that have at least one API key linked.
+   * Includes isFastest and isBest markers (true if ANY linked API key has the marker).
    */
   static async getAllModelsWithApiKeys(): Promise<
     Array<{
       model: Model;
+      isFastest: boolean;
+      isBest: boolean;
       apiKeys: Array<{
         id: string;
         name: string;
@@ -125,6 +155,8 @@ class ApiKeyModelModel {
     const relationships = await db
       .select({
         model: schema.modelsTable,
+        isFastest: schema.apiKeyModelsTable.isFastest,
+        isBest: schema.apiKeyModelsTable.isBest,
         apiKeyId: schema.chatApiKeysTable.id,
         apiKeyName: schema.chatApiKeysTable.name,
         apiKeyProvider: schema.chatApiKeysTable.provider,
@@ -146,10 +178,13 @@ class ApiKeyModelModel {
       );
 
     // Group by model, collecting API keys for each
+    // isFastest/isBest are true if ANY linked API key has the marker
     const modelMap = new Map<
       string,
       {
         model: Model;
+        isFastest: boolean;
+        isBest: boolean;
         apiKeys: Array<{
           id: string;
           name: string;
@@ -162,15 +197,23 @@ class ApiKeyModelModel {
 
     for (const rel of relationships) {
       const modelId = rel.model.id;
+      let entry = modelMap.get(modelId);
 
-      if (!modelMap.has(modelId)) {
-        modelMap.set(modelId, {
+      if (!entry) {
+        entry = {
           model: rel.model,
+          isFastest: false,
+          isBest: false,
           apiKeys: [],
-        });
+        };
+        modelMap.set(modelId, entry);
       }
 
-      modelMap.get(modelId)?.apiKeys.push({
+      // Set markers if any relationship has them
+      if (rel.isFastest) entry.isFastest = true;
+      if (rel.isBest) entry.isBest = true;
+
+      entry.apiKeys.push({
         id: rel.apiKeyId,
         name: rel.apiKeyName,
         provider: rel.apiKeyProvider,
@@ -264,3 +307,27 @@ class ApiKeyModelModel {
 }
 
 export default ApiKeyModelModel;
+
+// ============================================================================
+// Helper functions
+// ============================================================================
+
+/**
+ * Find the first model matching patterns, respecting pattern priority order.
+ * Patterns are checked in order (first pattern = highest priority).
+ * For each pattern, returns the first alphabetically sorted match.
+ */
+function findFirstMatchByPatternPriority(
+  sortedModels: Array<{ id: string; modelId: string }>,
+  patterns: string[],
+): { id: string; modelId: string } | undefined {
+  for (const pattern of patterns) {
+    const match = sortedModels.find((m) =>
+      m.modelId.toLowerCase().includes(pattern.toLowerCase()),
+    );
+    if (match) {
+      return match;
+    }
+  }
+  return undefined;
+}
