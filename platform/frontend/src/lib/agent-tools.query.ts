@@ -1,5 +1,7 @@
 import { archestraApiSdk, type archestraApiTypes } from "@shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { handleApiError } from "./utils";
 
 const {
   assignToolToAgent,
@@ -75,6 +77,9 @@ export function useAllProfileTools({
           skipPagination,
         },
       });
+      if (result.error) {
+        handleApiError(result.error);
+      }
       return (
         result.data ?? {
           data: [],
@@ -280,6 +285,9 @@ export function useProfileToolPatchMutation() {
         body,
         path: { id: updatedProfileTool.id },
       });
+      if (result.error) {
+        handleApiError(result.error);
+      }
       return { data: result.data ?? null, skipInvalidation };
     },
     onSuccess: (result) => {
@@ -311,13 +319,9 @@ export function useAutoConfigurePolicies() {
         body: { toolIds },
       });
 
-      if (!result.data) {
-        const errorMessage =
-          typeof result.error?.error === "string"
-            ? result.error.error
-            : (result.error?.error as { message?: string })?.message ||
-              "Failed to auto-configure policies";
-        throw new Error(errorMessage);
+      if (result.error) {
+        handleApiError(result.error);
+        return null;
       }
 
       return result.data;
@@ -362,6 +366,9 @@ export function useAllDelegationConnections() {
     queryKey: agentDelegationsQueryKeys.connections,
     queryFn: async () => {
       const response = await getAllDelegationConnections();
+      if (response.error) {
+        handleApiError(response.error);
+      }
       return (
         response.data ?? {
           connections: [],
@@ -381,6 +388,9 @@ export function useAgentDelegations(agentId: string | undefined) {
     queryFn: async () => {
       if (!agentId) return [];
       const response = await getAgentDelegations({ path: { agentId } });
+      if (response.error) {
+        handleApiError(response.error);
+      }
       return response.data ?? [];
     },
     enabled: !!agentId,
@@ -406,10 +416,8 @@ export function useSyncAgentDelegations() {
         body: { targetAgentIds },
       });
       if (response.error) {
-        throw new Error(
-          (response.error as { error?: { message?: string } })?.error
-            ?.message || "Failed to sync delegations",
-        );
+        handleApiError(response.error);
+        return null;
       }
       return response.data;
     },
@@ -452,10 +460,8 @@ export function useRemoveAgentDelegation() {
         path: { agentId, targetAgentId },
       });
       if (response.error) {
-        throw new Error(
-          (response.error as { error?: { message?: string } })?.error
-            ?.message || "Failed to remove delegation",
-        );
+        handleApiError(response.error);
+        return null;
       }
       return response.data;
     },
