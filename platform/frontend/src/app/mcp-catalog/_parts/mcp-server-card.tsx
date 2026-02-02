@@ -277,27 +277,24 @@ export function McpServerCard({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="flex-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full h-8 text-xs"
-                onClick={() => setIsLogsDialogOpen(true)}
-                disabled={!isLogsAvailable}
-              >
-                <FileText className="h-3 w-3 mr-1" />
-                Logs
-              </Button>
-            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 h-8 text-xs"
+              onClick={() => setIsLogsDialogOpen(true)}
+              disabled={!isLogsAvailable}
+            >
+              <FileText className="h-3 w-3 mr-1" />
+              Logs
+            </Button>
           </TooltipTrigger>
           <TooltipContent>
             <p>
               {variant !== "local"
-                ? "Local servers only"
+                ? "Available for local servers only"
                 : !hasLocalInstallations
                   ? "Connect first"
                   : "View container logs"}
@@ -474,9 +471,11 @@ export function McpServerCard({
     </>
   );
 
+  const shouldShowErrorBanner = hasError && toolsDiscoveredCount === 0;
+
   // Show error banner with links to logs and edit dialog (hide during reinstall)
   const errorBanner = isCurrentUserAuthenticated &&
-    hasError &&
+    shouldShowErrorBanner &&
     errorMessage &&
     !isInstalling && (
       <div
@@ -488,6 +487,7 @@ export function McpServerCard({
           type="button"
           onClick={() => setIsLogsDialogOpen(true)}
           className="text-primary hover:underline cursor-pointer"
+          data-testid={`${E2eTestId.McpLogsViewButton}-${item.name}`}
         >
           view the logs
         </button>{" "}
@@ -496,6 +496,7 @@ export function McpServerCard({
           type="button"
           onClick={onEdit}
           className="text-primary hover:underline cursor-pointer"
+          data-testid={`${E2eTestId.McpLogsEditConfigButton}-${item.name}`}
         >
           edit your config
         </button>
