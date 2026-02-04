@@ -44,6 +44,9 @@ export const RouteId = {
   UpdateInternalMcpCatalogItem: "updateInternalMcpCatalogItem",
   DeleteInternalMcpCatalogItem: "deleteInternalMcpCatalogItem",
   DeleteInternalMcpCatalogItemByName: "deleteInternalMcpCatalogItemByName",
+  GetDeploymentYamlPreview: "getDeploymentYamlPreview",
+  ValidateDeploymentYaml: "validateDeploymentYaml",
+  ResetDeploymentYaml: "resetDeploymentYaml",
 
   // MCP Server Routes
   GetMcpServers: "getMcpServers",
