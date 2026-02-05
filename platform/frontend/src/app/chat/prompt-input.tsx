@@ -10,7 +10,7 @@ import {
 import type { ChatStatus } from "ai";
 import { PaperclipIcon, Plus } from "lucide-react";
 import type { FormEvent } from "react";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   PromptInput,
   PromptInputAttachment,
@@ -128,6 +128,41 @@ const PromptInputContent = ({
     organization: ["update"],
   });
 
+  const storageKey = conversationId
+    ? `archestra_chat_draft_${conversationId}`
+    : `archestra_chat_draft_new_${agentId}`;
+
+  const isRestored = useRef(false);
+
+  // Restore draft on mount or conversation change
+  useEffect(() => {
+    isRestored.current = false;
+    const savedDraft = localStorage.getItem(storageKey);
+    if (savedDraft) {
+      controller.textInput.setInput(savedDraft);
+    } else {
+      controller.textInput.setInput("");
+    }
+
+    // Set restored bit after a tick to ensure state update propagates
+    const timeout = setTimeout(() => {
+      isRestored.current = true;
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [storageKey, controller.textInput.setInput]);
+
+  // Save draft on change
+  useEffect(() => {
+    if (!isRestored.current) return;
+
+    const value = controller.textInput.value;
+    if (value) {
+      localStorage.setItem(storageKey, value);
+    } else {
+      localStorage.removeItem(storageKey);
+    }
+  }, [controller.textInput.value, storageKey]);
+
   // Handle speech transcription by updating controller state
   const handleTranscriptionChange = useCallback(
     (text: string) => {
@@ -146,11 +181,19 @@ const PromptInputContent = ({
   // 2. Model must support at least one file type (modelSupportsFiles)
   const showFileUploadButton = allowFileUploads && modelSupportsFiles;
 
+  const handleWrappedSubmit = useCallback(
+    (message: PromptInputMessage, e: FormEvent<HTMLFormElement>) => {
+      localStorage.removeItem(storageKey);
+      onSubmit(message, e);
+    },
+    [onSubmit, storageKey],
+  );
+
   return (
     <PromptInput
       globalDrop
       multiple
-      onSubmit={onSubmit}
+      onSubmit={handleWrappedSubmit}
       accept={acceptedFileTypes}
     >
       {agentId && (
