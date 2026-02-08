@@ -1,6 +1,6 @@
 {
-  "id": "5d7fdd5b-b82a-406f-aed1-c7f25755a480",
-  "prevId": "f4754952-c232-4e74-a0f2-c990400a092c",
+  "id": "2d024a40-7066-4e86-8191-4b4c9ace8825",
+  "prevId": "5d7fdd5b-b82a-406f-aed1-c7f25755a480",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -865,6 +865,140 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.browser_tab_states": {
+      "name": "browser_tab_states",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "agent_id": {
+          "name": "agent_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "isolation_key": {
+          "name": "isolation_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tab_index": {
+          "name": "tab_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "browser_tab_states_agent_user_isolation_idx": {
+          "name": "browser_tab_states_agent_user_isolation_idx",
+          "columns": [
+            {
+              "expression": "agent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "isolation_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "browser_tab_states_user_id_idx": {
+          "name": "browser_tab_states_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "browser_tab_states_agent_id_agents_id_fk": {
+          "name": "browser_tab_states_agent_id_agents_id_fk",
+          "tableFrom": "browser_tab_states",
+          "tableTo": "agents",
+          "columnsFrom": [
+            "agent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "browser_tab_states_user_id_user_id_fk": {
+          "name": "browser_tab_states_user_id_user_id_fk",
+          "tableFrom": "browser_tab_states",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.chat_api_keys": {
       "name": "chat_api_keys",
       "schema": "",
@@ -1424,12 +1558,6 @@
         },
         "todo_list": {
           "name": "todo_list",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "browser_state": {
-          "name": "browser_state",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false

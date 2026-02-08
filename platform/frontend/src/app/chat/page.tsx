@@ -434,8 +434,12 @@ export default function ChatPage() {
   // Check if Playwright MCP is available for browser panel and get install function
   const {
     hasPlaywrightMcp,
+    reinstallRequired,
+    installationFailed,
+    playwrightServerId,
     isInstalling: isInstallingBrowser,
     installBrowser,
+    reinstallBrowser,
   } = useHasPlaywrightMcpTools(browserToolsAgentId);
 
   // Check if browser streaming feature is enabled
@@ -1334,6 +1338,13 @@ export default function ChatPage() {
         isInstallingBrowser={isInstallingBrowser}
         hasPlaywrightMcp={hasPlaywrightMcp}
         onInstallBrowser={installBrowser}
+        reinstallRequired={reinstallRequired}
+        installationFailed={installationFailed}
+        onReinstallBrowser={
+          playwrightServerId
+            ? () => reinstallBrowser(playwrightServerId)
+            : undefined
+        }
         onCreateConversationWithUrl={handleCreateConversationWithUrl}
         isCreatingConversation={createConversationMutation.isPending}
         initialNavigateUrl={pendingBrowserUrl}
