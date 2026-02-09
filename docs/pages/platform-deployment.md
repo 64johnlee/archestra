@@ -617,8 +617,8 @@ The following environment variables can be used to configure Archestra Platform.
 
 - **`ARCHESTRA_OLLAMA_BASE_URL`** - Base URL for your Ollama server.
 
-  - Required to enable Ollama provider support
-  - Example: `http://localhost:11434/v1` (default Ollama)
+  - Default: `http://localhost:11434/v1` (Ollama is enabled by default)
+  - Set this to override the default if your Ollama server runs on a different host or port
   - See: [Ollama setup guide](/docs/platform-supported-llm-providers#ollama)
 
 - **`ARCHESTRA_GEMINI_VERTEX_AI_ENABLED`** - Enable Vertex AI mode for Gemini.

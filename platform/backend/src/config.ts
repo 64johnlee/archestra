@@ -475,8 +475,11 @@ export default {
       baseUrl: process.env.ARCHESTRA_VLLM_BASE_URL,
     },
     ollama: {
-      enabled: Boolean(process.env.ARCHESTRA_OLLAMA_BASE_URL),
-      baseUrl: process.env.ARCHESTRA_OLLAMA_BASE_URL,
+      enabled: Boolean(
+        process.env.ARCHESTRA_OLLAMA_BASE_URL ?? "http://localhost:11434/v1",
+      ),
+      baseUrl:
+        process.env.ARCHESTRA_OLLAMA_BASE_URL ?? "http://localhost:11434/v1",
     },
     zhipuai: {
       baseUrl:
