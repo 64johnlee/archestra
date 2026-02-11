@@ -267,6 +267,7 @@ export const RouteId = {
   CreateSsoProvider: "createSsoProvider",
   UpdateSsoProvider: "updateSsoProvider",
   DeleteSsoProvider: "deleteSsoProvider",
+  GetSsoProviderIdpLogoutUrl: "getSsoProviderIdpLogoutUrl",
 
   // User Routes
   GetUserPermissions: "getUserPermissions",
