@@ -28,24 +28,24 @@ $ARGUMENTS
 
 ## IMPORTANT: You MUST always leave a comment
 
-**Every issue MUST receive a comment via `mcp__github__create_issue_comment` before any other action (labeling, closing, etc.).** Never close or label an issue without commenting first.
+**Every issue MUST receive a comment via `mcp__github__add_issue_comment` before any other action (labeling, closing, etc.).** Never close or label an issue without commenting first.
 
 ### If closing as low-quality:
-You MUST use `mcp__github__create_issue_comment` to post a comment BEFORE closing. Be polite but direct. Explain why the issue doesn't meet quality standards. Suggest what information would be needed to reopen. Example:
+You MUST use `mcp__github__add_issue_comment` to post a comment BEFORE closing. Be polite but direct. Explain why the issue doesn't meet quality standards. Suggest what information would be needed to reopen. Example:
 "Thanks for reporting this. I'm closing this issue because [reason]. If you can provide [missing info], please feel free to reopen with those details."
 
 ### If closing as duplicate:
-You MUST use `mcp__github__create_issue_comment` to post a comment BEFORE closing. Example:
+You MUST use `mcp__github__add_issue_comment` to post a comment BEFORE closing. Example:
 "This appears to be a duplicate of #NNN. Please follow that issue for updates. If your case is different, please reopen with details about how it differs."
 
 ### If valid:
-You MUST use `mcp__github__create_issue_comment` to acknowledge the issue. Example:
+You MUST use `mcp__github__add_issue_comment` to acknowledge the issue. Example:
 "Thanks for reporting this! I've labeled this issue for the team to review."
 
 ## Tools to use
 - `mcp__github__get_issue` - Get issue details
 - `mcp__github__search_issues` - Search for duplicates
 - `mcp__github__list_issues` - List recent issues if needed
-- `mcp__github__create_issue_comment` - ALWAYS use this to comment before any other action
+- `mcp__github__add_issue_comment` - ALWAYS use this to comment before any other action
 - `mcp__github__update_issue` - Add labels, close issues (AFTER commenting)
 - `mcp__github__get_issue_comments` - Check existing comments
