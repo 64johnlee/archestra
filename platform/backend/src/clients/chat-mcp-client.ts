@@ -556,6 +556,7 @@ export async function getChatMcpTools({
   conversationId,
   sessionId,
   delegationChain,
+  abortSignal,
 }: {
   agentName: string;
   agentId: string;
@@ -568,12 +569,15 @@ export async function getChatMcpTools({
   sessionId?: string;
   /** Delegation chain of agent IDs for tracking delegated agent calls */
   delegationChain?: string;
+  /** Optional cancellation signal from parent stream execution */
+  abortSignal?: AbortSignal;
 }): Promise<Record<string, Tool>> {
   const toolCacheKey = getToolCacheKey(agentId, userId, conversationId);
+  const shouldUseToolCache = !abortSignal;
 
   // Check in-memory tool cache first (cannot use distributed cacheManager - Tool objects have execute functions)
   // LRU eviction and TTL are handled automatically by LRUCacheManager
-  const cachedTools = toolCache.get(toolCacheKey);
+  const cachedTools = shouldUseToolCache ? toolCache.get(toolCacheKey) : null;
   if (cachedTools) {
     logger.info(
       {
@@ -682,6 +686,7 @@ export async function getChatMcpTools({
             const toolStartTime = Date.now();
 
             try {
+              throwIfAborted(abortSignal);
               // Check if this is an Archestra tool - handle directly without DB lookup
               if (isArchestraMcpServerTool(mcpTool.name)) {
                 const archestraResponse = await executeArchestraTool(
@@ -694,6 +699,7 @@ export async function getChatMcpTools({
                     agentId,
                     organizationId,
                     sessionId,
+                    abortSignal,
                   },
                 );
 
@@ -747,6 +753,7 @@ export async function getChatMcpTools({
                 userIsProfileAdmin,
                 conversationId,
                 mcpGwToken,
+                abortSignal,
               });
             } catch (error) {
               reportToolMetrics({
@@ -755,17 +762,19 @@ export async function getChatMcpTools({
                 startTime: toolStartTime,
                 isError: true,
               });
-              logger.error(
-                {
-                  agentId,
-                  userId,
-                  toolName: mcpTool.name,
-                  err: error,
-                  errorMessage:
-                    error instanceof Error ? error.message : String(error),
-                },
-                "MCP tool execution failed",
-              );
+              const logPayload = {
+                agentId,
+                userId,
+                toolName: mcpTool.name,
+                err: error,
+                errorMessage:
+                  error instanceof Error ? error.message : String(error),
+              };
+              if (isAbortLikeError(error)) {
+                logger.info(logPayload, "MCP tool execution aborted");
+              } else {
+                logger.error(logPayload, "MCP tool execution failed");
+              }
               throw error;
             }
           },
@@ -803,6 +812,7 @@ export async function getChatMcpTools({
           sessionId,
           // Pass delegation chain for tracking delegated agent calls
           delegationChain,
+          abortSignal,
           tokenAuth: mcpGwToken
             ? {
                 tokenId: mcpGwToken.tokenId,
@@ -837,6 +847,7 @@ export async function getChatMcpTools({
               const agentToolStartTime = Date.now();
 
               try {
+                throwIfAborted(abortSignal);
                 const response = await executeArchestraTool(
                   agentTool.name,
                   args,
@@ -879,17 +890,19 @@ export async function getChatMcpTools({
                   startTime: agentToolStartTime,
                   isError: true,
                 });
-                logger.error(
-                  {
-                    agentId,
-                    userId,
-                    toolName: agentTool.name,
-                    err: error,
-                    errorMessage:
-                      error instanceof Error ? error.message : String(error),
-                  },
-                  "Agent tool execution failed",
-                );
+                const logPayload = {
+                  agentId,
+                  userId,
+                  toolName: agentTool.name,
+                  err: error,
+                  errorMessage:
+                    error instanceof Error ? error.message : String(error),
+                };
+                if (isAbortLikeError(error)) {
+                  logger.info(logPayload, "Agent tool execution aborted");
+                } else {
+                  logger.error(logPayload, "Agent tool execution failed");
+                }
                 throw error;
               }
             },
@@ -914,7 +927,9 @@ export async function getChatMcpTools({
     }
 
     // Cache tools in-memory (LRU eviction and TTL handled by LRUCacheManager)
-    toolCache.set(toolCacheKey, aiTools);
+    if (shouldUseToolCache) {
+      toolCache.set(toolCacheKey, aiTools);
+    }
 
     // Apply filtering if enabledToolIds provided and non-empty
     return await filterToolsByEnabledIds(aiTools, enabledToolIds);
@@ -944,6 +959,7 @@ interface ToolExecutionContext {
     teamId: string | null;
     isOrganizationToken: boolean;
   } | null;
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -968,7 +984,9 @@ async function executeMcpTool(ctx: ToolExecutionContext): Promise<string> {
     userIsProfileAdmin,
     conversationId,
     mcpGwToken,
+    abortSignal,
   } = ctx;
+  throwIfAborted(abortSignal);
   const startTime = Date.now();
 
   // For browser tools, ensure the correct conversation tab is selected first
@@ -1033,6 +1051,7 @@ async function executeMcpTool(ctx: ToolExecutionContext): Promise<string> {
     reportToolMetrics({ toolName, agentName, startTime, isError: true });
     throw error;
   }
+  throwIfAborted(abortSignal);
 
   // Check if MCP tool returned an error
   if (result.isError) {
@@ -1158,6 +1177,28 @@ async function filterToolsByEnabledIds(
   );
 
   return filteredTools;
+}
+
+function throwIfAborted(abortSignal?: AbortSignal): void {
+  if (!abortSignal?.aborted) {
+    return;
+  }
+
+  const abortError = new Error("Chat execution aborted");
+  abortError.name = "AbortError";
+  throw abortError;
+}
+
+function isAbortLikeError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  if (error.name === "AbortError") {
+    return true;
+  }
+
+  return error.message.toLowerCase().includes("abort");
 }
 
 function reportToolMetrics(params: {

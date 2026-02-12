@@ -50,6 +50,7 @@ import {
   useConversation,
   useCreateConversation,
   useHasPlaywrightMcpTools,
+  useStopChatStream,
   useUpdateConversation,
   useUpdateConversationEnabledTools,
 } from "@/lib/chat.query";
@@ -446,6 +447,9 @@ export default function ChatPage() {
   // Update enabled tools mutation (for applying pending actions)
   const updateEnabledToolsMutation = useUpdateConversationEnabledTools();
 
+  // Stop chat stream mutation (signals backend to abort subagents)
+  const stopChatStreamMutation = useStopChatStream();
+
   // Persist artifact panel state
   const toggleArtifactPanel = useCallback(() => {
     const newValue = !isArtifactOpen;
@@ -695,18 +699,22 @@ export default function ChatPage() {
   const handleSubmit: PromptInputProps["onSubmit"] = (message, e) => {
     e.preventDefault();
     if (status === "submitted" || status === "streaming") {
-      stop?.();
+      if (conversationId) {
+        // Set the cache flag first, THEN close the connection so the
+        // connection-close handler on the backend finds the flag.
+        stopChatStreamMutation.mutateAsync(conversationId).finally(() => {
+          stop?.();
+        });
+      } else {
+        stop?.();
+      }
+      return;
     }
 
     const hasText = message.text?.trim();
     const hasFiles = message.files && message.files.length > 0;
 
-    if (
-      !sendMessage ||
-      (!hasText && !hasFiles) ||
-      status === "submitted" ||
-      status === "streaming"
-    ) {
+    if (!sendMessage || (!hasText && !hasFiles)) {
       return;
     }
 
