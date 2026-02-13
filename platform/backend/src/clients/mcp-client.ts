@@ -9,7 +9,6 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import {
   MCP_CATALOG_INSTALL_PATH,
   MCP_CATALOG_INSTALL_QUERY_PARAM,
-  OAUTH_TOKEN_ID_PREFIX,
 } from "@shared";
 import config from "@/config";
 import logger from "@/logging";
@@ -29,9 +28,11 @@ import type {
   CommonMcpToolDefinition,
   CommonToolCall,
   CommonToolResult,
+  ExternalIdentity,
   InternalMcpCatalog,
   MCPGatewayAuthMethod,
 } from "@/types";
+import { deriveAuthMethod } from "@/utils/auth-method";
 import { previewToolResultContent } from "@/utils/tool-result-preview";
 import { K8sAttachTransport } from "./k8s-attach-transport";
 
@@ -76,6 +77,12 @@ export type TokenAuthContext = {
   isUserToken?: boolean;
   /** Optional user ID for user-owned server priority (set when called from chat or from user token) */
   userId?: string;
+  /** True if authenticated via external IdP JWKS */
+  isExternalIdp?: boolean;
+  /** External identity info for audit logging (set when isExternalIdp is true) */
+  externalIdentity?: ExternalIdentity;
+  /** Raw JWT token for propagation to underlying MCP servers (set when isExternalIdp is true) */
+  rawToken?: string;
 };
 
 /**
@@ -207,7 +214,8 @@ class McpClient {
     const authInfo = tokenAuth
       ? {
           userId: tokenAuth.userId,
-          authMethod: deriveAuthMethodFromTokenAuth(tokenAuth),
+          authMethod: deriveAuthMethod(tokenAuth),
+          externalIdentity: tokenAuth.externalIdentity ?? null,
         }
       : undefined;
 
@@ -243,9 +251,15 @@ class McpClient {
     // Build connection cache key using the resolved target server ID.
     // When conversationId is provided, each (agent, conversation) gets its own connection
     // to enable per-session browser context isolation with streamable-http transport.
-    const connectionKey = options?.conversationId
+    // When authenticated via external IdP, each user (sub) gets their own connection
+    // since the JWT is propagated to the underlying MCP server per-user.
+    const externalSub = tokenAuth?.externalIdentity?.sub;
+    let connectionKey = options?.conversationId
       ? `${catalogItem.id}:${targetMcpServerId}:${agentId}:${options.conversationId}`
       : `${catalogItem.id}:${targetMcpServerId}`;
+    if (externalSub) {
+      connectionKey = `${connectionKey}:ext:${externalSub}`;
+    }
 
     const executeToolCall = async (
       getTransport: () => Promise<Transport>,
@@ -445,6 +459,7 @@ class McpClient {
             targetMcpServerId,
             secrets,
             connectionKey,
+            tokenAuth,
           ),
         secrets,
       );
@@ -468,6 +483,7 @@ class McpClient {
               secrets,
               transportKind,
               connectionKey,
+              tokenAuth,
             ),
           secrets,
         ),
@@ -886,6 +902,19 @@ class McpClient {
       return { targetMcpServerId: allServers[0].id };
     }
 
+    // Priority 5: External IdP users have no team membership; use first available server
+    if (tokenAuth.isExternalIdp && allServers.length > 0) {
+      logger.info(
+        {
+          toolName: toolCall.name,
+          catalogId: tool.catalogId,
+          serverId: allServers[0].id,
+        },
+        `Dynamic resolution: using first available server for external IdP user`,
+      );
+      return { targetMcpServerId: allServers[0].id };
+    }
+
     // No server found - return an actionable error with install link
     const context = tokenAuth.userId
       ? `user: ${tokenAuth.userId}`
@@ -934,6 +963,7 @@ class McpClient {
     secrets: Record<string, unknown>,
     transportKind: TransportKind,
     connectionKey?: string,
+    tokenAuth?: TokenAuthContext,
   ): Promise<Transport> {
     if (transportKind === "http") {
       if (catalogItem.serverType === "local") {
@@ -986,9 +1016,14 @@ class McpClient {
           });
         }
 
+        const localHeaders: Record<string, string> = {};
+        if (tokenAuth?.isExternalIdp && tokenAuth.rawToken) {
+          localHeaders.Authorization = `Bearer ${tokenAuth.rawToken}`;
+        }
+
         return new StreamableHTTPClientTransport(new URL(endpointUrl), {
           sessionId,
-          requestInit: { headers: new Headers({}) },
+          requestInit: { headers: new Headers(localHeaders) },
         });
       }
 
@@ -998,7 +1033,10 @@ class McpClient {
         }
 
         const headers: Record<string, string> = {};
-        if (secrets.access_token) {
+        if (tokenAuth?.isExternalIdp && tokenAuth.rawToken) {
+          // Propagate external IdP JWT to the underlying MCP server
+          headers.Authorization = `Bearer ${tokenAuth.rawToken}`;
+        } else if (secrets.access_token) {
           headers.Authorization = `Bearer ${secrets.access_token}`;
         } else if (secrets.raw_access_token) {
           headers.Authorization = String(secrets.raw_access_token);
@@ -1048,6 +1086,7 @@ class McpClient {
     targetMcpServerId: string,
     secrets: Record<string, unknown>,
     connectionKey?: string,
+    tokenAuth?: TokenAuthContext,
   ): Promise<Transport> {
     const transportKind = await this.getTransportKind(
       catalogItem,
@@ -1059,6 +1098,7 @@ class McpClient {
       secrets,
       transportKind,
       connectionKey,
+      tokenAuth,
     );
   }
 
@@ -1138,7 +1178,11 @@ class McpClient {
     agentId: string,
     error: string,
     mcpServerName: string = "unknown",
-    authInfo?: { userId?: string; authMethod?: MCPGatewayAuthMethod },
+    authInfo?: {
+      userId?: string;
+      authMethod?: MCPGatewayAuthMethod;
+      externalIdentity?: ExternalIdentity | null;
+    },
   ): Promise<CommonToolResult> {
     const errorResult: CommonToolResult = {
       id: toolCall.id,
@@ -1168,7 +1212,11 @@ class McpClient {
     content: unknown,
     isError: boolean,
     template: string | null,
-    authInfo?: { userId?: string; authMethod?: MCPGatewayAuthMethod },
+    authInfo?: {
+      userId?: string;
+      authMethod?: MCPGatewayAuthMethod;
+      externalIdentity?: ExternalIdentity | null;
+    },
   ): Promise<CommonToolResult> {
     const modifiedContent = this.applyTemplate(
       content,
@@ -1313,7 +1361,11 @@ class McpClient {
     mcpServerName: string,
     toolCall: CommonToolCall,
     toolResult: CommonToolResult,
-    authInfo?: { userId?: string; authMethod?: MCPGatewayAuthMethod },
+    authInfo?: {
+      userId?: string;
+      authMethod?: MCPGatewayAuthMethod;
+      externalIdentity?: ExternalIdentity | null;
+    },
   ): Promise<void> {
     // Skip high-frequency browser tool logging to prevent DB bloat
     // (screenshots every ~2s, tab list checks, viewport resizes)
@@ -1330,6 +1382,7 @@ class McpClient {
         toolResult,
         userId: authInfo?.userId ?? null,
         authMethod: authInfo?.authMethod ?? null,
+        externalIdentity: authInfo?.externalIdentity ?? null,
       });
 
       const logData: {
@@ -1493,19 +1546,6 @@ class McpClient {
     this.activeConnections.clear();
     this.pendingHttpSessionMetadata.clear();
   }
-}
-
-/**
- * Derive a human-readable auth method string from token auth context.
- * Kept here to avoid circular imports with mcp-gateway.utils.ts.
- */
-function deriveAuthMethodFromTokenAuth(
-  tokenAuth: TokenAuthContext,
-): MCPGatewayAuthMethod {
-  if (tokenAuth.tokenId.startsWith(OAUTH_TOKEN_ID_PREFIX)) return "oauth";
-  if (tokenAuth.isUserToken) return "user_token";
-  if (tokenAuth.isOrganizationToken) return "org_token";
-  return "team_token";
 }
 
 /**

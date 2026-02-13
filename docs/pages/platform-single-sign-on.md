@@ -1,30 +1,37 @@
 ---
-title: "Single Sign-On (SSO)"
+title: "Identity Providers"
 category: Archestra Platform
-description: "Configure SSO providers for seamless authentication using OIDC and SAML"
+description: "Configure Identity Providers for SSO authentication and MCP Gateway JWKS validation"
 order: 5
-lastUpdated: 2025-11-28
+lastUpdated: 2025-02-12
 ---
 
 <!--
 Check ../docs_writer_prompt.md before changing this file.
 
-This document covers SSO configuration for Archestra Platform. Include:
-- Overview of SSO support (OIDC and SAML)
+This document covers Identity Provider configuration for Archestra Platform. Include:
+- Overview of Identity Provider support (OIDC and SAML)
+- SSO configuration
+- MCP Gateway JWKS authentication
 - Provider-specific configuration (Okta, Google, GitHub, GitLab, Microsoft Entra ID, Generic OAuth, Generic SAML)
 - Callback URL format
 - Limitations and requirements
 -->
 
-![SSO Providers Overview](/docs/automated_screenshots/platform-single-sign-on_sso-providers-overview.png)
+![Identity Providers Overview](/docs/automated_screenshots/platform-single-sign-on_sso-providers-overview.png)
 
-Archestra supports Single Sign-On (SSO) authentication using OpenID Connect (OIDC) and SAML 2.0 providers. Once configured, users can authenticate with their existing identity provider credentials instead of managing separate passwords.
+Archestra supports Identity Provider (IdP) configuration for two purposes:
+
+1. **Single Sign-On (SSO)** — Users authenticate with their existing IdP credentials using OpenID Connect (OIDC) or SAML 2.0
+2. **MCP Gateway JWKS Authentication** — External MCP clients authenticate using JWTs issued by configured IdPs, validated via JWKS
 
 > **Enterprise feature:** Please reach out to sales@archestra.ai for instructions about how to enable the feature.
 
-## How SSO Works
+## Single Sign-On (SSO)
 
-1. Admin configures an SSO provider in **Settings > SSO Providers**
+### How SSO Works
+
+1. Admin configures an Identity Provider in **Settings > Identity Providers**
 2. SSO buttons appear on the sign-in page for enabled providers
 3. Users click the SSO button and authenticate with their identity provider
 4. After successful authentication, users are automatically provisioned and logged in
@@ -264,7 +271,6 @@ Archestra supports automatic role assignment based on user attributes from your 
 When creating or editing an SSO provider, expand the **Role Mapping (Optional)** section:
 
 1. **Mapping Rules**: Add one or more rules. Each rule has:
-
    - **Handlebars Template**: A template that renders to a non-empty string when the rule should match
    - **Archestra Role**: The role to assign when the template matches
 
@@ -278,24 +284,24 @@ When creating or editing an SSO provider, expand the **Role Mapping (Optional)**
 
 Handlebars templates should render to any non-empty string (like "true") when the rule matches. The following custom helpers are available:
 
-| Helper | Description |
-|--------|-------------|
-| `includes` | Check if an array includes a value (case-insensitive) |
-| `equals` | Check if two values are equal (case-insensitive for strings) |
-| `contains` | Check if a string contains a substring (case-insensitive) |
-| `and` | Logical AND - true if all values are truthy |
-| `or` | Logical OR - true if any value is truthy |
-| `exists` | True if the value is not null/undefined |
-| `notEquals` | Check if two values are not equal |
+| Helper      | Description                                                  |
+| ----------- | ------------------------------------------------------------ |
+| `includes`  | Check if an array includes a value (case-insensitive)        |
+| `equals`    | Check if two values are equal (case-insensitive for strings) |
+| `contains`  | Check if a string contains a substring (case-insensitive)    |
+| `and`       | Logical AND - true if all values are truthy                  |
+| `or`        | Logical OR - true if any value is truthy                     |
+| `exists`    | True if the value is not null/undefined                      |
+| `notEquals` | Check if two values are not equal                            |
 
 **Example Templates:**
 
-| Template | Description |
-|----------|-------------|
-| `{{#includes groups "admins"}}true{{/includes}}` | Match if "admins" is in the groups array |
-| `{{#equals role "administrator"}}true{{/equals}}` | Match if role claim equals "administrator" |
-| `{{#each roles}}{{#equals this "platform-admin"}}true{{/equals}}{{/each}}` | Match if "platform-admin" is in roles array |
-| `{{#and department title}}{{#equals department "IT"}}true{{/equals}}{{/and}}` | Match IT department users with a title set |
+| Template                                                                                             | Description                                      |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `{{#includes groups "admins"}}true{{/includes}}`                                                     | Match if "admins" is in the groups array         |
+| `{{#equals role "administrator"}}true{{/equals}}`                                                    | Match if role claim equals "administrator"       |
+| `{{#each roles}}{{#equals this "platform-admin"}}true{{/equals}}{{/each}}`                           | Match if "platform-admin" is in roles array      |
+| `{{#and department title}}{{#equals department "IT"}}true{{/equals}}{{/and}}`                        | Match IT department users with a title set       |
 | `{{#with (json roles)}}{{#each this}}{{#equals this.name "admin"}}true{{/equals}}{{/each}}{{/with}}` | Match role name in JSON string claim (see below) |
 
 > **Tip**: Templates should output any non-empty string when matching. The text "true" is commonly used but any output works.
@@ -313,10 +319,13 @@ Some identity providers (like Okta) may send complex claims as JSON strings rath
 To parse and match against JSON string claims, use the `json` helper with `#with`:
 
 ```handlebars
-{{#with (json roles)}}{{#each this}}{{#equals this.name "archestra-admin"}}true{{/equals}}{{/each}}{{/with}}
+{{#with (json roles)}}{{#each this}}{{#equals
+      this.name "archestra-admin"
+    }}true{{/equals}}{{/each}}{{/with}}
 ```
 
 This template:
+
 1. Parses the JSON string into an array using `(json roles)`
 2. Sets the parsed array as context using `#with`
 3. Iterates through each role object using `#each`
@@ -435,6 +444,7 @@ When creating or editing an SSO provider, expand the **Team Sync Configuration (
 #### Default Group Extraction
 
 If no custom Handlebars template is configured, Archestra automatically checks these common claim names in order:
+
 - `groups`, `group`, `memberOf`, `member_of`, `roles`, `role`, `teams`, `team`
 
 The first claim that contains non-empty group data is used.
@@ -445,29 +455,30 @@ For identity providers with non-standard ID token formats, you can use Handlebar
 
 **Available Helpers:**
 
-| Helper | Description |
-|--------|-------------|
-| `json` | Convert value to JSON string, or parse JSON string to object |
-| `pluck` | Extract a property from each item in an array |
+| Helper  | Description                                                  |
+| ------- | ------------------------------------------------------------ |
+| `json`  | Convert value to JSON string, or parse JSON string to object |
+| `pluck` | Extract a property from each item in an array                |
 
 **Common Examples:**
 
-| Template | Description |
-|----------|-------------|
-| `{{#each groups}}{{this}},{{/each}}` | Simple flat array: `["admin", "users"]` |
-| `{{#each roles}}{{this.name}},{{/each}}` | Extract names from objects: `[{name: "admin"}]` |
-| `{{{json (pluck roles "name")}}}` | Extract names as JSON array using pluck helper |
-| `{{#each user.memberships.groups}}{{this}},{{/each}}` | Nested path to groups |
-| `{{#with (json roles)}}{{#each this}}{{this.name}},{{/each}}{{/with}}` | Parse JSON string claim, then extract names |
+| Template                                                               | Description                                     |
+| ---------------------------------------------------------------------- | ----------------------------------------------- |
+| `{{#each groups}}{{this}},{{/each}}`                                   | Simple flat array: `["admin", "users"]`         |
+| `{{#each roles}}{{this.name}},{{/each}}`                               | Extract names from objects: `[{name: "admin"}]` |
+| `{{{json (pluck roles "name")}}}`                                      | Extract names as JSON array using pluck helper  |
+| `{{#each user.memberships.groups}}{{this}},{{/each}}`                  | Nested path to groups                           |
+| `{{#with (json roles)}}{{#each this}}{{this.name}},{{/each}}{{/with}}` | Parse JSON string claim, then extract names     |
 
 **Enterprise IdP Example (Array of Objects):**
 
 If your IdP sends roles as an array of objects:
+
 ```json
 {
   "roles": [
-    {"name": "Application Administrator", "attributes": []},
-    {"name": "n8n_access", "attributes": []}
+    { "name": "Application Administrator", "attributes": [] },
+    { "name": "n8n_access", "attributes": [] }
   ]
 }
 ```
@@ -479,6 +490,7 @@ Or use the pluck helper: `{{{json (pluck roles "name")}}}` for a cleaner JSON ar
 **Enterprise IdP Example (JSON String Claim):**
 
 Some IdPs (like Okta) may send complex claims as JSON **strings** rather than native arrays:
+
 ```json
 {
   "roles": "[{\"name\":\"Application Administrator\"},{\"name\":\"n8n_access\"}]"
@@ -628,15 +640,43 @@ If a user already has an account (created via email/password), SSO authenticatio
 - The email addresses match
 - The SSO provider is in the trusted providers list (Okta, Google, GitHub, GitLab, Entra ID, and all SAML providers are trusted by default)
 
-## Removing an SSO Provider
+## MCP Gateway JWKS Authentication
 
-To remove a configured SSO provider:
+Identity Providers can also be used to authenticate external MCP clients connecting to an MCP Gateway. When an IdP is linked to a gateway, the gateway validates incoming JWT bearer tokens against the IdP's JWKS (JSON Web Key Set) endpoint.
 
-1. Click **Configure** on the provider card
-2. Click the **Delete** button
-3. Confirm the deletion
+### How It Works
 
-Existing users who authenticated via that provider will need to use another authentication method (email/password or another SSO provider).
+1. Admin configures an OIDC Identity Provider in **Settings > Identity Providers**
+2. Admin creates or edits an MCP Gateway and selects the Identity Provider in the **Identity Provider (JWKS Auth)** dropdown
+3. External MCP client obtains a JWT from the IdP (e.g., via client credentials flow or user login)
+4. Client sends requests to the gateway with `Authorization: Bearer <jwt>`
+5. Gateway discovers the JWKS URL from the IdP's OIDC discovery endpoint
+6. Gateway validates the JWT signature, issuer, audience (IdP's client ID), and expiration
+7. Identity information (sub, email, name) is extracted from the JWT claims for audit logging
+
+### Requirements
+
+- The Identity Provider must be an **OIDC provider** (SAML providers do not support JWKS)
+- The IdP must expose a standard OIDC discovery endpoint (`.well-known/openid-configuration`) with a `jwks_uri`
+- The JWT `iss` claim must match the IdP's issuer URL
+- The JWT `aud` claim must match the IdP's client ID (if configured)
+
+### Authentication Priority
+
+When an MCP Gateway has an Identity Provider configured, incoming tokens are validated in this order:
+
+1. **External IdP JWKS** — JWT validated against the IdP's public keys (for non-`archestra_` tokens)
+2. **Archestra team/organization tokens** — Standard `archestra_` prefixed tokens
+3. **Archestra user tokens** — Personal user tokens
+4. **OAuth 2.1 tokens** — Tokens from the OAuth authorization flow
+
+The first successful validation is used. This means existing Archestra tokens continue to work alongside external IdP JWTs.
+
+### Audit Trail
+
+MCP tool calls authenticated via external IdP are logged with the caller's identity (subject, email, name) extracted from the JWT claims. These appear in the MCP Gateway logs with the auth method "External IdP".
+
+See the [MCP Gateway](/docs/platform-mcp-gateway) documentation for more details on gateway authentication.
 
 ## Troubleshooting
 
