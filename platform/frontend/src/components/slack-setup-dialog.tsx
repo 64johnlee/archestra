@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useChatOpsStatus } from "@/lib/chatops.query";
 import { useUpdateSlackChatOpsConfig } from "@/lib/chatops-config.query";
-import config from "@/lib/config";
+import { usePublicBaseUrl } from "@/lib/features.hook";
 import { useFeatures } from "@/lib/features.query";
 
 interface SlackSetupDialogProps {
@@ -23,6 +23,7 @@ export function SlackSetupDialog({
   onOpenChange,
 }: SlackSetupDialogProps) {
   const { data: features } = useFeatures();
+  const publicBaseUrl = usePublicBaseUrl();
   const ngrokDomain = features?.ngrokDomain ?? "";
 
   const mutation = useUpdateSlackChatOpsConfig();
@@ -36,9 +37,6 @@ export function SlackSetupDialog({
   const [sharedBotToken, setSharedBotToken] = useState("");
   const [sharedSigningSecret, setSharedSigningSecret] = useState("");
   const [sharedAppId, setSharedAppId] = useState("");
-
-  const isLocalEnvOrQuickstart =
-    features?.isQuickstart || config.environment === "development";
 
   const hasBotToken = Boolean(sharedBotToken || creds?.botToken);
   const hasSigningSecret = Boolean(sharedSigningSecret || creds?.signingSecret);
@@ -54,15 +52,9 @@ export function SlackSetupDialog({
     }
   };
 
-  const webhookUrl = ngrokDomain
-    ? `https://${ngrokDomain}/api/webhooks/chatops/slack`
-    : "<archestra-url>/api/webhooks/chatops/slack";
-  const interactiveUrl = ngrokDomain
-    ? `https://${ngrokDomain}/api/webhooks/chatops/slack/interactive`
-    : "<archestra-url>/api/webhooks/chatops/slack/interactive";
-  const slashCommandUrl = ngrokDomain
-    ? `https://${ngrokDomain}/api/webhooks/chatops/slack/slash-command`
-    : "<archestra-url>/api/webhooks/chatops/slack/slash-command";
+  const webhookUrl = `${publicBaseUrl}/api/webhooks/chatops/slack`;
+  const interactiveUrl = `${publicBaseUrl}/api/webhooks/chatops/slack/interactive`;
+  const slashCommandUrl = `${publicBaseUrl}/api/webhooks/chatops/slack/slash-command`;
 
   const steps = React.useMemo(() => {
     const slides: React.ReactNode[] = [
@@ -86,62 +78,20 @@ export function SlackSetupDialog({
         botToken={sharedBotToken}
         onBotTokenChange={setSharedBotToken}
       />,
-      // Step 3: Customize App Appearance
-      <StepSlide
-        key="appearance"
-        title="Customize App Appearance"
+      // Step 3: Customize App Appearance and connect Archestra
+      <StepAppearanceAndConnect
+        key="appearance-and-connect"
         stepNumber={3}
-        instructions={[
-          <>
-            Go to <strong>Basic Information</strong> &rarr;{" "}
-            <strong>Display Information</strong>
-          </>,
-          <>
-            Upload an app icon (
-            <a
-              href="/logo-slack.png"
-              download="archestra-logo.png"
-              className="text-primary underline hover:no-underline"
-            >
-              download Archestra logo
-            </a>
-            )
-          </>,
-          <>Optionally set a background color and short description</>,
-        ]}
+        appId={sharedAppId}
+        botToken={sharedBotToken}
+        signingSecret={sharedSigningSecret}
+        creds={creds}
       />,
     ];
-
-    // Step 4: Connect to Archestra (last step)
-    if (isLocalEnvOrQuickstart) {
-      slides.push(
-        <StepConfigForm
-          key="connect"
-          stepNumber={4}
-          botToken={sharedBotToken}
-          signingSecret={sharedSigningSecret}
-          appId={sharedAppId}
-          onBotTokenChange={setSharedBotToken}
-          onSigningSecretChange={setSharedSigningSecret}
-          onAppIdChange={setSharedAppId}
-          creds={creds}
-        />,
-      );
-    } else {
-      slides.push(
-        <StepEnvVarsInfo
-          key="connect"
-          botToken={sharedBotToken}
-          signingSecret={sharedSigningSecret}
-          appId={sharedAppId}
-        />,
-      );
-    }
 
     return slides;
   }, [
     ngrokDomain,
-    isLocalEnvOrQuickstart,
     sharedBotToken,
     sharedSigningSecret,
     sharedAppId,
@@ -151,35 +101,33 @@ export function SlackSetupDialog({
     slashCommandUrl,
   ]);
 
-  const lastStepAction = isLocalEnvOrQuickstart
-    ? {
-        label: saving ? "Connecting..." : "Connect",
-        disabled: saving || !canSave,
-        loading: saving,
-        onClick: async () => {
-          setSaving(true);
-          try {
-            const body: Record<string, unknown> = { enabled: true };
-            if (sharedBotToken) body.botToken = sharedBotToken;
-            if (sharedSigningSecret) body.signingSecret = sharedSigningSecret;
-            if (sharedAppId) body.appId = sharedAppId;
-            const updateResult = await mutation.mutateAsync(
-              body as {
-                enabled?: boolean;
-                botToken?: string;
-                signingSecret?: string;
-                appId?: string;
-              },
-            );
-            if (updateResult?.success) {
-              handleOpenChange(false);
-            }
-          } finally {
-            setSaving(false);
-          }
-        },
+  const lastStepAction = {
+    label: saving ? "Connecting..." : "Connect",
+    disabled: saving || !canSave,
+    loading: saving,
+    onClick: async () => {
+      setSaving(true);
+      try {
+        const body: Record<string, unknown> = { enabled: true };
+        if (sharedBotToken) body.botToken = sharedBotToken;
+        if (sharedSigningSecret) body.signingSecret = sharedSigningSecret;
+        if (sharedAppId) body.appId = sharedAppId;
+        const updateResult = await mutation.mutateAsync(
+          body as {
+            enabled?: boolean;
+            botToken?: string;
+            signingSecret?: string;
+            appId?: string;
+          },
+        );
+        if (updateResult?.success) {
+          handleOpenChange(false);
+        }
+      } finally {
+        setSaving(false);
       }
-    : undefined;
+    },
+  };
 
   return (
     <SetupDialog
@@ -207,34 +155,113 @@ export function SlackSetupDialog({
   );
 }
 
-function StepSlide({
-  title,
+function StepAppearanceAndConnect({
   stepNumber,
-  instructions,
+  appId,
+  botToken,
+  signingSecret,
+  creds,
 }: {
-  title: string;
   stepNumber: number;
-  instructions?: React.ReactNode[];
+  appId: string;
+  botToken: string;
+  signingSecret: string;
+  creds?: Record<string, string>;
 }) {
+  const displayAppId = appId || creds?.appId || "";
+  const hasBotToken = Boolean(botToken || creds?.botToken);
+  const hasSigningSecret = Boolean(signingSecret || creds?.signingSecret);
+
   return (
     <div
       className="grid flex-1 gap-6"
       style={{ gridTemplateColumns: "1fr 1fr" }}
     >
-      <StepCard stepNumber={stepNumber} title={title}>
-        {instructions && (
-          <ol className="space-y-3">
-            {instructions.map((instruction, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: items are static
-              <li key={i} className="flex gap-3 text-sm leading-relaxed">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                  {i + 1}
-                </span>
-                <span className="pt-0.5">{instruction}</span>
-              </li>
-            ))}
-          </ol>
-        )}
+      <StepCard
+        stepNumber={stepNumber}
+        title="Customize App Appearance and connect Archestra"
+      >
+        <ol className="space-y-3">
+          <li className="flex gap-3 text-sm leading-relaxed">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
+              1
+            </span>
+            <span className="pt-0.5">
+              Go to <strong>Basic Information</strong> &rarr;{" "}
+              <strong>Display Information</strong>
+            </span>
+          </li>
+          <li className="flex gap-3 text-sm leading-relaxed">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
+              2
+            </span>
+            <span className="pt-0.5">
+              Upload an app icon (
+              <a
+                href="/logo-slack.png"
+                download="archestra-logo.png"
+                className="text-primary underline hover:no-underline"
+              >
+                download Archestra logo
+              </a>
+              )
+            </span>
+          </li>
+          <li className="flex gap-3 text-sm leading-relaxed">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
+              3
+            </span>
+            <span className="pt-0.5">
+              Optionally set a background color and short description
+            </span>
+          </li>
+          <li className="flex gap-3 text-sm leading-relaxed">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
+              4
+            </span>
+            <span className="pt-0.5 flex-1">
+              Click <strong>Connect</strong> in the bottom right corner
+              <div className="mt-2 space-y-1 rounded-md border bg-muted/50 px-3 py-2 text-xs font-mono">
+                <div className="flex gap-1.5">
+                  <span className="text-muted-foreground shrink-0">
+                    App ID:
+                  </span>
+                  {displayAppId ? (
+                    <span className="break-all">{displayAppId}</span>
+                  ) : (
+                    <span className="italic text-muted-foreground">
+                      Not set
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-1.5">
+                  <span className="text-muted-foreground shrink-0">
+                    Bot Token:
+                  </span>
+                  {hasBotToken ? (
+                    <span>{"••••••••"}</span>
+                  ) : (
+                    <span className="italic text-muted-foreground">
+                      Not set
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-1.5">
+                  <span className="text-muted-foreground shrink-0">
+                    Signing Secret:
+                  </span>
+                  {hasSigningSecret ? (
+                    <span>{"••••••••"}</span>
+                  ) : (
+                    <span className="italic text-muted-foreground">
+                      Not set
+                    </span>
+                  )}
+                </div>
+              </div>
+            </span>
+          </li>
+        </ol>
       </StepCard>
       <video
         src="/slack/slack-display-settings.mp4"
@@ -526,230 +553,6 @@ function StepManifest({
         <pre className="min-h-0 flex-1 overflow-auto rounded bg-muted p-3 text-xs font-mono leading-relaxed">
           {manifest}
         </pre>
-      </div>
-    </div>
-  );
-}
-
-function StepConfigForm({
-  stepNumber,
-  botToken,
-  signingSecret,
-  appId,
-  onBotTokenChange,
-  onSigningSecretChange,
-  onAppIdChange,
-  creds,
-}: {
-  stepNumber: number;
-  botToken: string;
-  signingSecret: string;
-  appId: string;
-  onBotTokenChange: (v: string) => void;
-  onSigningSecretChange: (v: string) => void;
-  onAppIdChange: (v: string) => void;
-  creds?: Record<string, string>;
-}) {
-  return (
-    <div
-      className="grid flex-1 gap-6"
-      style={{ gridTemplateColumns: "1fr 1fr" }}
-    >
-      <StepCard stepNumber={stepNumber} title="Connect to Archestra">
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Enter the credentials from your Slack App.
-        </p>
-        <ol className="space-y-3">
-          <li className="flex gap-3 text-sm leading-relaxed">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-              1
-            </span>
-            <span className="pt-0.5 flex-1">
-              <strong>Bot Token</strong> — from OAuth &amp; Permissions (starts
-              with xoxb-)
-              <Input
-                id="setup-bot-token"
-                type="password"
-                value={botToken}
-                onChange={(e) => onBotTokenChange(e.target.value)}
-                placeholder={
-                  creds?.botToken
-                    ? `Current: ${creds.botToken}`
-                    : "xoxb-your-bot-token"
-                }
-                className="mt-1.5"
-              />
-            </span>
-          </li>
-          <li className="flex gap-3 text-sm leading-relaxed">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-              2
-            </span>
-            <span className="pt-0.5 flex-1">
-              <strong>Signing Secret</strong> — from Basic Information &rarr;
-              App Credentials
-              <Input
-                id="setup-signing-secret"
-                type="password"
-                value={signingSecret}
-                onChange={(e) => onSigningSecretChange(e.target.value)}
-                placeholder={
-                  creds?.signingSecret
-                    ? `Current: ${creds.signingSecret}`
-                    : "Your Signing Secret"
-                }
-                className="mt-1.5"
-              />
-            </span>
-          </li>
-          <li className="flex gap-3 text-sm leading-relaxed">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-              3
-            </span>
-            <span className="pt-0.5 flex-1">
-              <strong>App ID</strong> — from Basic Information
-              <Input
-                id="setup-app-id"
-                value={appId}
-                onChange={(e) => onAppIdChange(e.target.value)}
-                placeholder={
-                  creds?.appId ? `Current: ${creds.appId}` : "Slack App ID"
-                }
-                className="mt-1.5"
-              />
-            </span>
-          </li>
-        </ol>
-      </StepCard>
-
-      <EnvVarsInfo
-        botToken={botToken}
-        signingSecret={signingSecret}
-        appId={appId}
-      />
-    </div>
-  );
-}
-
-function EnvVarsInfo({
-  botToken,
-  signingSecret,
-  appId,
-}: {
-  botToken: string;
-  signingSecret: string;
-  appId: string;
-}) {
-  const envVarsText = [
-    "ARCHESTRA_CHATOPS_SLACK_ENABLED=true",
-    `ARCHESTRA_CHATOPS_SLACK_BOT_TOKEN=${botToken || "<your-bot-token>"}`,
-    `ARCHESTRA_CHATOPS_SLACK_SIGNING_SECRET=${signingSecret || "<your-signing-secret>"}`,
-    `ARCHESTRA_CHATOPS_SLACK_APP_ID=${appId || "<your-app-id>"}`,
-  ].join("\n");
-
-  const maskedDisplay = [
-    "ARCHESTRA_CHATOPS_SLACK_ENABLED=true",
-    `ARCHESTRA_CHATOPS_SLACK_BOT_TOKEN=${botToken ? "********" : "<your-bot-token>"}`,
-    `ARCHESTRA_CHATOPS_SLACK_SIGNING_SECRET=${signingSecret ? "********" : "<your-signing-secret>"}`,
-    `ARCHESTRA_CHATOPS_SLACK_APP_ID=${appId || "<your-app-id>"}`,
-  ].join("\n");
-
-  return (
-    <div className="flex items-start gap-2.5 rounded-md border border-blue-500/30 bg-blue-500/5 px-3 py-2.5 text-sm text-muted-foreground">
-      <Info className="h-4 w-4 shrink-0 text-blue-500 mt-0.5" />
-      <div className="min-w-0 flex-1">
-        <p>
-          Values set here are stored in memory and will be reset after server
-          restart. For persistent configuration, set these environment
-          variables:
-        </p>
-        <div className="relative mt-2">
-          <pre className="bg-muted rounded-md px-3 py-2 text-xs font-mono leading-relaxed overflow-x-auto">
-            {maskedDisplay}
-          </pre>
-          <div className="absolute top-1 right-1">
-            <CopyButton text={envVarsText} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StepEnvVarsInfo({
-  botToken,
-  signingSecret,
-  appId,
-}: {
-  botToken?: string;
-  signingSecret?: string;
-  appId?: string;
-}) {
-  const envVarsText = [
-    "ARCHESTRA_CHATOPS_SLACK_ENABLED=true",
-    `ARCHESTRA_CHATOPS_SLACK_BOT_TOKEN=${botToken || "<Bot User OAuth Token>"}`,
-    `ARCHESTRA_CHATOPS_SLACK_SIGNING_SECRET=${signingSecret || "<Signing Secret>"}`,
-    `ARCHESTRA_CHATOPS_SLACK_APP_ID=${appId || "<App ID>"}`,
-  ].join("\n");
-
-  const maskedEnvVarsDisplay = [
-    "ARCHESTRA_CHATOPS_SLACK_ENABLED=true",
-    `ARCHESTRA_CHATOPS_SLACK_BOT_TOKEN=${botToken ? "********" : "<Bot User OAuth Token>"}`,
-    `ARCHESTRA_CHATOPS_SLACK_SIGNING_SECRET=${signingSecret ? "********" : "<Signing Secret>"}`,
-    `ARCHESTRA_CHATOPS_SLACK_APP_ID=${appId || "<App ID>"}`,
-  ].join("\n");
-
-  return (
-    <div
-      className="grid flex-1 gap-6"
-      style={{ gridTemplateColumns: "1fr 1fr" }}
-    >
-      <StepCard stepNumber={4} title="Configure Archestra">
-        <ol className="space-y-3">
-          <li className="flex gap-3 text-sm leading-relaxed">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-              1
-            </span>
-            <span className="pt-0.5">
-              Set the environment variables shown on the right
-            </span>
-          </li>
-          <li className="flex gap-3 text-sm leading-relaxed">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-              2
-            </span>
-            <span className="pt-0.5">
-              <strong>Restart Archestra</strong> for changes to take effect
-            </span>
-          </li>
-          <li className="flex gap-3 text-sm leading-relaxed">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-              3
-            </span>
-            <span className="pt-0.5">
-              Edit an agent and enable the <strong>Slack</strong> toggle
-            </span>
-          </li>
-        </ol>
-      </StepCard>
-
-      <div className="flex flex-col justify-center gap-5 rounded-lg border bg-muted/30 p-6">
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Set the following environment variables and restart Archestra to
-          enable Slack integration.
-        </p>
-        <div className="relative rounded bg-muted px-4 py-3 font-mono text-sm leading-loose">
-          <div className="absolute top-2 right-2">
-            <CopyButton text={envVarsText} />
-          </div>
-          <pre className="text-xs leading-loose whitespace-pre-wrap">
-            {maskedEnvVarsDisplay}
-          </pre>
-        </div>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          After setting these variables, restart Archestra for the changes to
-          take effect. The Slack toggle will then appear on agents.
-        </p>
       </div>
     </div>
   );
