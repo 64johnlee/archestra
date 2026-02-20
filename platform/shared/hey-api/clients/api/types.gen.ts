@@ -14838,19 +14838,28 @@ export type PostApiWebhooksChatopsMsTeamsErrors = {
      * Default Response
      */
     400: {
-        error: string;
+        error: {
+            message: string;
+            type: string;
+        };
     };
     /**
      * Default Response
      */
     429: {
-        error: string;
+        error: {
+            message: string;
+            type: string;
+        };
     };
     /**
      * Default Response
      */
     500: {
-        error: string;
+        error: {
+            message: string;
+            type: string;
+        };
     };
 };
 
@@ -14868,6 +14877,136 @@ export type PostApiWebhooksChatopsMsTeamsResponses = {
 };
 
 export type PostApiWebhooksChatopsMsTeamsResponse = PostApiWebhooksChatopsMsTeamsResponses[keyof PostApiWebhooksChatopsMsTeamsResponses];
+
+export type PostApiWebhooksChatopsSlackData = {
+    body?: unknown;
+    path?: never;
+    query?: never;
+    url: '/api/webhooks/chatops/slack';
+};
+
+export type PostApiWebhooksChatopsSlackErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: string;
+        };
+    };
+    /**
+     * Default Response
+     */
+    429: {
+        error: {
+            message: string;
+            type: string;
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: string;
+        };
+    };
+};
+
+export type PostApiWebhooksChatopsSlackError = PostApiWebhooksChatopsSlackErrors[keyof PostApiWebhooksChatopsSlackErrors];
+
+export type PostApiWebhooksChatopsSlackResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        challenge: string;
+    } | {
+        ok: boolean;
+    };
+};
+
+export type PostApiWebhooksChatopsSlackResponse = PostApiWebhooksChatopsSlackResponses[keyof PostApiWebhooksChatopsSlackResponses];
+
+export type PostApiWebhooksChatopsSlackInteractiveData = {
+    body?: unknown;
+    path?: never;
+    query?: never;
+    url: '/api/webhooks/chatops/slack/interactive';
+};
+
+export type PostApiWebhooksChatopsSlackInteractiveErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: string;
+        };
+    };
+    /**
+     * Default Response
+     */
+    429: {
+        error: {
+            message: string;
+            type: string;
+        };
+    };
+};
+
+export type PostApiWebhooksChatopsSlackInteractiveError = PostApiWebhooksChatopsSlackInteractiveErrors[keyof PostApiWebhooksChatopsSlackInteractiveErrors];
+
+export type PostApiWebhooksChatopsSlackInteractiveResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        ok: boolean;
+    };
+};
+
+export type PostApiWebhooksChatopsSlackInteractiveResponse = PostApiWebhooksChatopsSlackInteractiveResponses[keyof PostApiWebhooksChatopsSlackInteractiveResponses];
+
+export type PostApiWebhooksChatopsSlackSlashCommandData = {
+    body?: unknown;
+    path?: never;
+    query?: never;
+    url: '/api/webhooks/chatops/slack/slash-command';
+};
+
+export type PostApiWebhooksChatopsSlackSlashCommandErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: string;
+        };
+    };
+    /**
+     * Default Response
+     */
+    429: {
+        error: {
+            message: string;
+            type: string;
+        };
+    };
+};
+
+export type PostApiWebhooksChatopsSlackSlashCommandError = PostApiWebhooksChatopsSlackSlashCommandErrors[keyof PostApiWebhooksChatopsSlackSlashCommandErrors];
+
+export type PostApiWebhooksChatopsSlackSlashCommandResponses = {
+    /**
+     * Default Response
+     */
+    200: unknown;
+};
 
 export type GetChatOpsStatusData = {
     body?: never;
@@ -14945,9 +15084,7 @@ export type GetChatOpsStatusResponses = {
             displayName: string;
             configured: boolean;
             credentials?: {
-                appId: string;
-                appSecret: string;
-                tenantId: string;
+                [key: string]: string;
             };
         }>;
     };
@@ -15028,7 +15165,7 @@ export type ListChatOpsBindingsResponses = {
     200: Array<{
         id: string;
         organizationId: string;
-        provider: 'ms-teams';
+        provider: 'ms-teams' | 'slack';
         channelId: string;
         workspaceId: string | null;
         channelName: string | null;
@@ -15197,7 +15334,7 @@ export type UpdateChatOpsBindingResponses = {
     200: {
         id: string;
         organizationId: string;
-        provider: 'ms-teams';
+        provider: 'ms-teams' | 'slack';
         channelId: string;
         workspaceId: string | null;
         channelName: string | null;
@@ -15292,9 +15429,91 @@ export type UpdateChatOpsConfigInQuickstartResponses = {
 
 export type UpdateChatOpsConfigInQuickstartResponse = UpdateChatOpsConfigInQuickstartResponses[keyof UpdateChatOpsConfigInQuickstartResponses];
 
+export type UpdateSlackChatOpsConfigData = {
+    body?: {
+        enabled?: boolean;
+        botToken?: string;
+        signingSecret?: string;
+        appId?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/chatops/config/slack';
+};
+
+export type UpdateSlackChatOpsConfigErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type UpdateSlackChatOpsConfigError = UpdateSlackChatOpsConfigErrors[keyof UpdateSlackChatOpsConfigErrors];
+
+export type UpdateSlackChatOpsConfigResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        success: boolean;
+    };
+};
+
+export type UpdateSlackChatOpsConfigResponse = UpdateSlackChatOpsConfigResponses[keyof UpdateSlackChatOpsConfigResponses];
+
 export type RefreshChatOpsChannelDiscoveryData = {
     body: {
-        provider: 'ms-teams';
+        provider: 'ms-teams' | 'slack';
     };
     path?: never;
     query?: never;
