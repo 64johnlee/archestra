@@ -30,8 +30,8 @@ export const RouteId = {
   DeleteAgentDelegation: "deleteAgentDelegation",
   GetAllDelegationConnections: "getAllDelegationConnections",
 
-  // Features Routes
-  GetFeatures: "getFeatures",
+  // Config Routes
+  GetConfig: "getConfig",
 
   // Auth Routes
   GetDefaultCredentialsStatus: "getDefaultCredentialsStatus",
@@ -226,6 +226,12 @@ export const RouteId = {
   GetChatApiKey: "getChatApiKey",
   UpdateChatApiKey: "updateChatApiKey",
   DeleteChatApiKey: "deleteChatApiKey",
+
+  // Virtual API Key Routes
+  GetVirtualApiKeys: "getVirtualApiKeys",
+  GetAllVirtualApiKeys: "getAllVirtualApiKeys",
+  CreateVirtualApiKey: "createVirtualApiKey",
+  DeleteVirtualApiKey: "deleteVirtualApiKey",
 
   // Models with API Keys Routes
   GetModelsWithApiKeys: "getModelsWithApiKeys",

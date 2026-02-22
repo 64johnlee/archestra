@@ -696,6 +696,8 @@ The following environment variables can be used to configure Archestra Platform.
 
 ### LLM Provider Configuration
 
+These environment variables set the default base URL for each LLM provider. Per-key base URLs configured in **Settings > LLM API Keys** take precedence over these defaults. See [LLM Proxy Authentication](/docs/platform-llm-proxy-authentication) for details on per-key base URLs and virtual API keys.
+
 - **`ARCHESTRA_OPENAI_BASE_URL`** - Override the OpenAI API base URL.
 
   - Default: `https://api.openai.com/v1`
@@ -723,6 +725,18 @@ The following environment variables can be used to configure Archestra Platform.
   - Default: `http://localhost:11434/v1` (Ollama is enabled by default)
   - Set this to override the default if your Ollama server runs on a different host or port
   - See: [Ollama setup guide](/docs/platform-supported-llm-providers#ollama)
+
+- **`ARCHESTRA_LLM_PROXY_MAX_VIRTUAL_KEYS`** - Maximum number of virtual API keys per LLM API key.
+
+  - Default: `10`
+  - Virtual keys are `archestra_`-prefixed tokens used by external LLM Proxy clients
+  - See: [LLM Proxy Authentication](/docs/platform-llm-proxy-authentication)
+
+- **`ARCHESTRA_LLM_PROXY_VIRTUAL_KEYS_DEFAULT_EXPIRATION_SECONDS`** - Default expiration time for newly created virtual API keys, in seconds.
+
+  - Default: `2592000` (30 days)
+  - Set to `0` to create virtual keys that never expire by default
+  - Users can override this per-key when creating virtual keys via the UI
 
 - **`ARCHESTRA_GEMINI_VERTEX_AI_ENABLED`** - Enable Vertex AI mode for Gemini.
 

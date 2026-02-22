@@ -9,6 +9,7 @@ import {
 import {
   AGENT_TOOL_PREFIX,
   ARCHESTRA_MCP_SERVER_NAME,
+  ARCHESTRA_TOKEN_PREFIX,
   MCP_SERVER_TOOL_NAME_SEPARATOR,
   OAUTH_TOKEN_ID_PREFIX,
   parseFullToolName,
@@ -660,7 +661,7 @@ export async function validateMCPGatewayToken(
   tokenValue: string,
 ): Promise<TokenAuthResult | null> {
   // Try external IdP JWKS validation first (if profile has an IdP configured)
-  if (!tokenValue.startsWith("archestra_")) {
+  if (!tokenValue.startsWith(ARCHESTRA_TOKEN_PREFIX)) {
     const externalIdpResult = await validateExternalIdpToken(
       profileId,
       tokenValue,
@@ -683,7 +684,7 @@ export async function validateMCPGatewayToken(
   }
 
   // Try OAuth token validation (for MCP clients like Open WebUI)
-  if (!tokenValue.startsWith("archestra_")) {
+  if (!tokenValue.startsWith(ARCHESTRA_TOKEN_PREFIX)) {
     const oauthResult = await validateOAuthToken(profileId, tokenValue);
     if (oauthResult) {
       return oauthResult;
@@ -706,6 +707,7 @@ export async function validateMCPGatewayToken(
 export async function validateExternalIdpToken(
   profileId: string,
   tokenValue: string,
+  permissionResource: "mcpGateway" | "llmProxy" = "mcpGateway",
 ): Promise<TokenAuthResult | null> {
   try {
     // Look up the agent to check if it has an identity provider configured
@@ -805,15 +807,15 @@ export async function validateExternalIdpToken(
       return null;
     }
 
-    // Check if user has MCP gateway admin permission (can access all gateways)
-    const isGatewayAdmin = await userHasPermission(
+    // Check if user has admin permission for the target resource (MCP Gateway or LLM Proxy)
+    const isAdmin = await userHasPermission(
       user.id,
       agent.organizationId,
-      "mcpGateway",
+      permissionResource,
       "admin",
     );
 
-    if (isGatewayAdmin) {
+    if (isAdmin) {
       return {
         tokenId: `external_idp:${agent.identityProviderId}:${result.sub}`,
         teamId: null,

@@ -6,6 +6,7 @@ import {
   Bot,
   Cable,
   Home,
+  Key,
   MessageCircle,
   MessagesSquare,
   Network,
@@ -16,7 +17,7 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -121,6 +122,13 @@ const navigationItems = [
     href: "/llm-proxies",
   },
   {
+    icon: Key,
+    label: "Provider Settings",
+    value: "provider-settings",
+    keywords: "provider settings api keys virtual keys models llm",
+    href: "/llm-proxies/provider-settings",
+  },
+  {
     icon: MessagesSquare,
     label: "Logs",
     value: "logs",
@@ -167,13 +175,16 @@ const navigationItems = [
 interface ConversationSearchPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  recentChatsView?: boolean;
 }
 
 export function ConversationSearchPalette({
   open,
   onOpenChange,
+  recentChatsView = false,
 }: ConversationSearchPaletteProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedValue, setSelectedValue] = useState("");
   const [isPendingDeletion, setIsPendingDeletion] = useState<string | null>(
@@ -250,8 +261,13 @@ export function ConversationSearchPalette({
       }
       deleteMutation.mutate(conversationId);
       setIsPendingDeletion(null);
+
+      // Redirect to new chat if the deleted conversation is currently open
+      if (searchParams.get("conversation") === conversationId) {
+        router.push("/chat");
+      }
     },
-    [deleteMutation, conversations],
+    [deleteMutation, conversations, searchParams, router],
   );
 
   // Keyboard shortcuts for search palette
@@ -433,56 +449,60 @@ export function ConversationSearchPalette({
                   <CommandItem
                     value="new-chat"
                     onSelect={handleNewChat}
-                    className="flex items-center gap-2 px-3 py-3 cursor-pointer aria-selected:bg-accent"
+                    className="flex items-center gap-2 px-3 py-2.5 cursor-pointer aria-selected:bg-accent"
                   >
                     <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <span className="font-medium">New chat</span>
                   </CommandItem>
                 </CommandGroup>
 
-                <CommandSeparator className="my-2" />
+                {!recentChatsView && (
+                  <>
+                    <CommandSeparator className="my-2" />
 
-                <div className="px-2 pb-1.5">
-                  <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Pages
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Jump to
-                    </span>
-                  </div>
-                </div>
-                <CommandGroup>
-                  {navigationItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <CommandItem
-                        key={item.value}
-                        value={`${item.value} ${item.keywords} ${item.label}`}
-                        onSelect={() => {
-                          router.push(item.href);
-                          onOpenChange(false);
-                        }}
-                        className="flex items-center gap-3 px-3 py-2.5 cursor-pointer aria-selected:bg-accent rounded-sm"
-                      >
-                        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        <span className="text-sm font-medium">
-                          {item.label}
+                    <div className="px-2 pb-1.5">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Pages
                         </span>
-                      </CommandItem>
-                    );
-                  })}
-                </CommandGroup>
+                        <span className="text-xs text-muted-foreground">
+                          Jump to
+                        </span>
+                      </div>
+                    </div>
+                    <CommandGroup>
+                      {navigationItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <CommandItem
+                            key={item.value}
+                            value={`${item.value} ${item.keywords} ${item.label}`}
+                            onSelect={() => {
+                              router.push(item.href);
+                              onOpenChange(false);
+                            }}
+                            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer aria-selected:bg-accent rounded-sm"
+                          >
+                            <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span className="text-sm font-medium">
+                              {item.label}
+                            </span>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
 
-                <CommandSeparator className="my-2" />
+                    <CommandSeparator className="my-2" />
 
-                <div className="px-2 pb-1.5">
-                  <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Chats
-                    </span>
-                  </div>
-                </div>
+                    <div className="px-2 pb-1.5">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Chats
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
             )}
 
@@ -525,7 +545,9 @@ export function ConversationSearchPalette({
                   </CommandGroup>
                 )}
                 {conversations.length === 0 && (
-                  <CommandEmpty>No conversations yet.</CommandEmpty>
+                  <div className="py-4 text-center text-sm text-muted-foreground">
+                    No recent chats
+                  </div>
                 )}
               </>
             ) : null}

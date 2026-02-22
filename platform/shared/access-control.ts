@@ -491,6 +491,18 @@ export const requiredEndpointPermissionsMap: Partial<
   [RouteId.DeleteChatApiKey]: {
     chatSettings: ["delete"],
   },
+  [RouteId.GetVirtualApiKeys]: {
+    chatSettings: ["read"],
+  },
+  [RouteId.GetAllVirtualApiKeys]: {
+    chatSettings: ["read"],
+  },
+  [RouteId.CreateVirtualApiKey]: {
+    chatSettings: ["create"],
+  },
+  [RouteId.DeleteVirtualApiKey]: {
+    chatSettings: ["delete"],
+  },
   [RouteId.GetModelsWithApiKeys]: {
     chatSettings: ["read"],
   },
@@ -724,7 +736,7 @@ export const requiredPagePermissionsMap: Record<string, Permissions> = {
   "/settings/appearance": {
     organization: ["read"],
   },
-  "/settings/llm-api-keys": {
+  "/llm-proxies/provider-settings": {
     chatSettings: ["read"],
   },
   "/settings/identity-providers": {

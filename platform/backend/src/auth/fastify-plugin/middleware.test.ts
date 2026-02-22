@@ -94,7 +94,7 @@ describe("Authnz", () => {
         "/openapi.json",
         "/health",
         "/ready",
-        "/api/features",
+        "/api/config",
       ];
 
       for (const url of whitelistedPaths) {
