@@ -1,6 +1,6 @@
 {
-  "id": "190b854d-0bd0-447e-a427-256f724f8af0",
-  "prevId": "a026d3a0-6468-41fa-9225-6b0267afc35c",
+  "id": "6a795df9-13c2-4bc2-bcb7-c085053ae6bf",
+  "prevId": "190b854d-0bd0-447e-a427-256f724f8af0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -468,13 +468,6 @@
         },
         "prompt_history": {
           "name": "prompt_history",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'[]'::jsonb"
-        },
-        "allowed_chatops": {
-          "name": "allowed_chatops",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false,
