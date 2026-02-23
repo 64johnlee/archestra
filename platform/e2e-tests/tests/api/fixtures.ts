@@ -39,6 +39,7 @@ export interface TestFixtures {
   createTeam: typeof createTeam;
   deleteTeam: typeof deleteTeam;
   waitForAgentTool: typeof waitForAgentTool;
+  waitForProxyTool: typeof waitForProxyTool;
   getTeamByName: typeof getTeamByName;
   addTeamMember: typeof addTeamMember;
   removeTeamMember: typeof removeTeamMember;
@@ -493,6 +494,52 @@ const waitForAgentTool = async (
 };
 
 /**
+ * Wait for a proxy-discovered tool to appear in the tools list.
+ * Queries GET /api/tools/with-assignments filtered by name and llm-proxy origin.
+ */
+const waitForProxyTool = async (
+  request: APIRequestContext,
+  toolName: string,
+  options?: {
+    maxAttempts?: number;
+    delayMs?: number;
+  },
+): Promise<{
+  id: string;
+  name: string;
+  description: string | null;
+  catalogId: string | null;
+}> => {
+  const maxAttempts = options?.maxAttempts ?? 20;
+  const delayMs = options?.delayMs ?? 1000;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const response = await makeApiRequest({
+      request,
+      method: "get",
+      urlSuffix: `/api/tools/with-assignments?search=${encodeURIComponent(toolName)}&origin=llm-proxy`,
+      ignoreStatusCheck: true,
+    });
+
+    if (response.ok()) {
+      const result = await response.json();
+      const found = result.data.find(
+        (t: { name: string }) => t.name === toolName,
+      );
+      if (found) return found;
+    }
+
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw new Error(
+    `Proxy tool '${toolName}' not found after ${maxAttempts} attempts`,
+  );
+};
+
+/**
  * Get a team by name (includes members)
  */
 export const getTeamByName = async (
@@ -912,6 +959,9 @@ export const test = base.extend<TestFixtures>({
   },
   waitForAgentTool: async ({}, use) => {
     await use(waitForAgentTool);
+  },
+  waitForProxyTool: async ({}, use) => {
+    await use(waitForProxyTool);
   },
   getTeamByName: async ({}, use) => {
     await use(getTeamByName);

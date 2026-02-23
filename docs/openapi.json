@@ -29994,7 +29994,7 @@
             "in": "query",
             "name": "origin",
             "required": false,
-            "description": "Can be 'llm-proxy' or a catalogId"
+            "description": "A catalogId to filter by"
           },
           {
             "schema": {
@@ -31684,15 +31684,6 @@
         ],
         "description": "Get all tools for an agent (both proxy-sniffed and MCP tools)",
         "parameters": [
-          {
-            "schema": {
-              "default": false,
-              "type": "boolean"
-            },
-            "in": "query",
-            "name": "excludeLlmProxyOrigin",
-            "required": false
-          },
           {
             "schema": {
               "type": "string",

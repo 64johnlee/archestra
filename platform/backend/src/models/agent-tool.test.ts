@@ -460,33 +460,6 @@ describe("AgentToolModel.findAll", () => {
       expect(result.data[0].agent.id).toBe(agent1.id);
     });
 
-    test("filters by origin (llm-proxy)", async ({
-      makeAgent,
-      makeTool,
-      makeAgentTool,
-      makeInternalMcpCatalog,
-    }) => {
-      const agent = await makeAgent();
-      const catalog = await makeInternalMcpCatalog();
-
-      const llmProxyTool = await makeTool({ name: "llm-proxy-tool" });
-      const mcpTool = await makeTool({
-        name: "mcp-tool",
-        catalogId: catalog.id,
-      });
-
-      await makeAgentTool(agent.id, llmProxyTool.id);
-      await makeAgentTool(agent.id, mcpTool.id);
-
-      const result = await AgentToolModel.findAll({
-        pagination: { limit: 10, offset: 0 },
-        filters: { origin: "llm-proxy", excludeArchestraTools: true },
-      });
-
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].tool.catalogId).toBeNull();
-    });
-
     test("filters by origin (catalogId)", async ({
       makeAgent,
       makeTool,

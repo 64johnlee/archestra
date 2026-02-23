@@ -841,11 +841,15 @@ class AgentModel {
       }
     }
 
-    // Fetch the tools for the updated agent
-    const tools = await db
-      .select()
-      .from(schema.toolsTable)
-      .where(eq(schema.toolsTable.agentId, updatedAgent.id));
+    const toolRows = await db
+      .select({ tool: schema.toolsTable })
+      .from(schema.agentToolsTable)
+      .innerJoin(
+        schema.toolsTable,
+        eq(schema.agentToolsTable.toolId, schema.toolsTable.id),
+      )
+      .where(eq(schema.agentToolsTable.agentId, updatedAgent.id));
+    const tools = toolRows.map((row) => row.tool);
 
     // Fetch current teams and labels
     const currentTeams = await AgentTeamModel.getTeamDetailsForAgent(id);

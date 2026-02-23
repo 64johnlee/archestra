@@ -381,7 +381,6 @@ export async function fetchAgentMcpTools(agentId: string | undefined) {
   if (!agentId) return [];
   const { data, error } = await getAgentTools({
     path: { agentId },
-    query: { excludeLlmProxyOrigin: true },
   });
   if (error) {
     handleApiError(error);
@@ -411,7 +410,6 @@ export function useAgentDelegationTools(agentId: string | undefined) {
       if (!agentId) return [];
       const { data, error } = await getAgentTools({
         path: { agentId },
-        query: { excludeLlmProxyOrigin: true },
       });
       if (error) {
         handleApiError(error);
