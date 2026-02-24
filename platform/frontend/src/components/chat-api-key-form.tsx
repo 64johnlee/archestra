@@ -126,6 +126,14 @@ const PROVIDER_CONFIG: Record<
     consoleUrl: "https://www.perplexity.ai/settings/api",
     consoleName: "Perplexity Settings",
   },
+  groq: {
+    name: "Groq",
+    icon: "/icons/groq.png",
+    placeholder: "gsk_...",
+    enabled: true,
+    consoleUrl: "https://console.groq.com/keys",
+    consoleName: "Groq Console",
+  },
   vllm: {
     name: "vLLM",
     icon: "/icons/vllm.png",

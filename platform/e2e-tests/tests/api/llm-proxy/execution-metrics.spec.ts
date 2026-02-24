@@ -104,6 +104,22 @@ const cerebrasConfig: ExecutionMetricsTestConfig = {
   }),
 };
 
+const groqConfig: ExecutionMetricsTestConfig = {
+  providerName: "Groq",
+
+  endpoint: (agentId) => `/v1/groq/${agentId}/chat/completions`,
+
+  headers: (wiremockStub) => ({
+    Authorization: `Bearer ${wiremockStub}`,
+    "Content-Type": "application/json",
+  }),
+
+  buildRequest: (content) => ({
+    model: "llama-3.1-8b-instant",
+    messages: [{ role: "user", content }],
+  }),
+};
+
 const mistralConfig: ExecutionMetricsTestConfig = {
   providerName: "Mistral",
 
@@ -195,6 +211,7 @@ const testConfigsMap = {
   gemini: geminiConfig,
   cohere: cohereConfig,
   cerebras: cerebrasConfig,
+  groq: groqConfig,
   mistral: mistralConfig,
   vllm: vllmConfig,
   ollama: ollamaConfig,

@@ -171,6 +171,18 @@ const cerebrasConfig: StreamingToolCallTestConfig = {
   expectedToolName: "read_file",
 };
 
+const groqConfig: StreamingToolCallTestConfig = {
+  providerName: "Groq",
+  endpoint: (agentId) => `/v1/groq/${agentId}/chat/completions`,
+  headers: (wiremockStub) => ({
+    Authorization: `Bearer ${wiremockStub}`,
+    "Content-Type": "application/json",
+  }),
+  buildStreamingRequest: (content, tools) =>
+    buildOpenAIStreamingRequest("llama-3.1-8b-instant", content, tools),
+  expectedToolName: "read_file",
+};
+
 const mistralConfig: StreamingToolCallTestConfig = {
   providerName: "Mistral",
   endpoint: (agentId) => `/v1/mistral/${agentId}/chat/completions`,
@@ -234,6 +246,7 @@ const testConfigsMap = {
   gemini: geminiConfig,
   cohere: cohereConfig,
   cerebras: cerebrasConfig,
+  groq: groqConfig,
   mistral: mistralConfig,
   vllm: vllmConfig,
   ollama: ollamaConfig,

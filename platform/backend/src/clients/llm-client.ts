@@ -4,6 +4,7 @@ import { createCerebras } from "@ai-sdk/cerebras";
 import { createCohere } from "@ai-sdk/cohere";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createVertex } from "@ai-sdk/google-vertex";
+import { createGroq } from "@ai-sdk/groq";
 import { createMistral } from "@ai-sdk/mistral";
 import { createOpenAI } from "@ai-sdk/openai";
 import { context, propagation } from "@opentelemetry/api";
@@ -90,6 +91,7 @@ const envApiKeyGetters: Record<
   ollama: () => config.chat.ollama.apiKey,
   openai: () => config.chat.openai.apiKey,
   perplexity: () => config.chat.perplexity.apiKey,
+  groq: () => config.chat.groq.apiKey,
   vllm: () => config.chat.vllm.apiKey,
   zhipuai: () => config.chat.zhipuai.apiKey,
 };
@@ -222,6 +224,7 @@ export const FAST_MODELS: Record<SupportedChatProvider, string> = {
   bedrock: "amazon.nova-lite-v1:0", // Bedrock's fast model, available in all regions for on-demand inference
   mistral: "mistral-small-latest", // Mistral's fast model
   perplexity: "sonar", // Perplexity's fast model
+  groq: "llama-3.1-8b-instant", // Groq's fast model
 };
 
 /**
@@ -358,6 +361,20 @@ const directModelCreators: Record<SupportedChatProvider, DirectModelCreator> = {
       baseURL: baseUrl ?? config.llm.perplexity.baseUrl,
     });
     return client.chat(modelName);
+  },
+
+  groq: ({ apiKey, modelName }) => {
+    if (!apiKey) {
+      throw new ApiError(
+        400,
+        "Groq API key is required. Please configure ARCHESTRA_CHAT_GROQ_API_KEY.",
+      );
+    }
+    const client = createGroq({
+      apiKey,
+      baseURL: config.llm.groq.baseUrl,
+    });
+    return client(modelName);
   },
 
   vllm: ({ apiKey, modelName, baseUrl }) => {
@@ -580,6 +597,22 @@ const proxiedModelCreators: Record<SupportedChatProvider, ProxiedModelCreator> =
         headers,
       });
       return client.chat(modelName);
+    },
+
+    groq: ({ apiKey, agentId, modelName, headers }) => {
+      if (!apiKey) {
+        throw new ApiError(
+          400,
+          "Groq API key is required. Please configure ARCHESTRA_CHAT_GROQ_API_KEY.",
+        );
+      }
+      const client = createGroq({
+        apiKey,
+        baseURL: buildProxyBaseUrl("groq", agentId),
+        headers,
+        fetch: createTracedFetch(),
+      });
+      return client(modelName);
     },
 
     vllm: ({ apiKey, agentId, modelName, headers }) => {

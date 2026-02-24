@@ -1125,6 +1125,7 @@ const providerParsers: Record<SupportedProvider, ErrorParser> = {
   cohere: parseCohereError,
   mistral: parseOpenAIError, // Mistral uses OpenAI-compatible API
   perplexity: parseOpenAIError, // Perplexity uses OpenAI-compatible API
+  groq: parseOpenAIError, // Groq uses OpenAI-compatible API
   vllm: parseVllmError,
   ollama: parseOllamaError,
   zhipuai: parseZhipuaiError,
@@ -1144,6 +1145,7 @@ const providerMappers: Record<SupportedProvider, ErrorMapper> = {
   cohere: mapCohereErrorWrapper,
   mistral: mapOpenAIErrorWrapper, // Mistral uses OpenAI-compatible API
   perplexity: mapOpenAIErrorWrapper, // Perplexity uses OpenAI-compatible API
+  groq: mapOpenAIErrorWrapper, // Groq uses OpenAI-compatible API
   vllm: mapVllmErrorWrapper,
   ollama: mapOllamaErrorWrapper,
   zhipuai: mapZhipuaiErrorWrapper,

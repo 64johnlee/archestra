@@ -13,6 +13,7 @@ import type {
   Cerebras,
   Cohere,
   Gemini,
+  Groq,
   Mistral,
   OpenAi,
   Perplexity,
@@ -25,6 +26,7 @@ type ProviderMessages = {
   cerebras: Cerebras.Types.ChatCompletionsRequest["messages"];
   cohere: Cohere.Types.ChatRequest["messages"];
   gemini: Gemini.Types.GenerateContentRequest["contents"];
+  groq: Groq.Types.ChatCompletionsRequest["messages"];
   mistral: Mistral.Types.ChatCompletionsRequest["messages"];
   perplexity: Perplexity.Types.ChatCompletionsRequest["messages"];
   openai: OpenAi.Types.ChatCompletionsRequest["messages"];

@@ -3,7 +3,7 @@ title: Supported LLM Providers
 category: Agents
 order: 3
 description: LLM providers supported by Archestra Platform
-lastUpdated: 2026-01-14
+lastUpdated: 2026-02-22
 ---
 
 <!--
@@ -168,6 +168,41 @@ See the [Vertex AI authentication guide](https://cloud.google.com/vertex-ai/docs
 ### Important Notes
 
 - **API Key format**: Obtain your API key from the [Cohere Dashboard](https://dashboard.cohere.ai/)
+
+## Groq
+
+[Groq](https://groq.com/) provides low-latency inference for popular open-source models through an OpenAI-compatible API.
+
+### Supported Groq APIs
+
+- **Chat Completions API** (`/chat/completions`) - ✅ Fully supported (OpenAI-compatible)
+
+### Groq Connection Details
+
+- **Base URL**: `http://localhost:9000/v1/groq/{profile-id}`
+- **Authentication**: Pass your Groq API key in the `Authorization` header as `Bearer <your-api-key>`
+
+### Environment Variables
+
+| Variable                      | Required | Description                                                              |
+| ----------------------------- | -------- | ------------------------------------------------------------------------ |
+| `ARCHESTRA_GROQ_BASE_URL`     | No       | Groq API base URL (default: `https://api.groq.com/openai/v1`)            |
+| `ARCHESTRA_CHAT_GROQ_API_KEY` | No       | Default API key for Groq (can be overridden per conversation/team/org)   |
+
+### Getting an API Key
+
+You can generate an API key from the [Groq Console](https://console.groq.com/keys).
+
+### Popular Models
+
+- `llama-3.3-70b-versatile`
+- `llama-3.1-8b-instant`
+- `gemma2-9b-it`
+
+### Important Notes
+
+- **OpenAI-compatible API**: Groq uses the OpenAI Chat Completions request/response format, which makes it a good fit for existing OpenAI client libraries.
+- **Base URL includes `/openai/v1`**: When configuring a custom Groq endpoint, ensure the base URL points to the OpenAI-compatible API root (for example, `https://api.groq.com/openai/v1`).
 
 ## Mistral AI
 

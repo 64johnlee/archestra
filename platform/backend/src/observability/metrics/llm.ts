@@ -37,6 +37,7 @@ const fetchUsageExtractors: Record<SupportedProvider, UsageExtractor> = {
   ollama: getOpenAIUsage,
   mistral: getOpenAIUsage,
   perplexity: getOpenAIUsage,
+  groq: getOpenAIUsage,
   anthropic: getAnthropicUsage,
   cohere: getCohereUsage,
   zhipuai: getZhipuaiUsage,

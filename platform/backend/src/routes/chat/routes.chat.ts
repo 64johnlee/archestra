@@ -74,6 +74,7 @@ const DEFAULT_MODELS: Record<SupportedProvider, string> = {
   openai: "gpt-4o",
   gemini: "gemini-2.5-pro",
   cohere: "command-r-08-2024",
+  groq: "llama-3.1-8b-instant",
   ollama: "llama3.2",
   vllm: "default",
   cerebras: "llama-4-scout-17b-16e-instruct",
@@ -138,6 +139,9 @@ async function getSmartDefaultModel(
   }
   if (config.chat.cohere?.apiKey) {
     return { model: "command-r-08-2024", provider: "cohere" };
+  }
+  if (config.chat.groq?.apiKey) {
+    return { model: "llama-3.3-70b-versatile", provider: "groq" };
   }
 
   // Check if Vertex AI is enabled - use Gemini without API key

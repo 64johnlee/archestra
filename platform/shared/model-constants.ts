@@ -12,6 +12,7 @@ export const SupportedProvidersSchema = z.enum([
   "cerebras",
   "mistral",
   "perplexity",
+  "groq",
   "vllm",
   "ollama",
   "zhipuai",
@@ -26,6 +27,7 @@ export const SupportedProvidersDiscriminatorSchema = z.enum([
   "cerebras:chatCompletions",
   "mistral:chatCompletions",
   "perplexity:chatCompletions",
+  "groq:chatCompletions",
   "vllm:chatCompletions",
   "ollama:chatCompletions",
   "zhipuai:chatCompletions",
@@ -46,6 +48,7 @@ export const providerDisplayNames: Record<SupportedProvider, string> = {
   cerebras: "Cerebras",
   mistral: "Mistral AI",
   perplexity: "Perplexity AI",
+  groq: "Groq",
   vllm: "vLLM",
   ollama: "Ollama",
   zhipuai: "Zhipu AI",
@@ -77,6 +80,7 @@ export const DEFAULT_PROVIDER_BASE_URLS: Record<SupportedProvider, string> = {
   cerebras: "https://api.cerebras.ai/v1",
   mistral: "https://api.mistral.ai/v1",
   perplexity: "https://api.perplexity.ai",
+  groq: "https://api.groq.com/openai/v1",
   vllm: "",
   ollama: "http://localhost:11434/v1",
   zhipuai: "https://api.z.ai/api/paas/v4",
@@ -127,6 +131,10 @@ export const MODEL_MARKER_PATTERNS: Record<
   perplexity: {
     fastest: ["sonar"],
     best: ["sonar-pro", "sonar-reasoning-pro", "sonar-reasoning"],
+  },
+  groq: {
+    fastest: ["llama-3.1-8b", "gemma2-9b"],
+    best: ["llama-3.3-70b", "llama-3.1-70b"],
   },
   ollama: {
     fastest: ["llama3.2", "phi"],

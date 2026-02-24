@@ -556,6 +556,10 @@ export default {
         process.env.ARCHESTRA_PERPLEXITY_BASE_URL ||
         "https://api.perplexity.ai",
     },
+    groq: {
+      baseUrl:
+        process.env.ARCHESTRA_GROQ_BASE_URL || "https://api.groq.com/openai/v1",
+    },
     vllm: {
       enabled: Boolean(process.env.ARCHESTRA_VLLM_BASE_URL),
       baseUrl: process.env.ARCHESTRA_VLLM_BASE_URL,
@@ -598,6 +602,9 @@ export default {
     },
     perplexity: {
       apiKey: process.env.ARCHESTRA_CHAT_PERPLEXITY_API_KEY || "",
+    },
+    groq: {
+      apiKey: process.env.ARCHESTRA_CHAT_GROQ_API_KEY || "",
     },
     vllm: {
       apiKey: process.env.ARCHESTRA_CHAT_VLLM_API_KEY || "",

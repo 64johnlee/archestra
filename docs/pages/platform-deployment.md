@@ -714,6 +714,11 @@ These environment variables set the default base URL for each LLM provider. Per-
   - Use this to point to your own proxy or other custom endpoints
   - Note: This is only used when Vertex AI mode is disabled
 
+- **`ARCHESTRA_GROQ_BASE_URL`** - Override the Groq API base URL.
+
+  - Default: `https://api.groq.com/openai/v1`
+  - Use this to point to your own proxy, a Groq-compatible API, or other custom endpoints
+
 - **`ARCHESTRA_VLLM_BASE_URL`** - Base URL for your vLLM server.
 
   - Required to enable vLLM provider support

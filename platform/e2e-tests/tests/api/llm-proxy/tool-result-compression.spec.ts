@@ -79,6 +79,44 @@ const openaiConfig: CompressionTestConfig = {
   }),
 };
 
+const groqConfig: CompressionTestConfig = {
+  providerName: "Groq",
+
+  endpoint: (profileId) => `/v1/groq/${profileId}/chat/completions`,
+
+  headers: (wiremockStub) => ({
+    Authorization: `Bearer ${wiremockStub}`,
+    "Content-Type": "application/json",
+  }),
+
+  // Groq uses OpenAI-compatible format: tool results are sent as separate "tool" role messages
+  buildRequestWithToolResult: () => ({
+    model: "llama-3.1-8b-instant",
+    messages: [
+      { role: "user", content: "What files are in the current directory?" },
+      {
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call_123",
+            type: "function",
+            function: {
+              name: "list_files",
+              arguments: '{"directory": "."}',
+            },
+          },
+        ],
+      },
+      {
+        role: "tool",
+        tool_call_id: "call_123",
+        content: JSON.stringify(TOOL_RESULT_DATA),
+      },
+    ],
+  }),
+};
+
 const anthropicConfig: CompressionTestConfig = {
   providerName: "Anthropic",
 
@@ -455,6 +493,7 @@ const testConfigsMap = {
   cohere: cohereConfig,
   cerebras: cerebrasConfig,
   mistral: mistralConfig,
+  groq: groqConfig,
   vllm: vllmConfig,
   ollama: ollamaConfig,
   zhipuai: zhipuaiConfig,
