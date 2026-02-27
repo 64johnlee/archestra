@@ -1,4 +1,5 @@
 import type { IncomingHttpHeaders } from "node:http";
+import type { SupportedProvider } from "@shared";
 import { PROVIDERS_WITH_OPTIONAL_API_KEY, RouteId } from "@shared";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { capitalize } from "lodash-es";
@@ -29,6 +30,21 @@ import {
   type SupportedChatProvider,
   SupportedChatProviderSchema,
 } from "@/types";
+
+async function testApiKeyOrThrow(
+  provider: SupportedProvider,
+  apiKey: string,
+  baseUrl?: string | null,
+): Promise<void> {
+  try {
+    await testProviderApiKey(provider, apiKey, baseUrl);
+  } catch (error) {
+    throw new ApiError(
+      400,
+      `Invalid API key: Failed to connect to ${capitalize(provider)}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
 
 const chatApiKeysRoutes: FastifyPluginAsyncZod = async (fastify) => {
   // List all visible chat API keys for the user
@@ -193,18 +209,7 @@ const chatApiKeysRoutes: FastifyPluginAsyncZod = async (fastify) => {
           );
         }
         // then test the API key
-        try {
-          await testProviderApiKey(
-            body.provider,
-            actualApiKeyValue,
-            body.baseUrl,
-          );
-        } catch (_error) {
-          throw new ApiError(
-            400,
-            `Invalid API key: Failed to connect to ${capitalize(body.provider)}`,
-          );
-        }
+        await testApiKeyOrThrow(body.provider, actualApiKeyValue, body.baseUrl);
         // then create the secret
         secret = await secretManager().createSecret(
           { apiKey: vaultReference },
@@ -218,18 +223,7 @@ const chatApiKeysRoutes: FastifyPluginAsyncZod = async (fastify) => {
         // When readonly_vault is disabled
         actualApiKeyValue = body.apiKey;
         // Test the API key before saving
-        try {
-          await testProviderApiKey(
-            body.provider,
-            actualApiKeyValue,
-            body.baseUrl,
-          );
-        } catch (_error) {
-          throw new ApiError(
-            400,
-            `Invalid API key: Failed to connect to ${capitalize(body.provider)}`,
-          );
-        }
+        await testApiKeyOrThrow(body.provider, actualApiKeyValue, body.baseUrl);
 
         secret = await secretManager().createSecret(
           { apiKey: actualApiKeyValue },
@@ -450,18 +444,11 @@ const chatApiKeysRoutes: FastifyPluginAsyncZod = async (fastify) => {
         // the existing baseUrl stored on the API key record.
         const testBaseUrl =
           body.baseUrl !== undefined ? body.baseUrl : apiKeyFromDB.baseUrl;
-        try {
-          await testProviderApiKey(
-            apiKeyFromDB.provider,
-            apiKeyValue,
-            testBaseUrl,
-          );
-        } catch (_error) {
-          throw new ApiError(
-            400,
-            `Invalid API key: Failed to connect to ${capitalize(apiKeyFromDB.provider)}`,
-          );
-        }
+        await testApiKeyOrThrow(
+          apiKeyFromDB.provider,
+          apiKeyValue,
+          testBaseUrl,
+        );
 
         // Update or create the secret
         if (apiKeyFromDB.secretId) {
