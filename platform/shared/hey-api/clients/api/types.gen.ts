@@ -23699,7 +23699,14 @@ export type GetInternalMcpCatalogResponses = {
             httpPath?: string;
             nodePort?: number;
             imagePullSecrets?: Array<{
+                source: 'existing';
                 name: string;
+            } | {
+                source: 'credentials';
+                server: string;
+                username: string;
+                password?: string;
+                email?: string;
             }>;
         } | null;
         deploymentSpecYaml: string | null;
@@ -23792,7 +23799,14 @@ export type CreateInternalMcpCatalogItemData = {
             nodePort?: number;
             serviceAccount?: string;
             imagePullSecrets?: Array<{
+                source: 'existing';
                 name: string;
+            } | {
+                source: 'credentials';
+                server: string;
+                username: string;
+                password?: string;
+                email?: string;
             }>;
         } | null;
         deploymentSpecYaml?: string | null;
@@ -23950,7 +23964,14 @@ export type CreateInternalMcpCatalogItemResponses = {
             httpPath?: string;
             nodePort?: number;
             imagePullSecrets?: Array<{
+                source: 'existing';
                 name: string;
+            } | {
+                source: 'credentials';
+                server: string;
+                username: string;
+                password?: string;
+                email?: string;
             }>;
         } | null;
         deploymentSpecYaml: string | null;
@@ -24193,7 +24214,14 @@ export type GetInternalMcpCatalogItemResponses = {
             httpPath?: string;
             nodePort?: number;
             imagePullSecrets?: Array<{
+                source: 'existing';
                 name: string;
+            } | {
+                source: 'credentials';
+                server: string;
+                username: string;
+                password?: string;
+                email?: string;
             }>;
         } | null;
         deploymentSpecYaml: string | null;
@@ -24285,7 +24313,14 @@ export type UpdateInternalMcpCatalogItemData = {
             nodePort?: number;
             serviceAccount?: string;
             imagePullSecrets?: Array<{
+                source: 'existing';
                 name: string;
+            } | {
+                source: 'credentials';
+                server: string;
+                username: string;
+                password?: string;
+                email?: string;
             }>;
         } | null;
         deploymentSpecYaml?: string | null;
@@ -24445,7 +24480,14 @@ export type UpdateInternalMcpCatalogItemResponses = {
             httpPath?: string;
             nodePort?: number;
             imagePullSecrets?: Array<{
+                source: 'existing';
                 name: string;
+            } | {
+                source: 'credentials';
+                server: string;
+                username: string;
+                password?: string;
+                email?: string;
             }>;
         } | null;
         deploymentSpecYaml: string | null;
@@ -24902,6 +24944,83 @@ export type ResetDeploymentYamlResponses = {
 };
 
 export type ResetDeploymentYamlResponse = ResetDeploymentYamlResponses[keyof ResetDeploymentYamlResponses];
+
+export type GetK8sImagePullSecretsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/k8s/image-pull-secrets';
+};
+
+export type GetK8sImagePullSecretsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type GetK8sImagePullSecretsError = GetK8sImagePullSecretsErrors[keyof GetK8sImagePullSecretsErrors];
+
+export type GetK8sImagePullSecretsResponses = {
+    /**
+     * Default Response
+     */
+    200: Array<{
+        name: string;
+    }>;
+};
+
+export type GetK8sImagePullSecretsResponse = GetK8sImagePullSecretsResponses[keyof GetK8sImagePullSecretsResponses];
 
 export type GetInternalMcpCatalogLabelKeysData = {
     body?: never;
@@ -25806,7 +25925,14 @@ export type GetMcpServerInstallationRequestsResponses = {
                 nodePort?: number;
                 serviceAccount?: string;
                 imagePullSecrets?: Array<{
+                    source: 'existing';
                     name: string;
+                } | {
+                    source: 'credentials';
+                    server: string;
+                    username: string;
+                    password?: string;
+                    email?: string;
                 }>;
             };
         } | null;
@@ -25890,7 +26016,14 @@ export type CreateMcpServerInstallationRequestData = {
                 nodePort?: number;
                 serviceAccount?: string;
                 imagePullSecrets?: Array<{
+                    source: 'existing';
                     name: string;
+                } | {
+                    source: 'credentials';
+                    server: string;
+                    username: string;
+                    password?: string;
+                    email?: string;
                 }>;
             };
         } | null;
@@ -26028,7 +26161,14 @@ export type CreateMcpServerInstallationRequestResponses = {
                 nodePort?: number;
                 serviceAccount?: string;
                 imagePullSecrets?: Array<{
+                    source: 'existing';
                     name: string;
+                } | {
+                    source: 'credentials';
+                    server: string;
+                    username: string;
+                    password?: string;
+                    email?: string;
                 }>;
             };
         } | null;
@@ -26265,7 +26405,14 @@ export type GetMcpServerInstallationRequestResponses = {
                 nodePort?: number;
                 serviceAccount?: string;
                 imagePullSecrets?: Array<{
+                    source: 'existing';
                     name: string;
+                } | {
+                    source: 'credentials';
+                    server: string;
+                    username: string;
+                    password?: string;
+                    email?: string;
                 }>;
             };
         } | null;
@@ -26349,7 +26496,14 @@ export type UpdateMcpServerInstallationRequestData = {
                 nodePort?: number;
                 serviceAccount?: string;
                 imagePullSecrets?: Array<{
+                    source: 'existing';
                     name: string;
+                } | {
+                    source: 'credentials';
+                    server: string;
+                    username: string;
+                    password?: string;
+                    email?: string;
                 }>;
             };
         } | null;
@@ -26499,7 +26653,14 @@ export type UpdateMcpServerInstallationRequestResponses = {
                 nodePort?: number;
                 serviceAccount?: string;
                 imagePullSecrets?: Array<{
+                    source: 'existing';
                     name: string;
+                } | {
+                    source: 'credentials';
+                    server: string;
+                    username: string;
+                    password?: string;
+                    email?: string;
                 }>;
             };
         } | null;
@@ -26659,7 +26820,14 @@ export type ApproveMcpServerInstallationRequestResponses = {
                 nodePort?: number;
                 serviceAccount?: string;
                 imagePullSecrets?: Array<{
+                    source: 'existing';
                     name: string;
+                } | {
+                    source: 'credentials';
+                    server: string;
+                    username: string;
+                    password?: string;
+                    email?: string;
                 }>;
             };
         } | null;
@@ -26819,7 +26987,14 @@ export type DeclineMcpServerInstallationRequestResponses = {
                 nodePort?: number;
                 serviceAccount?: string;
                 imagePullSecrets?: Array<{
+                    source: 'existing';
                     name: string;
+                } | {
+                    source: 'credentials';
+                    server: string;
+                    username: string;
+                    password?: string;
+                    email?: string;
                 }>;
             };
         } | null;
@@ -26979,7 +27154,14 @@ export type AddMcpServerInstallationRequestNoteResponses = {
                 nodePort?: number;
                 serviceAccount?: string;
                 imagePullSecrets?: Array<{
+                    source: 'existing';
                     name: string;
+                } | {
+                    source: 'credentials';
+                    server: string;
+                    username: string;
+                    password?: string;
+                    email?: string;
                 }>;
             };
         } | null;
