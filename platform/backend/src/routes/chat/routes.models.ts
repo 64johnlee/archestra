@@ -56,6 +56,46 @@ export interface ModelInfo {
 }
 
 /**
+ * Fetch models from xAI API (OpenAI-compatible)
+ */
+async function fetchXaiModels(
+  apiKey: string,
+  baseUrlOverride?: string | null,
+): Promise<ModelInfo[]> {
+  const baseUrl = baseUrlOverride || config.llm.xai.baseUrl;
+  const url = `${baseUrl}/models`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error(
+      { status: response.status, error: errorText },
+      "Failed to fetch xAI models",
+    );
+    throw new Error(`Failed to fetch xAI models: ${response.status}`);
+  }
+
+  const data = (await response.json()) as {
+    data: (OpenAi.Types.Model | OpenAi.Types.OrlandoModel)[];
+  };
+
+  return data.data.map((model) => ({
+    id: model.id,
+    displayName: model.id,
+    provider: "xai" as const,
+    createdAt:
+      "created" in model && typeof model.created === "number"
+        ? new Date(model.created * 1000).toISOString()
+        : undefined,
+  }));
+}
+
+/**
  * Fetch models from Anthropic API
  */
 async function fetchAnthropicModels(
@@ -936,6 +976,7 @@ async function getProviderApiKey({
     openrouter: () => config.chat.openrouter?.apiKey || null,
     perplexity: () => config.chat.perplexity?.apiKey || null,
     groq: () => config.chat.groq?.apiKey || null,
+    xai: () => config.chat.xai?.apiKey || null,
     vllm: () => config.chat.vllm.apiKey || "", // vLLM typically doesn't require API keys
     zhipuai: () => config.chat.zhipuai?.apiKey || null,
     deepseek: () => config.chat.deepseek?.apiKey || null,
@@ -960,6 +1001,7 @@ const modelFetchers: Record<
   openrouter: fetchOpenrouterModels,
   perplexity: fetchPerplexityModels,
   groq: fetchGroqModels,
+  xai: fetchXaiModels,
   vllm: fetchVllmModels,
   ollama: fetchOllamaModels,
   cohere: fetchCohereModels,
