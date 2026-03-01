@@ -11734,6 +11734,11 @@ export type GetAgentsResponses = {
             llmApiKeyId: string | null;
             llmModel: string | null;
             identityProviderId: string | null;
+            builtInAgentConfig: {
+                name: 'policy-configuration-subagent';
+                autoConfigureOnToolAssignment: boolean;
+            } | null;
+            builtIn: boolean | null;
             createdAt: string;
             updatedAt: string;
             tools: Array<{
@@ -11762,6 +11767,7 @@ export type GetAgentsResponses = {
                 policiesAutoConfiguredAt: string | null;
                 policiesAutoConfiguringStartedAt: string | null;
                 policiesAutoConfiguredReasoning: string | null;
+                policiesAutoConfiguredModel: string | null;
                 createdAt: string;
                 updatedAt: string;
             }>;
@@ -11808,6 +11814,10 @@ export type CreateAgentData = {
         llmApiKeyId?: string | null;
         llmModel?: string | null;
         identityProviderId?: string | null;
+        builtInAgentConfig?: {
+            name: 'policy-configuration-subagent';
+            autoConfigureOnToolAssignment: boolean;
+        } | null;
         teams?: Array<string>;
         labels?: Array<{
             key: string;
@@ -11907,6 +11917,11 @@ export type CreateAgentResponses = {
         llmApiKeyId: string | null;
         llmModel: string | null;
         identityProviderId: string | null;
+        builtInAgentConfig: {
+            name: 'policy-configuration-subagent';
+            autoConfigureOnToolAssignment: boolean;
+        } | null;
+        builtIn: boolean | null;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -11935,6 +11950,7 @@ export type CreateAgentResponses = {
             policiesAutoConfiguredAt: string | null;
             policiesAutoConfiguringStartedAt: string | null;
             policiesAutoConfiguredReasoning: string | null;
+            policiesAutoConfiguredModel: string | null;
             createdAt: string;
             updatedAt: string;
         }>;
@@ -11966,6 +11982,10 @@ export type GetAllAgentsData = {
          * Filter by multiple agent types (comma-separated). Takes precedence over agentType if both provided.
          */
         agentTypes?: Array<'profile' | 'mcp_gateway' | 'llm_proxy' | 'agent'>;
+        /**
+         * Exclude built-in agents from the results. Defaults to false.
+         */
+        excludeBuiltIn?: boolean;
     };
     url: '/api/agents/all';
 };
@@ -12056,6 +12076,11 @@ export type GetAllAgentsResponses = {
         llmApiKeyId: string | null;
         llmModel: string | null;
         identityProviderId: string | null;
+        builtInAgentConfig: {
+            name: 'policy-configuration-subagent';
+            autoConfigureOnToolAssignment: boolean;
+        } | null;
+        builtIn: boolean | null;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -12084,6 +12109,7 @@ export type GetAllAgentsResponses = {
             policiesAutoConfiguredAt: string | null;
             policiesAutoConfiguringStartedAt: string | null;
             policiesAutoConfiguredReasoning: string | null;
+            policiesAutoConfiguredModel: string | null;
             createdAt: string;
             updatedAt: string;
         }>;
@@ -12196,6 +12222,11 @@ export type GetDefaultMcpGatewayResponses = {
         llmApiKeyId: string | null;
         llmModel: string | null;
         identityProviderId: string | null;
+        builtInAgentConfig: {
+            name: 'policy-configuration-subagent';
+            autoConfigureOnToolAssignment: boolean;
+        } | null;
+        builtIn: boolean | null;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -12224,6 +12255,7 @@ export type GetDefaultMcpGatewayResponses = {
             policiesAutoConfiguredAt: string | null;
             policiesAutoConfiguringStartedAt: string | null;
             policiesAutoConfiguredReasoning: string | null;
+            policiesAutoConfiguredModel: string | null;
             createdAt: string;
             updatedAt: string;
         }>;
@@ -12336,6 +12368,11 @@ export type GetDefaultLlmProxyResponses = {
         llmApiKeyId: string | null;
         llmModel: string | null;
         identityProviderId: string | null;
+        builtInAgentConfig: {
+            name: 'policy-configuration-subagent';
+            autoConfigureOnToolAssignment: boolean;
+        } | null;
+        builtIn: boolean | null;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -12364,6 +12401,7 @@ export type GetDefaultLlmProxyResponses = {
             policiesAutoConfiguredAt: string | null;
             policiesAutoConfiguringStartedAt: string | null;
             policiesAutoConfiguredReasoning: string | null;
+            policiesAutoConfiguredModel: string | null;
             createdAt: string;
             updatedAt: string;
         }>;
@@ -12557,6 +12595,11 @@ export type GetAgentResponses = {
         llmApiKeyId: string | null;
         llmModel: string | null;
         identityProviderId: string | null;
+        builtInAgentConfig: {
+            name: 'policy-configuration-subagent';
+            autoConfigureOnToolAssignment: boolean;
+        } | null;
+        builtIn: boolean | null;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -12585,6 +12628,7 @@ export type GetAgentResponses = {
             policiesAutoConfiguredAt: string | null;
             policiesAutoConfiguringStartedAt: string | null;
             policiesAutoConfiguredReasoning: string | null;
+            policiesAutoConfiguredModel: string | null;
             createdAt: string;
             updatedAt: string;
         }>;
@@ -12622,6 +12666,10 @@ export type UpdateAgentData = {
         llmApiKeyId?: string | null;
         llmModel?: string | null;
         identityProviderId?: string | null;
+        builtInAgentConfig?: {
+            name: 'policy-configuration-subagent';
+            autoConfigureOnToolAssignment: boolean;
+        } | null;
         teams?: Array<string>;
         labels?: Array<{
             key: string;
@@ -12723,6 +12771,11 @@ export type UpdateAgentResponses = {
         llmApiKeyId: string | null;
         llmModel: string | null;
         identityProviderId: string | null;
+        builtInAgentConfig: {
+            name: 'policy-configuration-subagent';
+            autoConfigureOnToolAssignment: boolean;
+        } | null;
+        builtIn: boolean | null;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -12751,6 +12804,7 @@ export type UpdateAgentResponses = {
             policiesAutoConfiguredAt: string | null;
             policiesAutoConfiguringStartedAt: string | null;
             policiesAutoConfiguredReasoning: string | null;
+            policiesAutoConfiguredModel: string | null;
             createdAt: string;
             updatedAt: string;
         }>;
@@ -12866,6 +12920,11 @@ export type GetAgentVersionsResponses = {
             llmApiKeyId: string | null;
             llmModel: string | null;
             identityProviderId: string | null;
+            builtInAgentConfig: {
+                name: 'policy-configuration-subagent';
+                autoConfigureOnToolAssignment: boolean;
+            } | null;
+            builtIn: boolean | null;
             createdAt: string;
             updatedAt: string;
             tools: Array<{
@@ -12894,6 +12953,7 @@ export type GetAgentVersionsResponses = {
                 policiesAutoConfiguredAt: string | null;
                 policiesAutoConfiguringStartedAt: string | null;
                 policiesAutoConfiguredReasoning: string | null;
+                policiesAutoConfiguredModel: string | null;
                 createdAt: string;
                 updatedAt: string;
             }>;
@@ -13020,6 +13080,11 @@ export type RollbackAgentResponses = {
         llmApiKeyId: string | null;
         llmModel: string | null;
         identityProviderId: string | null;
+        builtInAgentConfig: {
+            name: 'policy-configuration-subagent';
+            autoConfigureOnToolAssignment: boolean;
+        } | null;
+        builtIn: boolean | null;
         createdAt: string;
         updatedAt: string;
         tools: Array<{
@@ -13048,6 +13113,7 @@ export type RollbackAgentResponses = {
             policiesAutoConfiguredAt: string | null;
             policiesAutoConfiguringStartedAt: string | null;
             policiesAutoConfiguredReasoning: string | null;
+            policiesAutoConfiguredModel: string | null;
             createdAt: string;
             updatedAt: string;
         }>;
@@ -13810,6 +13876,7 @@ export type GetAgentToolsResponses = {
         policiesAutoConfiguredAt: string | null;
         policiesAutoConfiguringStartedAt: string | null;
         policiesAutoConfiguredReasoning: string | null;
+        policiesAutoConfiguredModel: string | null;
         createdAt: string;
         updatedAt: string;
     }>;
@@ -17411,7 +17478,7 @@ export type GetChatApiKeysResponses = {
         id: string;
         organizationId: string;
         name: string;
-        provider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        provider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         secretId: string | null;
         scope: 'personal' | 'team' | 'org_wide';
         userId: string | null;
@@ -17436,7 +17503,7 @@ export type GetChatApiKeysResponse = GetChatApiKeysResponses[keyof GetChatApiKey
 export type CreateChatApiKeyData = {
     body: {
         name: string;
-        provider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        provider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         apiKey?: string;
         baseUrl?: string | null;
         scope?: 'personal' | 'team' | 'org_wide';
@@ -17517,7 +17584,7 @@ export type CreateChatApiKeyResponses = {
         id: string;
         organizationId: string;
         name: string;
-        provider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        provider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         secretId: string | null;
         scope: 'personal' | 'team' | 'org_wide';
         userId: string | null;
@@ -17536,7 +17603,7 @@ export type GetAvailableChatApiKeysData = {
     body?: never;
     path?: never;
     query?: {
-        provider?: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        provider?: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         includeKeyId?: string;
     };
     url: '/api/chat-api-keys/available';
@@ -17609,7 +17676,7 @@ export type GetAvailableChatApiKeysResponses = {
         id: string;
         organizationId: string;
         name: string;
-        provider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        provider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         secretId: string | null;
         scope: 'personal' | 'team' | 'org_wide';
         userId: string | null;
@@ -17786,7 +17853,7 @@ export type GetChatApiKeyResponses = {
         id: string;
         organizationId: string;
         name: string;
-        provider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        provider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         secretId: string | null;
         scope: 'personal' | 'team' | 'org_wide';
         userId: string | null;
@@ -17893,7 +17960,7 @@ export type UpdateChatApiKeyResponses = {
         id: string;
         organizationId: string;
         name: string;
-        provider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        provider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         secretId: string | null;
         scope: 'personal' | 'team' | 'org_wide';
         userId: string | null;
@@ -17912,7 +17979,7 @@ export type GetChatModelsData = {
     body?: never;
     path?: never;
     query?: {
-        provider?: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        provider?: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
     };
     url: '/api/chat/models';
 };
@@ -17983,7 +18050,7 @@ export type GetChatModelsResponses = {
     200: Array<{
         id: string;
         displayName: string;
-        provider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        provider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         createdAt?: string;
         capabilities?: {
             contextLength: number | null;
@@ -18514,7 +18581,7 @@ export type GetChatConversationsResponses = {
         chatApiKeyId: string | null;
         title: string | null;
         selectedModel: string;
-        selectedProvider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        selectedProvider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         hasCustomToolSelection: boolean;
         todoList: string | number | boolean | null | {
             [key: string]: unknown;
@@ -18542,7 +18609,7 @@ export type CreateChatConversationData = {
         agentId: string;
         title?: string | null;
         selectedModel?: string;
-        selectedProvider?: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        selectedProvider?: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         chatApiKeyId?: string | null;
     };
     path?: never;
@@ -18621,7 +18688,7 @@ export type CreateChatConversationResponses = {
         chatApiKeyId: string | null;
         title: string | null;
         selectedModel: string;
-        selectedProvider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        selectedProvider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         hasCustomToolSelection: boolean;
         todoList: string | number | boolean | null | {
             [key: string]: unknown;
@@ -18803,7 +18870,7 @@ export type GetChatConversationResponses = {
         chatApiKeyId: string | null;
         title: string | null;
         selectedModel: string;
-        selectedProvider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        selectedProvider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         hasCustomToolSelection: boolean;
         todoList: string | number | boolean | null | {
             [key: string]: unknown;
@@ -18830,7 +18897,7 @@ export type UpdateChatConversationData = {
     body?: {
         title?: string | null;
         selectedModel?: string;
-        selectedProvider?: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        selectedProvider?: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         chatApiKeyId?: string | null;
         agentId?: string;
         artifact?: string | null;
@@ -18914,7 +18981,7 @@ export type UpdateChatConversationResponses = {
         chatApiKeyId: string | null;
         title: string | null;
         selectedModel: string;
-        selectedProvider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        selectedProvider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         hasCustomToolSelection: boolean;
         todoList: string | number | boolean | null | {
             [key: string]: unknown;
@@ -19105,7 +19172,7 @@ export type GenerateChatConversationTitleResponses = {
         chatApiKeyId: string | null;
         title: string | null;
         selectedModel: string;
-        selectedProvider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        selectedProvider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         hasCustomToolSelection: boolean;
         todoList: string | number | boolean | null | {
             [key: string]: unknown;
@@ -19212,7 +19279,7 @@ export type UpdateChatMessageResponses = {
         chatApiKeyId: string | null;
         title: string | null;
         selectedModel: string;
-        selectedProvider: 'anthropic' | 'bedrock' | 'cerebras' | 'cohere' | 'gemini' | 'groq' | 'xai' | 'openrouter' | 'mistral' | 'openai' | 'perplexity' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
+        selectedProvider: 'openai' | 'gemini' | 'anthropic' | 'bedrock' | 'cohere' | 'cerebras' | 'mistral' | 'perplexity' | 'groq' | 'xai' | 'openrouter' | 'vllm' | 'ollama' | 'zhipuai' | 'deepseek' | 'minimax';
         hasCustomToolSelection: boolean;
         todoList: string | number | boolean | null | {
             [key: string]: unknown;
@@ -31082,7 +31149,6 @@ export type GetOrganizationResponses = {
         customFont: 'lato' | 'inter' | 'open-sans' | 'roboto' | 'source-sans-pro' | 'jetbrains-mono';
         convertToolResultsToToon: boolean;
         compressionScope: 'organization' | 'team';
-        autoConfigureNewTools: boolean;
         globalToolPolicy: 'permissive' | 'restrictive';
         allowChatFileUploads: boolean;
     };
@@ -31100,7 +31166,6 @@ export type UpdateOrganizationData = {
         logo?: string | null;
         onboardingComplete?: boolean;
         convertToolResultsToToon?: boolean;
-        autoConfigureNewTools?: boolean;
         allowChatFileUploads?: boolean;
     };
     path?: never;
@@ -31184,7 +31249,6 @@ export type UpdateOrganizationResponses = {
         customFont: 'lato' | 'inter' | 'open-sans' | 'roboto' | 'source-sans-pro' | 'jetbrains-mono';
         convertToolResultsToToon: boolean;
         compressionScope: 'organization' | 'team';
-        autoConfigureNewTools: boolean;
         globalToolPolicy: 'permissive' | 'restrictive';
         allowChatFileUploads: boolean;
     };
@@ -31680,83 +31744,6 @@ export type PerplexityChatCompletionsWithAgentResponses = {
 };
 
 export type PerplexityChatCompletionsWithAgentResponse = PerplexityChatCompletionsWithAgentResponses[keyof PerplexityChatCompletionsWithAgentResponses];
-
-export type GetPolicyConfigSubagentPromptData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/policy-config-subagent/prompt';
-};
-
-export type GetPolicyConfigSubagentPromptErrors = {
-    /**
-     * Default Response
-     */
-    400: {
-        error: {
-            message: string;
-            type: 'api_validation_error';
-        };
-    };
-    /**
-     * Default Response
-     */
-    401: {
-        error: {
-            message: string;
-            type: 'api_authentication_error';
-        };
-    };
-    /**
-     * Default Response
-     */
-    403: {
-        error: {
-            message: string;
-            type: 'api_authorization_error';
-        };
-    };
-    /**
-     * Default Response
-     */
-    404: {
-        error: {
-            message: string;
-            type: 'api_not_found_error';
-        };
-    };
-    /**
-     * Default Response
-     */
-    409: {
-        error: {
-            message: string;
-            type: 'api_conflict_error';
-        };
-    };
-    /**
-     * Default Response
-     */
-    500: {
-        error: {
-            message: string;
-            type: 'api_internal_server_error';
-        };
-    };
-};
-
-export type GetPolicyConfigSubagentPromptError = GetPolicyConfigSubagentPromptErrors[keyof GetPolicyConfigSubagentPromptErrors];
-
-export type GetPolicyConfigSubagentPromptResponses = {
-    /**
-     * Default Response
-     */
-    200: {
-        promptTemplate: string;
-    };
-};
-
-export type GetPolicyConfigSubagentPromptResponse = GetPolicyConfigSubagentPromptResponses[keyof GetPolicyConfigSubagentPromptResponses];
 
 export type GetSecretsTypeData = {
     body?: never;
@@ -33758,6 +33745,7 @@ export type GetToolsResponses = {
         policiesAutoConfiguredAt: string | null;
         policiesAutoConfiguringStartedAt: string | null;
         policiesAutoConfiguredReasoning: string | null;
+        policiesAutoConfiguredModel: string | null;
         createdAt: string;
         updatedAt: string;
         agent: {
@@ -33880,6 +33868,9 @@ export type GetToolsWithAssignmentsResponses = {
             catalogId: string | null;
             createdAt: string;
             updatedAt: string;
+            policiesAutoConfiguredAt: string | null;
+            policiesAutoConfiguredReasoning: string | null;
+            policiesAutoConfiguredModel: string | null;
             assignmentCount: number;
             assignments: Array<{
                 agentToolId: string;
