@@ -341,24 +341,23 @@ class SlackProvider implements ChatOpsProvider {
       throw new Error("SlackProvider not initialized");
     }
 
-    const agentButtons = params.agents.map((agent) => ({
-      type: "button" as const,
-      text: {
-        type: "plain_text" as const,
-        text: agent.name,
-      },
-      action_id: `select_agent_${agent.id}`,
-      value: agent.id,
-    }));
-
-    // Slack allows max 5 elements per actions block, split if needed
-    const actionBlocks: Record<string, unknown>[] = [];
-    for (let i = 0; i < agentButtons.length; i += 5) {
-      actionBlocks.push({
-        type: "actions" as const,
-        elements: agentButtons.slice(i, i + 5),
-      });
-    }
+    const agentDropdown = {
+      type: "actions" as const,
+      elements: [
+        {
+          type: "static_select" as const,
+          action_id: "select_agent",
+          placeholder: {
+            type: "plain_text" as const,
+            text: "Choose an agent…",
+          },
+          options: params.agents.map((agent) => ({
+            text: { type: "plain_text" as const, text: agent.name },
+            value: agent.id,
+          })),
+        },
+      ],
+    };
 
     const blocks: Record<string, unknown>[] = params.isWelcome
       ? [
@@ -366,7 +365,7 @@ class SlackProvider implements ChatOpsProvider {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: "Each Slack channel needs a *default agent* bound to it. This agent will handle all your requests in this channel by default.",
+              text: "Each Slack channel needs a *default agent* assigned to it. This agent will handle all your requests in this channel by default.",
             },
           },
           {
@@ -391,7 +390,7 @@ class SlackProvider implements ChatOpsProvider {
               text: "*Let's set the default agent for this channel:*",
             },
           },
-          ...actionBlocks,
+          agentDropdown,
         ]
       : [
           {
@@ -401,7 +400,7 @@ class SlackProvider implements ChatOpsProvider {
               text: "*Change Default Agent*\nSelect a different agent to handle messages in this channel:",
             },
           },
-          ...actionBlocks,
+          agentDropdown,
         ];
 
     const isDM = params.message.metadata?.channelType === "im";
@@ -591,12 +590,12 @@ class SlackProvider implements ChatOpsProvider {
     }
 
     const action = p.actions[0];
-    if (!action.action_id?.startsWith("select_agent_") || !action.value) {
+    if (action.action_id !== "select_agent" || !action.selected_option?.value) {
       return null;
     }
 
     return {
-      agentId: action.value,
+      agentId: action.selected_option.value,
       channelId: p.channel?.id || "",
       workspaceId: p.team?.id || null,
       threadTs: p.message?.thread_ts || p.message?.ts,
@@ -679,7 +678,7 @@ class SlackProvider implements ChatOpsProvider {
             "`/archestra-select-agent` — Change the default agent\n" +
             "`/archestra-status` — Show current agent binding\n" +
             "`/archestra-help` — Show this help message\n\n" +
-            "Or just send a message to interact with the bound agent.",
+            "Or just send a message to interact with the assigned agent.",
         };
 
       case SLACK_SLASH_COMMANDS.STATUS: {
@@ -694,7 +693,7 @@ class SlackProvider implements ChatOpsProvider {
           return {
             response_type: "ephemeral",
             text:
-              `This channel is bound to agent: *${agent?.name || binding.agentId}*\n\n` +
+              `This channel is assigned to agent: *${agent?.name || binding.agentId}*\n\n` +
               "*Tip:* You can use other agents with the syntax *AgentName >* (e.g., @Archestra Sales > what's the status?).\n\n" +
               "Use `/archestra-select-agent` to change the default agent.",
           };
@@ -702,7 +701,7 @@ class SlackProvider implements ChatOpsProvider {
 
         return {
           response_type: "ephemeral",
-          text: "No agent is bound to this channel yet.\nSend any message to set up an agent binding.",
+          text: "No agent is assigned to this channel yet.\nSend any message to set up an agent assignment.",
         };
       }
 
@@ -1050,7 +1049,8 @@ interface SlackInteractivePayload {
   type: string;
   actions?: Array<{
     action_id: string;
-    value: string;
+    value?: string;
+    selected_option?: { value: string };
   }>;
   user?: { id: string; name: string };
   channel?: { id: string };

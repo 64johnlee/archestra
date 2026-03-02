@@ -51,7 +51,7 @@ The bot responds with an **Adaptive Card dropdown** to select which agent handle
 
 ### Default Agent
 
-Each Teams channel requires a **default agent** to be bound to it. This agent handles all messages in the channel by default. When you first mention the bot in a channel without a binding, you'll be prompted to select an agent from a dropdown.
+Each Teams channel requires a **default agent** to be assigned to it. This agent handles all messages in the channel by default. When you first mention the bot in a channel without a binding, you'll be prompted to select an agent from a dropdown.
 
 You can manage the default agent for each channel from the **Agent Triggers** → **MS Teams** page in Archestra.
 
@@ -86,6 +86,8 @@ This routes the message to the "Sales" agent instead of the channel's default ag
 ### Direct Messages
 
 A DM with the bot behaves just like another channel — each user can choose which agent handles their DMs. On your first message, the bot shows an agent selection card. Use `/select-agent` to change it later.
+
+> **Note:** Installing the bot for a team does not automatically enable direct messages for all team members. Each user must install the Archestra app personally before they can DM the bot. When a user opens a chat with the bot for the first time, Teams prompts them to click **Add** to complete the personal installation. This is a Microsoft Teams platform requirement.
 
 > If you update from a previous manifest without the `"personal"` scope, re-upload the updated manifest to enable DMs.
 
