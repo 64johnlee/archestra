@@ -27,7 +27,13 @@ import {
   OrganizationModel,
   UserModel,
 } from "@/models";
-import { ApiError, constructResponseSchema } from "@/types";
+import {
+  ApiError,
+  constructResponseSchema,
+  createPaginatedResponseSchema,
+  createSortingQuerySchema,
+  PaginationQuerySchema,
+} from "@/types";
 import {
   type ChatOpsProvider,
   type ChatOpsProviderType,
@@ -911,39 +917,71 @@ const chatopsRoutes: FastifyPluginAsyncZod = async (fastify) => {
   );
 
   /**
-   * List all channel bindings for the organization
+   * List channel bindings for the organization with server-side pagination
    */
   fastify.get(
     "/api/chatops/bindings",
     {
       schema: {
         operationId: RouteId.ListChatOpsBindings,
-        description: "List all chatops channel bindings",
+        description: "List chatops channel bindings with pagination",
         tags: ["ChatOps"],
+        querystring: z
+          .object({
+            provider: ChatOpsProviderTypeSchema.optional(),
+            workspaceId: z.string().optional(),
+            search: z.string().optional(),
+            status: z.enum(["configured", "unassigned"]).optional(),
+          })
+          .merge(PaginationQuerySchema)
+          .merge(
+            createSortingQuerySchema(["channelName", "createdAt"] as const),
+          ),
         response: constructResponseSchema(
-          z.array(ChatOpsChannelBindingResponseSchema),
+          createPaginatedResponseSchema(
+            ChatOpsChannelBindingResponseSchema,
+          ).extend({
+            counts: z.object({
+              configured: z.number(),
+              unassigned: z.number(),
+            }),
+            workspaces: z.array(z.object({ id: z.string(), name: z.string() })),
+            hasDmBinding: z.boolean(),
+          }),
         ),
       },
     },
     async (request, reply) => {
-      const bindings = await ChatOpsChannelBindingModel.findByOrganization(
-        request.organizationId,
-      );
+      const {
+        limit,
+        offset,
+        sortBy,
+        sortDirection,
+        provider,
+        workspaceId,
+        search,
+        status,
+      } = request.query;
 
-      // Filter out DM bindings that belong to other users
-      const userEmail = request.user.email;
-      const visibleBindings = bindings.filter((b) => {
-        if (!b.isDm) return true;
-        return b.dmOwnerEmail === userEmail;
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: request.organizationId,
+        userEmail: request.user.email,
+        pagination: { limit, offset },
+        sorting: { sortBy, sortDirection },
+        filters: { provider, workspaceId, search, status },
       });
 
-      return reply.send(
-        visibleBindings.map((b) => ({
+      return reply.send({
+        data: result.data.map((b) => ({
           ...b,
           createdAt: b.createdAt.toISOString(),
           updatedAt: b.updatedAt.toISOString(),
         })),
-      );
+        pagination: result.pagination,
+        counts: result.counts,
+        workspaces: result.workspaces,
+        hasDmBinding: result.hasDmBinding,
+      });
     },
   );
 
@@ -1065,13 +1103,9 @@ const chatopsRoutes: FastifyPluginAsyncZod = async (fastify) => {
       }
 
       // Check if user already has a DM binding (real or pending) for this provider
-      const existingBindings =
-        await ChatOpsChannelBindingModel.findByOrganization(
-          request.organizationId,
-        );
-      const existingDm = existingBindings.find(
-        (b) =>
-          b.provider === provider && b.isDm && b.dmOwnerEmail === userEmail,
+      const existingDm = await ChatOpsChannelBindingModel.findDmBindingByEmail(
+        provider,
+        userEmail,
       );
 
       if (existingDm) {

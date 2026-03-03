@@ -545,15 +545,26 @@ class SlackProvider implements ChatOpsProvider {
     }
 
     try {
-      const result = await this.client.conversations.list({
-        types: "public_channel,private_channel",
-        exclude_archived: true,
-        limit: 999,
-      });
+      // Paginate through all channels using cursor-based pagination.
+      // Slack API returns at most `limit` channels per page (max 999).
+      const allChannels: NonNullable<
+        Awaited<ReturnType<WebClient["conversations"]["list"]>>["channels"]
+      > = [];
+      let cursor: string | undefined;
 
-      const channels = result.channels || [];
+      do {
+        const result = await this.client.conversations.list({
+          types: "public_channel,private_channel",
+          exclude_archived: true,
+          limit: 999,
+          cursor,
+        });
+        allChannels.push(...(result.channels || []));
+        cursor = result.response_metadata?.next_cursor || undefined;
+      } while (cursor);
+
       // Only include channels where the bot is a member
-      return channels
+      return allChannels
         .filter((ch) => ch.id && ch.is_member)
         .map((ch) => ({
           channelId: ch.id as string,

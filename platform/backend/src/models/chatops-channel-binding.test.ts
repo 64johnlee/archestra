@@ -809,4 +809,400 @@ describe("ChatOpsChannelBindingModel", () => {
       expect(deletedCount).toBe(0);
     });
   });
+
+  describe("findAllPaginated", () => {
+    test("returns paginated results with correct pagination metadata", async ({
+      makeAgent,
+      makeOrganization,
+      makeUser,
+    }) => {
+      const org = await makeOrganization();
+      const user = await makeUser({ email: "test@example.com" });
+      const agent = await makeAgent({ agentType: "agent" });
+
+      // Create 5 channels
+      for (let i = 0; i < 5; i++) {
+        await ChatOpsChannelBindingModel.create({
+          organizationId: org.id,
+          provider: "slack",
+          channelId: `ch-${i}`,
+          channelName: `Channel ${i}`,
+          workspaceId: "ws-1",
+          workspaceName: "Workspace",
+          agentId: i < 3 ? agent.id : null,
+        });
+      }
+
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: org.id,
+        userEmail: user.email,
+        pagination: { limit: 2, offset: 0 },
+        filters: { provider: "slack" },
+      });
+
+      expect(result.data).toHaveLength(2);
+      expect(result.pagination.total).toBe(5);
+      expect(result.pagination.totalPages).toBe(3);
+      expect(result.pagination.hasNext).toBe(true);
+      expect(result.pagination.hasPrev).toBe(false);
+    });
+
+    test("applies offset correctly", async ({
+      makeAgent,
+      makeOrganization,
+      makeUser,
+    }) => {
+      const org = await makeOrganization();
+      const user = await makeUser({ email: "test@example.com" });
+      const agent = await makeAgent({ agentType: "agent" });
+
+      for (let i = 0; i < 5; i++) {
+        await ChatOpsChannelBindingModel.create({
+          organizationId: org.id,
+          provider: "slack",
+          channelId: `ch-${i}`,
+          channelName: `Channel ${i}`,
+          workspaceId: "ws-1",
+          agentId: agent.id,
+        });
+      }
+
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: org.id,
+        userEmail: user.email,
+        pagination: { limit: 2, offset: 4 },
+        filters: { provider: "slack" },
+      });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.pagination.hasNext).toBe(false);
+      expect(result.pagination.hasPrev).toBe(true);
+    });
+
+    test("filters by search on channelName", async ({
+      makeOrganization,
+      makeUser,
+    }) => {
+      const org = await makeOrganization();
+      const user = await makeUser({ email: "test@example.com" });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-1",
+        channelName: "general",
+        workspaceId: "ws-1",
+      });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-2",
+        channelName: "random",
+        workspaceId: "ws-1",
+      });
+
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: org.id,
+        userEmail: user.email,
+        pagination: { limit: 20, offset: 0 },
+        filters: { provider: "slack", search: "gen" },
+      });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].channelName).toBe("general");
+    });
+
+    test("filters by status configured", async ({
+      makeAgent,
+      makeOrganization,
+      makeUser,
+    }) => {
+      const org = await makeOrganization();
+      const user = await makeUser({ email: "test@example.com" });
+      const agent = await makeAgent({ agentType: "agent" });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-1",
+        channelName: "configured-channel",
+        workspaceId: "ws-1",
+        agentId: agent.id,
+      });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-2",
+        channelName: "unassigned-channel",
+        workspaceId: "ws-1",
+        agentId: null,
+      });
+
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: org.id,
+        userEmail: user.email,
+        pagination: { limit: 20, offset: 0 },
+        filters: { provider: "slack", status: "configured" },
+      });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].agentId).toBe(agent.id);
+    });
+
+    test("filters by status unassigned", async ({
+      makeAgent,
+      makeOrganization,
+      makeUser,
+    }) => {
+      const org = await makeOrganization();
+      const user = await makeUser({ email: "test@example.com" });
+      const agent = await makeAgent({ agentType: "agent" });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-1",
+        workspaceId: "ws-1",
+        agentId: agent.id,
+      });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-2",
+        workspaceId: "ws-1",
+        agentId: null,
+      });
+
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: org.id,
+        userEmail: user.email,
+        pagination: { limit: 20, offset: 0 },
+        filters: { provider: "slack", status: "unassigned" },
+      });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].agentId).toBeNull();
+    });
+
+    test("filters by provider", async ({ makeOrganization, makeUser }) => {
+      const org = await makeOrganization();
+      const user = await makeUser({ email: "test@example.com" });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-slack",
+        workspaceId: "ws-1",
+      });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "ms-teams",
+        channelId: "ch-teams",
+        workspaceId: "ws-2",
+      });
+
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: org.id,
+        userEmail: user.email,
+        pagination: { limit: 20, offset: 0 },
+        filters: { provider: "slack" },
+      });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].provider).toBe("slack");
+    });
+
+    test("filters by workspaceId", async ({ makeOrganization, makeUser }) => {
+      const org = await makeOrganization();
+      const user = await makeUser({ email: "test@example.com" });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-1",
+        workspaceId: "ws-1",
+        workspaceName: "Workspace 1",
+      });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-2",
+        workspaceId: "ws-2",
+        workspaceName: "Workspace 2",
+      });
+
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: org.id,
+        userEmail: user.email,
+        pagination: { limit: 20, offset: 0 },
+        filters: { provider: "slack", workspaceId: "ws-1" },
+      });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].workspaceId).toBe("ws-1");
+    });
+
+    test("sorts by channelName ascending", async ({
+      makeOrganization,
+      makeUser,
+    }) => {
+      const org = await makeOrganization();
+      const user = await makeUser({ email: "test@example.com" });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-b",
+        channelName: "Bravo",
+        workspaceId: "ws-1",
+      });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-a",
+        channelName: "Alpha",
+        workspaceId: "ws-1",
+      });
+
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: org.id,
+        userEmail: user.email,
+        pagination: { limit: 20, offset: 0 },
+        sorting: { sortBy: "channelName", sortDirection: "asc" },
+        filters: { provider: "slack" },
+      });
+
+      expect(result.data[0].channelName).toBe("Alpha");
+      expect(result.data[1].channelName).toBe("Bravo");
+    });
+
+    test("returns correct counts regardless of status filter", async ({
+      makeAgent,
+      makeOrganization,
+      makeUser,
+    }) => {
+      const org = await makeOrganization();
+      const user = await makeUser({ email: "test@example.com" });
+      const agent = await makeAgent({ agentType: "agent" });
+
+      // 2 configured, 3 unassigned
+      for (let i = 0; i < 5; i++) {
+        await ChatOpsChannelBindingModel.create({
+          organizationId: org.id,
+          provider: "slack",
+          channelId: `ch-${i}`,
+          channelName: `Channel ${i}`,
+          workspaceId: "ws-1",
+          agentId: i < 2 ? agent.id : null,
+        });
+      }
+
+      // Filter to configured only, but counts should reflect all
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: org.id,
+        userEmail: user.email,
+        pagination: { limit: 20, offset: 0 },
+        filters: { provider: "slack", status: "configured" },
+      });
+
+      expect(result.data).toHaveLength(2);
+      expect(result.counts.configured).toBe(2);
+      expect(result.counts.unassigned).toBe(3);
+    });
+
+    test("hides other users DM bindings", async ({
+      makeAgent,
+      makeOrganization,
+      makeUser,
+    }) => {
+      const org = await makeOrganization();
+      const currentUser = await makeUser({ email: "current@example.com" });
+      const agent = await makeAgent({ agentType: "agent" });
+
+      // Current user's DM
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "dm-current",
+        workspaceId: "ws-1",
+        agentId: agent.id,
+        isDm: true,
+        dmOwnerEmail: "current@example.com",
+      });
+
+      // Other user's DM
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "dm-other",
+        workspaceId: "ws-1",
+        agentId: agent.id,
+        isDm: true,
+        dmOwnerEmail: "other@example.com",
+      });
+
+      // Regular channel
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-regular",
+        channelName: "General",
+        workspaceId: "ws-1",
+      });
+
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: org.id,
+        userEmail: currentUser.email,
+        pagination: { limit: 20, offset: 0 },
+        filters: { provider: "slack" },
+      });
+
+      // Should see own DM + regular channel, not other user's DM
+      expect(result.data).toHaveLength(2);
+      const channelIds = result.data.map((b) => b.channelId);
+      expect(channelIds).toContain("dm-current");
+      expect(channelIds).toContain("ch-regular");
+      expect(channelIds).not.toContain("dm-other");
+    });
+
+    test("returns workspaces list", async ({ makeOrganization, makeUser }) => {
+      const org = await makeOrganization();
+      const user = await makeUser({ email: "test@example.com" });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-1",
+        workspaceId: "ws-1",
+        workspaceName: "Workspace 1",
+      });
+
+      await ChatOpsChannelBindingModel.create({
+        organizationId: org.id,
+        provider: "slack",
+        channelId: "ch-2",
+        workspaceId: "ws-2",
+        workspaceName: "Workspace 2",
+      });
+
+      const result = await ChatOpsChannelBindingModel.findAllPaginated({
+        organizationId: org.id,
+        userEmail: user.email,
+        pagination: { limit: 20, offset: 0 },
+        filters: { provider: "slack" },
+      });
+
+      expect(result.workspaces).toHaveLength(2);
+      expect(result.workspaces.map((w) => w.id).sort()).toEqual([
+        "ws-1",
+        "ws-2",
+      ]);
+    });
+  });
 });

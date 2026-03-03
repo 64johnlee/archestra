@@ -99,7 +99,7 @@ const contentNavGroups: NavGroup[] = [
         subItems: [
           {
             title: "Triggers",
-            url: "/agents/triggers/ms-teams",
+            url: "/agents/triggers",
             customIsActive: (pathname: string) =>
               pathname.startsWith("/agents/triggers"),
           },
