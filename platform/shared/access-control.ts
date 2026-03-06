@@ -479,6 +479,21 @@ export const requiredEndpointPermissionsMap: Partial<
   [RouteId.DeleteConversationEnabledTools]: {
     conversation: ["update"],
   },
+  [RouteId.ShareConversation]: {
+    conversation: ["update"],
+  },
+  [RouteId.UnshareConversation]: {
+    conversation: ["update"],
+  },
+  [RouteId.GetConversationShare]: {
+    conversation: ["read"],
+  },
+  [RouteId.GetSharedConversation]: {
+    conversation: ["read"],
+  },
+  [RouteId.ForkSharedConversation]: {
+    conversation: ["create"],
+  },
   [RouteId.GetChatApiKeys]: {
     chatSettings: ["read"],
   },
@@ -677,6 +692,9 @@ export const requiredEndpointPermissionsMap: Partial<
  */
 export const requiredPagePermissionsMap: Record<string, Permissions> = {
   "/chat": {
+    conversation: ["read"],
+  },
+  "/chat/shared": {
     conversation: ["read"],
   },
 
