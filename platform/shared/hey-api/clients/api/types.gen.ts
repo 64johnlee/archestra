@@ -21201,6 +21201,7 @@ export type GetConfigResponses = {
     200: {
         enterpriseFeatures: {
             core: boolean;
+            fullWhiteLabeling: boolean;
         };
         features: {
             orchestratorK8sRuntime: boolean;
