@@ -86,10 +86,10 @@ export function ManageUsersDialog({
     team: ["admin"],
   });
   const { data: hasMcpServerCreatePermission } = useHasPermissions({
-    mcpServer: ["create"],
+    mcpServerInstallation: ["create"],
   });
   const { data: hasMcpServerUpdatePermission } = useHasPermissions({
-    mcpServer: ["update"],
+    mcpServerInstallation: ["update"],
   });
 
   // Use the first server for display purposes
