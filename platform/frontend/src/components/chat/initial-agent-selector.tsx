@@ -1,13 +1,26 @@
 "use client";
 
 import type { archestraApiTypes } from "@shared";
-import { ArrowLeft, Check, Loader2, Plus, Search, XIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  Bot,
+  Check,
+  ExternalLink,
+  Info,
+  Loader2,
+  Plus,
+  Search,
+  User,
+  XIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentBadge } from "@/components/agent-badge";
 import { AgentIcon } from "@/components/agent-icon";
 import { McpCatalogIcon, ToolChecklist } from "@/components/agent-tools-editor";
 import { PromptInputButton } from "@/components/ai-elements/prompt-input";
 import { TokenSelect } from "@/components/token-select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,19 +31,20 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useInternalAgents, useUpdateProfile } from "@/lib/agent.query";
 import { useInvalidateToolAssignmentQueries } from "@/lib/agent-tools.hook";
 import {
+  useAgentDelegations,
   useAllProfileTools,
   useAssignTool,
+  useRemoveAgentDelegation,
+  useSyncAgentDelegations,
   useUnassignTool,
 } from "@/lib/agent-tools.query";
 import { authClient } from "@/lib/clients/auth/auth-client";
@@ -41,8 +55,13 @@ import {
 import { useMcpServersGroupedByCatalog } from "@/lib/mcp-server.query";
 import { cn } from "@/lib/utils";
 
-type ScopeFilter = "all" | "personal" | "team" | "org";
-type DialogView = "settings" | "change" | "add-tool" | "configure-tool";
+type ScopeFilter = "my" | "others" | "team" | "org";
+type DialogView =
+  | "settings"
+  | "change"
+  | "add-tool"
+  | "configure-tool"
+  | "add-delegation";
 
 type CatalogItem =
   archestraApiTypes.GetInternalMcpCatalogResponses["200"][number];
@@ -61,27 +80,26 @@ export function InitialAgentSelector({
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<DialogView>("settings");
   const [search, setSearch] = useState("");
-  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("all");
+  const [scopeFilters, setScopeFilters] = useState<Set<ScopeFilter>>(
+    () => new Set<ScopeFilter>(["my", "team", "org"]),
+  );
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogItem | null>(
     null,
   );
 
-  const agents = useMemo(() => {
-    const userId = session?.user?.id;
-    return allAgents.filter(
-      (a) =>
-        (a as unknown as Record<string, unknown>).scope !== "personal" ||
-        (a as unknown as Record<string, unknown>).authorId === userId,
-    );
-  }, [allAgents, session?.user?.id]);
+  const userId = session?.user?.id;
 
   const filteredAgents = useMemo(() => {
-    let result = agents;
-    if (scopeFilter !== "all") {
-      result = result.filter(
-        (a) => (a as unknown as Record<string, unknown>).scope === scopeFilter,
-      );
-    }
+    let result = allAgents.filter((a) => {
+      const scope = (a as unknown as Record<string, unknown>).scope as string;
+      const authorId = (a as unknown as Record<string, unknown>)
+        .authorId as string;
+      if (scope === "personal") {
+        if (authorId === userId) return scopeFilters.has("my");
+        return scopeFilters.has("others");
+      }
+      return scopeFilters.has(scope as ScopeFilter);
+    });
     if (search) {
       const lower = search.toLowerCase();
       result = result.filter(
@@ -90,25 +108,55 @@ export function InitialAgentSelector({
           a.description?.toLowerCase().includes(lower),
       );
     }
-    return result;
-  }, [agents, search, scopeFilter]);
+    const scopeOrder: Record<string, number> = { personal: 0, team: 1, org: 2 };
+    return [...result].sort((a, b) => {
+      const sa = (a as unknown as Record<string, unknown>).scope as string;
+      const sb = (b as unknown as Record<string, unknown>).scope as string;
+      return (scopeOrder[sa] ?? 3) - (scopeOrder[sb] ?? 3);
+    });
+  }, [allAgents, search, scopeFilters, userId]);
 
   const currentAgent = useMemo(
-    () => agents.find((a) => a.id === currentAgentId) ?? agents[0] ?? null,
-    [agents, currentAgentId],
+    () =>
+      allAgents.find((a) => a.id === currentAgentId) ?? allAgents[0] ?? null,
+    [allAgents, currentAgentId],
   );
+
+  const effectiveAgentId = currentAgent?.id ?? currentAgentId;
+  const { data: catalogItems = [] } = useInternalMcpCatalog();
+  const { data: assignedToolsData } = useAllProfileTools({
+    filters: { agentId: effectiveAgentId ?? undefined },
+    skipPagination: true,
+    enabled: !!effectiveAgentId,
+  });
+
+  const assignedCatalogs = useMemo(() => {
+    const catalogIds = new Set<string>();
+    for (const at of assignedToolsData?.data ?? []) {
+      if (at.tool.catalogId) catalogIds.add(at.tool.catalogId);
+    }
+    return catalogItems.filter((c) => catalogIds.has(c.id));
+  }, [assignedToolsData, catalogItems]);
+
+  const { data: triggerDelegations = [] } = useAgentDelegations(
+    effectiveAgentId ?? undefined,
+  );
+  const triggerSubagents = useMemo(() => {
+    const targetIds = new Set(triggerDelegations.map((d) => d.id));
+    return allAgents.filter((a) => targetIds.has(a.id));
+  }, [allAgents, triggerDelegations]);
 
   const handleAgentSelect = (agentId: string) => {
     onAgentChange(agentId);
     setView("settings");
     setSearch("");
-    setScopeFilter("all");
+    setScopeFilters(new Set(["my", "team", "org"]));
   };
 
   const resetToSettings = useCallback(() => {
     setView("settings");
     setSearch("");
-    setScopeFilter("all");
+    setScopeFilters(new Set(["my", "team", "org"]));
     setSelectedCatalog(null);
   }, []);
 
@@ -142,6 +190,10 @@ export function InitialAgentSelector({
           <span className="truncate flex-1 text-left">
             {currentAgent?.name ?? "Select agent"}
           </span>
+          <ToolServerAvatarGroup
+            catalogs={assignedCatalogs}
+            subagents={triggerSubagents}
+          />
         </PromptInputButton>
       </DialogTrigger>
       <DialogContent
@@ -154,6 +206,7 @@ export function InitialAgentSelector({
           {view === "change" && "Select Agent"}
           {view === "add-tool" && "Add Tools"}
           {view === "configure-tool" && "Configure Tools"}
+          {view === "add-delegation" && "Call an Agent"}
         </DialogTitle>
 
         {view === "settings" && (
@@ -171,20 +224,38 @@ export function InitialAgentSelector({
               title="Select Agent"
               onBack={resetToSettings}
               extra={
-                <Select
-                  value={scopeFilter}
-                  onValueChange={(v) => setScopeFilter(v as ScopeFilter)}
-                >
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent position="popper" side="bottom" align="start">
-                    <SelectItem value="all">All types</SelectItem>
-                    <SelectItem value="personal">Personal</SelectItem>
-                    <SelectItem value="team">Team</SelectItem>
-                    <SelectItem value="org">Organization</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-1">
+                  {(
+                    [
+                      { value: "my", label: "My Personal" },
+                      { value: "team", label: "Team" },
+                      { value: "org", label: "Organization" },
+                      { value: "others", label: "Others' Personal" },
+                    ] as const
+                  ).map((option) => (
+                    <Button
+                      key={option.value}
+                      variant={
+                        scopeFilters.has(option.value) ? "secondary" : "ghost"
+                      }
+                      size="sm"
+                      className="text-xs h-7 px-2.5"
+                      onClick={() => {
+                        setScopeFilters((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(option.value)) {
+                            next.delete(option.value);
+                          } else {
+                            next.add(option.value);
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
               }
             />
             <div className="px-4 pt-4 shrink-0">
@@ -212,8 +283,18 @@ export function InitialAgentSelector({
                       agent={agent}
                       isSelected={currentAgentId === agent.id}
                       onSelect={() => handleAgentSelect(agent.id)}
+                      currentUserId={userId}
                     />
                   ))}
+                  <a
+                    href="/agents?create=true"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-full min-h-[120px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-4 text-center transition-colors hover:bg-accent cursor-pointer text-muted-foreground"
+                  >
+                    <ExternalLink className="size-5" />
+                    <span className="text-xs font-medium">Create Agent</span>
+                  </a>
                 </div>
               )}
             </div>
@@ -224,6 +305,15 @@ export function InitialAgentSelector({
           <AddToolView
             onBack={resetToSettings}
             onSelectCatalog={handleSelectCatalog}
+            onAddDelegation={() => setView("add-delegation")}
+          />
+        )}
+
+        {view === "add-delegation" && currentAgent && (
+          <AddDelegationView
+            agentId={currentAgent.id}
+            onBack={() => setView("add-tool")}
+            onDone={resetToSettings}
           />
         )}
 
@@ -351,7 +441,11 @@ function AgentSettingsView({
           </div>
           <div>
             <div className="font-semibold text-sm">{agent.name}</div>
-            <div className="text-xs text-muted-foreground">AI Agent</div>
+            {agent.description && (
+              <div className="text-xs text-muted-foreground line-clamp-1">
+                {agent.description}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -369,10 +463,17 @@ function AgentSettingsView({
       </div>
 
       <div className="p-4 space-y-4 flex-1 min-h-0 overflow-y-auto">
+        {((agent as unknown as Record<string, unknown>).scope === "org" ||
+          (agent as unknown as Record<string, unknown>).scope === "team") && (
+          <Alert variant="info" className="border-0 py-2 text-xs">
+            <Info className="size-3.5" />
+            <AlertDescription className="text-xs">
+              You are editing a shared agent
+            </AlertDescription>
+          </Alert>
+        )}
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-            Instructions
-          </div>
+          <Label className="mb-1.5">Instructions</Label>
           <Textarea
             value={instructions}
             onChange={(e) => handleInstructionsChange(e.target.value)}
@@ -382,9 +483,7 @@ function AgentSettingsView({
         </div>
 
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-            Tools
-          </div>
+          <Label className="mb-1.5">Tools and subagents</Label>
           <AssignedToolsGrid
             agentId={agent.id}
             onAddTool={onAddTool}
@@ -412,8 +511,16 @@ function AssignedToolsGrid({
     skipPagination: true,
     enabled: !!agentId,
   });
+  const { data: allAgents = [] } = useInternalAgents();
+  const { data: delegations = [] } = useAgentDelegations(agentId);
+  const removeDelegation = useRemoveAgentDelegation();
   const unassignTool = useUnassignTool();
   const invalidateAllQueries = useInvalidateToolAssignmentQueries();
+
+  const delegatedAgents = useMemo(() => {
+    const targetIds = new Set(delegations.map((d) => d.id));
+    return allAgents.filter((a) => targetIds.has(a.id));
+  }, [allAgents, delegations]);
 
   // Group assigned tools by catalogId
   const assignedByCatalog = useMemo(() => {
@@ -451,6 +558,40 @@ function AssignedToolsGrid({
 
   return (
     <div className="grid grid-cols-3 gap-2">
+      {delegatedAgents.map((agent) => (
+        <div
+          key={`delegation-${agent.id}`}
+          className="group relative flex flex-col items-center gap-1.5 rounded-lg border border-primary bg-primary/5 p-3 text-center"
+        >
+          <button
+            type="button"
+            className="absolute top-1.5 right-1.5 hidden group-hover:flex h-5 w-5 items-center justify-center rounded-full bg-muted hover:bg-destructive hover:text-destructive-foreground transition-colors z-10"
+            onClick={() =>
+              removeDelegation.mutate({
+                agentId,
+                targetAgentId: agent.id,
+              })
+            }
+            title={`Remove ${agent.name}`}
+          >
+            <XIcon className="size-3" />
+          </button>
+          <div className="flex flex-col items-center gap-1.5 w-full">
+            <AgentIcon
+              icon={
+                (agent as unknown as Record<string, unknown>).icon as
+                  | string
+                  | null
+              }
+              size={24}
+            />
+            <span className="text-xs font-medium truncate w-full">
+              {agent.name}
+            </span>
+            <AgentToolAvatars agentId={agent.id} />
+          </div>
+        </div>
+      ))}
       {assignedCatalogs.map((catalog) => {
         const info = assignedByCatalog.get(catalog.id);
         return (
@@ -483,7 +624,7 @@ function AssignedToolsGrid({
                 {catalog.name}
               </span>
               <span className="text-[10px] text-muted-foreground">
-                {info?.count ?? 0} tools
+                {info?.count ?? 0} {(info?.count ?? 0) === 1 ? "tool" : "tools"}
               </span>
             </button>
           </div>
@@ -508,9 +649,11 @@ function AssignedToolsGrid({
 function AddToolView({
   onBack,
   onSelectCatalog,
+  onAddDelegation,
 }: {
   onBack: () => void;
   onSelectCatalog: (catalog: CatalogItem) => void;
+  onAddDelegation: () => void;
 }) {
   const { data: catalogItems = [], isPending } = useInternalMcpCatalog();
   const allCredentials = useMcpServersGroupedByCatalog();
@@ -553,6 +696,21 @@ function AddToolView({
           </p>
         ) : (
           <div className="grid grid-cols-3 gap-3">
+            {!search && (
+              <button
+                type="button"
+                onClick={onAddDelegation}
+                className="flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-colors cursor-pointer hover:bg-accent"
+              >
+                <Bot className="size-7 text-muted-foreground" />
+                <span className="text-sm font-medium truncate w-full">
+                  Call an Agent
+                </span>
+                <p className="text-xs text-muted-foreground line-clamp-2 w-full">
+                  Delegate tasks to another agent
+                </p>
+              </button>
+            )}
             {filteredCatalogs.map((catalog) => {
               const hasCredentials =
                 catalog.serverType === "builtin" ||
@@ -773,6 +931,210 @@ function ConfigureToolView({
 }
 
 // ============================================================================
+// Add Delegation View - Pick agents to delegate to
+// ============================================================================
+
+function AddDelegationView({
+  agentId,
+  onBack,
+  onDone,
+}: {
+  agentId: string;
+  onBack: () => void;
+  onDone: () => void;
+}) {
+  const { data: allAgents = [] } = useInternalAgents();
+  const { data: session } = authClient.useSession();
+  const { data: delegations = [] } = useAgentDelegations(agentId);
+  const syncDelegations = useSyncAgentDelegations();
+  const [scopeFilters, setScopeFilters] = useState<Set<ScopeFilter>>(
+    () => new Set<ScopeFilter>(["my", "team", "org"]),
+  );
+  const [search, setSearch] = useState("");
+  const currentUserId = session?.user?.id;
+
+  const delegatedIds = useMemo(
+    () => new Set(delegations.map((d) => d.id)),
+    [delegations],
+  );
+
+  const filteredAgents = useMemo(() => {
+    let result = allAgents.filter((a) => a.id !== agentId);
+    result = result.filter((a) => {
+      const scope = (a as unknown as Record<string, unknown>).scope as string;
+      const authorId = (a as unknown as Record<string, unknown>)
+        .authorId as string;
+      if (scope === "personal") {
+        if (authorId === currentUserId) return scopeFilters.has("my");
+        return scopeFilters.has("others");
+      }
+      return scopeFilters.has(scope as ScopeFilter);
+    });
+    if (search) {
+      const lower = search.toLowerCase();
+      result = result.filter(
+        (a) =>
+          a.name.toLowerCase().includes(lower) ||
+          a.description?.toLowerCase().includes(lower),
+      );
+    }
+    const scopeOrder: Record<string, number> = { personal: 0, team: 1, org: 2 };
+    return [...result].sort((a, b) => {
+      const sa = (a as unknown as Record<string, unknown>).scope as string;
+      const sb = (b as unknown as Record<string, unknown>).scope as string;
+      return (scopeOrder[sa] ?? 3) - (scopeOrder[sb] ?? 3);
+    });
+  }, [allAgents, agentId, search, scopeFilters, currentUserId]);
+
+  const handleToggle = (targetAgentId: string) => {
+    const isAdding = !delegatedIds.has(targetAgentId);
+    const newIds = new Set(delegatedIds);
+    if (isAdding) {
+      newIds.add(targetAgentId);
+    } else {
+      newIds.delete(targetAgentId);
+    }
+    syncDelegations.mutate(
+      { agentId, targetAgentIds: [...newIds] },
+      {
+        onSuccess: () => {
+          if (isAdding) onDone();
+        },
+      },
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <DialogHeader
+        title="Call an Agent"
+        onBack={onBack}
+        extra={
+          <div className="flex items-center gap-1">
+            {(
+              [
+                { value: "my", label: "My Personal" },
+                { value: "team", label: "Team" },
+                { value: "org", label: "Organization" },
+                { value: "others", label: "Others' Personal" },
+              ] as const
+            ).map((option) => (
+              <Button
+                key={option.value}
+                variant={scopeFilters.has(option.value) ? "secondary" : "ghost"}
+                size="sm"
+                className="text-xs h-7 px-2.5"
+                onClick={() => {
+                  setScopeFilters((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(option.value)) {
+                      next.delete(option.value);
+                    } else {
+                      next.add(option.value);
+                    }
+                    return next;
+                  });
+                }}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        }
+      />
+      <div className="px-4 pt-4 shrink-0">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search agents..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+            autoFocus
+          />
+        </div>
+      </div>
+      <div className="px-4 pt-2 shrink-0">
+        <Alert variant="info" className="border-0 py-2 text-xs">
+          <Info className="size-3.5" />
+          <AlertDescription className="text-xs">
+            Adding a subagent makes its tools and capabilities available to all
+            users of this agent during conversations
+          </AlertDescription>
+        </Alert>
+      </div>
+      <div className="px-4 pt-2 pb-4 flex-1 min-h-0 overflow-y-auto">
+        {filteredAgents.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No agents found.
+          </p>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            {filteredAgents.map((agent) => (
+              <button
+                key={agent.id}
+                type="button"
+                onClick={() => handleToggle(agent.id)}
+                className={cn(
+                  "flex h-full min-h-[120px] flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-accent cursor-pointer",
+                  delegatedIds.has(agent.id) && "border-primary bg-accent",
+                )}
+              >
+                <div className="flex w-full items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <AgentIcon
+                      icon={
+                        (agent as unknown as Record<string, unknown>).icon as
+                          | string
+                          | null
+                      }
+                      size={16}
+                    />
+                  </div>
+                  <span className="text-sm font-medium truncate flex-1">
+                    {agent.name}
+                  </span>
+                  {delegatedIds.has(agent.id) && (
+                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                  )}
+                </div>
+                {agent.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 w-full">
+                    {agent.description}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 w-full mt-auto">
+                  <AgentBadge
+                    type={
+                      (agent as unknown as Record<string, unknown>).scope as
+                        | "personal"
+                        | "team"
+                        | "org"
+                    }
+                    className="text-[10px] px-1.5 py-0"
+                  />
+                  <div className="flex-1" />
+                  <AgentToolAvatars agentId={agent.id} />
+                </div>
+              </button>
+            ))}
+            <a
+              href="/agents?create=true"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-full min-h-[120px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-4 text-center transition-colors hover:bg-accent cursor-pointer text-muted-foreground"
+            >
+              <ExternalLink className="size-5" />
+              <span className="text-xs font-medium">Create Agent</span>
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // Agent Card (for change agent view)
 // ============================================================================
 
@@ -780,6 +1142,7 @@ function AgentCard({
   agent,
   isSelected,
   onSelect,
+  currentUserId,
 }: {
   agent: {
     id: string;
@@ -789,13 +1152,14 @@ function AgentCard({
   };
   isSelected: boolean;
   onSelect: () => void;
+  currentUserId?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex h-full flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-accent cursor-pointer",
+        "flex h-full min-h-[120px] flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-accent cursor-pointer",
         isSelected && "border-primary bg-accent",
       )}
     >
@@ -825,7 +1189,143 @@ function AgentCard({
           type={agent.scope as "personal" | "team" | "org"}
           className="text-[10px] px-1.5 py-0"
         />
+        {agent.scope === "personal" &&
+          (agent as unknown as Record<string, unknown>).authorId !==
+            currentUserId &&
+          Boolean((agent as unknown as Record<string, unknown>).authorName) && (
+            <Badge
+              variant="secondary"
+              className="text-[10px] gap-1 px-1.5 py-0"
+            >
+              <User className="h-2.5 w-2.5" />
+              {
+                (agent as unknown as Record<string, unknown>)
+                  .authorName as string
+              }
+            </Badge>
+          )}
+        <div className="flex-1" />
+        <AgentToolAvatars agentId={agent.id} />
       </div>
     </button>
+  );
+}
+
+function AgentToolAvatars({ agentId }: { agentId: string }) {
+  const { data: catalogItems = [] } = useInternalMcpCatalog();
+  const { data: allAgents = [] } = useInternalAgents();
+  const { data: assignedToolsData } = useAllProfileTools({
+    filters: { agentId },
+    skipPagination: true,
+    enabled: !!agentId,
+  });
+  const { data: delegations = [] } = useAgentDelegations(agentId);
+
+  const catalogs = useMemo(() => {
+    const catalogIds = new Set<string>();
+    for (const at of assignedToolsData?.data ?? []) {
+      if (at.tool.catalogId) catalogIds.add(at.tool.catalogId);
+    }
+    return catalogItems.filter((c) => catalogIds.has(c.id));
+  }, [assignedToolsData, catalogItems]);
+
+  const subagents = useMemo(() => {
+    const targetIds = new Set(delegations.map((d) => d.id));
+    return allAgents.filter((a) => targetIds.has(a.id));
+  }, [allAgents, delegations]);
+
+  if (catalogs.length === 0 && subagents.length === 0) return null;
+
+  return <ToolServerAvatarGroup catalogs={catalogs} subagents={subagents} />;
+}
+
+const MAX_VISIBLE_AVATARS = 3;
+
+type SubagentItem = {
+  id: string;
+  name: string;
+  icon?: string | null;
+};
+
+function ToolServerAvatarGroup({
+  catalogs,
+  subagents = [],
+}: {
+  catalogs: CatalogItem[];
+  subagents?: SubagentItem[];
+}) {
+  const totalCount = catalogs.length + subagents.length;
+  if (totalCount === 0) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted ml-1">
+            <Plus className="size-3 text-muted-foreground" />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top">Add tools</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  // Build a unified list of avatar items
+  const allItems: Array<
+    | { type: "catalog"; item: CatalogItem }
+    | { type: "subagent"; item: SubagentItem }
+  > = [
+    ...subagents.map((a) => ({ type: "subagent" as const, item: a })),
+    ...catalogs.map((c) => ({ type: "catalog" as const, item: c })),
+  ];
+
+  const visible = allItems.slice(0, MAX_VISIBLE_AVATARS);
+  const remaining = totalCount - MAX_VISIBLE_AVATARS;
+
+  const hiddenItems = allItems.slice(MAX_VISIBLE_AVATARS);
+  const hiddenText =
+    hiddenItems.length <= 5
+      ? hiddenItems.map((i) => i.item.name).join(", ")
+      : `${hiddenItems
+          .slice(0, 5)
+          .map((i) => i.item.name)
+          .join(", ")} and ${hiddenItems.length - 5} more`;
+
+  return (
+    <div className="flex -space-x-1.5 items-center ml-1">
+      {visible.map((entry) =>
+        entry.type === "catalog" ? (
+          <Tooltip key={entry.item.id}>
+            <TooltipTrigger asChild>
+              <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted ring-1 ring-background overflow-hidden">
+                <McpCatalogIcon
+                  icon={entry.item.icon}
+                  catalogId={entry.item.id}
+                  size={12}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top">{entry.item.name}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Tooltip key={entry.item.id}>
+            <TooltipTrigger asChild>
+              <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted ring-1 ring-background overflow-hidden">
+                <AgentIcon icon={entry.item.icon as string | null} size={12} />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top">{entry.item.name}</TooltipContent>
+          </Tooltip>
+        ),
+      )}
+      {remaining > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted ring-1 ring-background text-[9px] font-medium text-muted-foreground">
+              +{remaining}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top">{hiddenText}</TooltipContent>
+        </Tooltip>
+      )}
+    </div>
   );
 }
