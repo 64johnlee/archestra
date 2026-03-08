@@ -4,7 +4,8 @@ import {
   isArchestraMcpServerTool,
   MCP_SERVER_TOOL_NAME_SEPARATOR,
 } from "@shared";
-import * as knowledgeGraph from "@/knowledge-graph";
+import { eq } from "drizzle-orm";
+import db, { schema } from "@/database";
 import { AgentModel, InternalMcpCatalogModel } from "@/models";
 import { beforeEach, describe, expect, test, vi } from "@/test";
 import type { Agent } from "@/types";
@@ -125,19 +126,19 @@ describe("getArchestraMcpTools", () => {
     expect(tool?.title).toBe("Get LLM Proxy Token Usage");
   });
 
-  test("should have query_knowledge_graph tool", () => {
+  test("should have query_knowledge_base tool", () => {
     const tools = getArchestraMcpTools();
-    const tool = tools.find((t) => t.name.endsWith("query_knowledge_graph"));
+    const tool = tools.find((t) => t.name.endsWith("query_knowledge_base"));
 
     expect(tool).toBeDefined();
-    expect(tool?.title).toBe("Query Knowledge Graph");
+    expect(tool?.title).toBe("Query Knowledge Base");
     expect(tool?.inputSchema).toEqual({
       type: "object",
       properties: {
         query: {
           type: "string",
           description:
-            "The natural language query to search the knowledge graph",
+            "A natural language query about the content stored in the knowledge base. Ask about topics, concepts, or information — not about source systems (e.g. ask 'what tasks are in progress' rather than 'get jira data').",
         },
         mode: {
           type: "string",
@@ -719,201 +720,122 @@ describe("executeArchestraTool", () => {
     });
   });
 
-  describe("query_knowledge_graph tool", () => {
-    test("should return error when query is empty", async () => {
+  describe("query_knowledge_base tool", () => {
+    const toolName = `${ARCHESTRA_MCP_SERVER_NAME}${MCP_SERVER_TOOL_NAME_SEPARATOR}query_knowledge_base`;
+
+    test("should return error when query param is missing", async () => {
+      const result = await executeArchestraTool(toolName, {}, mockContext);
+
+      expect(result.isError).toBe(true);
+      expect((result.content[0] as any).text).toContain(
+        "query parameter is required",
+      );
+    });
+
+    test("should return error when no knowledge base is assigned", async () => {
       const result = await executeArchestraTool(
-        `${ARCHESTRA_MCP_SERVER_NAME}${MCP_SERVER_TOOL_NAME_SEPARATOR}query_knowledge_graph`,
-        { query: "" },
+        toolName,
+        { query: "test query" },
         mockContext,
       );
 
       expect(result.isError).toBe(true);
       expect((result.content[0] as any).text).toContain(
-        "query parameter is required and cannot be empty",
+        "No knowledge base assigned",
       );
     });
 
-    test("should return error when query is not provided", async () => {
+    test("should return error when assigned knowledge base is deleted (cascade removes assignment)", async ({
+      makeOrganization,
+      makeKnowledgeBase,
+    }) => {
+      const org = await makeOrganization();
+      const kb = await makeKnowledgeBase(org.id);
+
+      // Assign KB to agent, then delete it — CASCADE removes the junction entry too
+      await AgentModel.update(testAgent.id, { knowledgeBaseIds: [kb.id] });
+
+      await db
+        .delete(schema.knowledgeBasesTable)
+        .where(eq(schema.knowledgeBasesTable.id, kb.id));
+
       const result = await executeArchestraTool(
-        `${ARCHESTRA_MCP_SERVER_NAME}${MCP_SERVER_TOOL_NAME_SEPARATOR}query_knowledge_graph`,
-        {},
+        toolName,
+        { query: "test query" },
         mockContext,
       );
 
       expect(result.isError).toBe(true);
       expect((result.content[0] as any).text).toContain(
-        "query parameter is required and cannot be empty",
+        "No knowledge base assigned",
       );
     });
 
-    test("should return error when invalid mode is provided", async () => {
+    test("should call query service and return results when KB is assigned", async ({
+      makeOrganization,
+      makeKnowledgeBase,
+    }) => {
+      const { queryService } = await import("@/knowledge-base/query");
+      const org = await makeOrganization();
+      const kb = await makeKnowledgeBase(org.id);
+      await AgentModel.update(testAgent.id, { knowledgeBaseIds: [kb.id] });
+
+      const mockResults = [
+        {
+          content: "Test chunk content",
+          score: 0.95,
+          chunkIndex: 0,
+          citation: {
+            title: "Test Document",
+            sourceUrl: "https://example.com/doc",
+            documentId: "doc-123",
+            connectorType: "github",
+          },
+        },
+      ];
+      const querySpy = vi
+        .spyOn(queryService, "query")
+        .mockResolvedValueOnce(mockResults);
+
       const result = await executeArchestraTool(
-        `${ARCHESTRA_MCP_SERVER_NAME}${MCP_SERVER_TOOL_NAME_SEPARATOR}query_knowledge_graph`,
-        { query: "test query", mode: "invalid_mode" },
+        toolName,
+        { query: "test query" },
+        mockContext,
+      );
+
+      expect(result.isError).toBeUndefined();
+      const parsed = JSON.parse((result.content[0] as any).text);
+      expect(parsed.totalChunks).toBe(1);
+      expect(parsed.results[0].citation.title).toBe("Test Document");
+
+      querySpy.mockRestore();
+    });
+
+    test("should return error when query service throws", async ({
+      makeOrganization,
+      makeKnowledgeBase,
+    }) => {
+      const { queryService } = await import("@/knowledge-base/query");
+      const org = await makeOrganization();
+      const kb = await makeKnowledgeBase(org.id);
+      await AgentModel.update(testAgent.id, { knowledgeBaseIds: [kb.id] });
+
+      const querySpy = vi
+        .spyOn(queryService, "query")
+        .mockRejectedValueOnce(new Error("Embedding API unavailable"));
+
+      const result = await executeArchestraTool(
+        toolName,
+        { query: "test query" },
         mockContext,
       );
 
       expect(result.isError).toBe(true);
       expect((result.content[0] as any).text).toContain(
-        'Invalid mode "invalid_mode"',
+        "Embedding API unavailable",
       );
-      expect((result.content[0] as any).text).toContain(
-        "local, global, hybrid, naive",
-      );
-    });
 
-    test("should return error when provider is not configured", async () => {
-      // Mock getKnowledgeGraphProvider to return null (not configured)
-      const getProviderSpy = vi
-        .spyOn(knowledgeGraph, "getKnowledgeGraphProvider")
-        .mockReturnValue(null);
-
-      try {
-        const result = await executeArchestraTool(
-          `${ARCHESTRA_MCP_SERVER_NAME}${MCP_SERVER_TOOL_NAME_SEPARATOR}query_knowledge_graph`,
-          { query: "test query" },
-          mockContext,
-        );
-
-        expect(result.isError).toBe(true);
-        expect((result.content[0] as any).text).toContain(
-          "Knowledge graph provider is not configured",
-        );
-      } finally {
-        getProviderSpy.mockRestore();
-      }
-    });
-
-    test("should return query result when provider is configured", async () => {
-      // Create a mock provider with a queryDocument method
-      const mockProvider = {
-        providerId: "lightrag" as const,
-        displayName: "LightRAG",
-        isConfigured: () => true,
-        initialize: vi.fn().mockResolvedValue(undefined),
-        cleanup: vi.fn().mockResolvedValue(undefined),
-        insertDocument: vi.fn().mockResolvedValue({
-          status: "completed",
-          documentId: "doc-123",
-        }),
-        queryDocument: vi.fn().mockResolvedValue({
-          answer:
-            "This is the answer from the knowledge graph about AI agents.",
-          sources: [
-            { documentId: "source1.txt" },
-            { documentId: "source2.pdf" },
-          ],
-        }),
-        getHealth: vi.fn().mockResolvedValue({ healthy: true }),
-      };
-
-      // Mock getKnowledgeGraphProvider to return our mock provider
-      const getProviderSpy = vi
-        .spyOn(knowledgeGraph, "getKnowledgeGraphProvider")
-        .mockReturnValue(mockProvider);
-
-      try {
-        const result = await executeArchestraTool(
-          `${ARCHESTRA_MCP_SERVER_NAME}${MCP_SERVER_TOOL_NAME_SEPARATOR}query_knowledge_graph`,
-          { query: "What are AI agents?", mode: "hybrid" },
-          mockContext,
-        );
-
-        expect(result.isError).toBe(false);
-        expect(result.content).toHaveLength(1);
-        expect((result.content[0] as any).text).toContain(
-          "This is the answer from the knowledge graph about AI agents.",
-        );
-        expect(mockProvider.queryDocument).toHaveBeenCalledWith(
-          "What are AI agents?",
-          { mode: "hybrid" },
-        );
-      } finally {
-        // Restore the original implementation
-        getProviderSpy.mockRestore();
-      }
-    });
-
-    test("should use default mode when not specified", async () => {
-      const mockProvider = {
-        providerId: "lightrag" as const,
-        displayName: "LightRAG",
-        isConfigured: () => true,
-        initialize: vi.fn().mockResolvedValue(undefined),
-        cleanup: vi.fn().mockResolvedValue(undefined),
-        insertDocument: vi.fn().mockResolvedValue({
-          status: "completed",
-          documentId: "doc-123",
-        }),
-        queryDocument: vi.fn().mockResolvedValue({
-          answer: "Default mode response.",
-        }),
-        getHealth: vi.fn().mockResolvedValue({ healthy: true }),
-      };
-
-      const getProviderSpy = vi
-        .spyOn(knowledgeGraph, "getKnowledgeGraphProvider")
-        .mockReturnValue(mockProvider);
-
-      try {
-        const result = await executeArchestraTool(
-          `${ARCHESTRA_MCP_SERVER_NAME}${MCP_SERVER_TOOL_NAME_SEPARATOR}query_knowledge_graph`,
-          { query: "Test query without mode" },
-          mockContext,
-        );
-
-        expect(result.isError).toBe(false);
-        expect((result.content[0] as any).text).toContain(
-          "Default mode response.",
-        );
-        // Should default to "hybrid" mode
-        expect(mockProvider.queryDocument).toHaveBeenCalledWith(
-          "Test query without mode",
-          { mode: "hybrid" },
-        );
-      } finally {
-        getProviderSpy.mockRestore();
-      }
-    });
-
-    test("should handle provider query errors gracefully", async () => {
-      const mockProvider = {
-        providerId: "lightrag" as const,
-        displayName: "LightRAG",
-        isConfigured: () => true,
-        initialize: vi.fn().mockResolvedValue(undefined),
-        cleanup: vi.fn().mockResolvedValue(undefined),
-        insertDocument: vi.fn().mockResolvedValue({
-          status: "completed",
-          documentId: "doc-123",
-        }),
-        queryDocument: vi
-          .fn()
-          .mockRejectedValue(new Error("Connection to LightRAG failed")),
-        getHealth: vi.fn().mockResolvedValue({ healthy: true }),
-      };
-
-      const getProviderSpy = vi
-        .spyOn(knowledgeGraph, "getKnowledgeGraphProvider")
-        .mockReturnValue(mockProvider);
-
-      try {
-        const result = await executeArchestraTool(
-          `${ARCHESTRA_MCP_SERVER_NAME}${MCP_SERVER_TOOL_NAME_SEPARATOR}query_knowledge_graph`,
-          { query: "Test query with error" },
-          mockContext,
-        );
-
-        expect(result.isError).toBe(true);
-        expect((result.content[0] as any).text).toContain(
-          "Error querying knowledge graph",
-        );
-        expect((result.content[0] as any).text).toContain(
-          "Connection to LightRAG failed",
-        );
-      } finally {
-        getProviderSpy.mockRestore();
-      }
+      querySpy.mockRestore();
     });
   });
 

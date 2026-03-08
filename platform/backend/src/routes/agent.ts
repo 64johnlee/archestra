@@ -6,7 +6,13 @@ import {
   hasAnyAgentTypeReadPermission,
   requireAgentModifyPermission,
 } from "@/auth";
-import { AgentLabelModel, AgentModel, TeamModel } from "@/models";
+import {
+  AgentLabelModel,
+  AgentModel,
+  KnowledgeBaseConnectorModel,
+  KnowledgeBaseModel,
+  TeamModel,
+} from "@/models";
 import { metrics } from "@/observability";
 import {
   AgentVersionsResponseSchema,
@@ -326,6 +332,39 @@ const agentRoutes: FastifyPluginAsyncZod = async (fastify) => {
         }
       }
 
+      // Validate knowledgeBaseIds if provided
+      if (body.knowledgeBaseIds && body.knowledgeBaseIds.length > 0) {
+        if (agentType === "llm_proxy") {
+          throw new ApiError(
+            400,
+            "Knowledge bases cannot be assigned to LLM Proxy agents",
+          );
+        }
+        for (const kbId of body.knowledgeBaseIds) {
+          const kb = await KnowledgeBaseModel.findById(kbId);
+          if (!kb || kb.organizationId !== organizationId) {
+            throw new ApiError(404, `Knowledge base not found: ${kbId}`);
+          }
+        }
+      }
+
+      // Validate connectorIds if provided
+      if (body.connectorIds && body.connectorIds.length > 0) {
+        if (agentType === "llm_proxy") {
+          throw new ApiError(
+            400,
+            "Connectors cannot be assigned to LLM Proxy agents",
+          );
+        }
+        for (const connectorId of body.connectorIds) {
+          const connector =
+            await KnowledgeBaseConnectorModel.findById(connectorId);
+          if (!connector || connector.organizationId !== organizationId) {
+            throw new ApiError(404, `Connector not found: ${connectorId}`);
+          }
+        }
+      }
+
       // Omit teams if scope is not 'team' — scope takes precedence
       const createData = {
         ...body,
@@ -488,6 +527,39 @@ const agentRoutes: FastifyPluginAsyncZod = async (fastify) => {
       // Prevent downgrading shared agents to personal
       if (body.scope === "personal" && existingAgent.scope !== "personal") {
         throw new ApiError(400, "Shared agents cannot be made personal");
+      }
+
+      // Validate knowledgeBaseIds if provided
+      if (body.knowledgeBaseIds && body.knowledgeBaseIds.length > 0) {
+        if (existingAgent.agentType === "llm_proxy") {
+          throw new ApiError(
+            400,
+            "Knowledge bases cannot be assigned to LLM Proxy agents",
+          );
+        }
+        for (const kbId of body.knowledgeBaseIds) {
+          const kb = await KnowledgeBaseModel.findById(kbId);
+          if (!kb || kb.organizationId !== organizationId) {
+            throw new ApiError(404, `Knowledge base not found: ${kbId}`);
+          }
+        }
+      }
+
+      // Validate connectorIds if provided
+      if (body.connectorIds && body.connectorIds.length > 0) {
+        if (existingAgent.agentType === "llm_proxy") {
+          throw new ApiError(
+            400,
+            "Connectors cannot be assigned to LLM Proxy agents",
+          );
+        }
+        for (const connectorId of body.connectorIds) {
+          const connector =
+            await KnowledgeBaseConnectorModel.findById(connectorId);
+          if (!connector || connector.organizationId !== organizationId) {
+            throw new ApiError(404, `Connector not found: ${connectorId}`);
+          }
+        }
       }
 
       // Built-in agent guard: restrict which fields can be modified

@@ -32,6 +32,8 @@ import type {
   SortingQuery,
   UpdateAgent,
 } from "@/types";
+import AgentConnectorAssignmentModel from "./agent-connector-assignment";
+import AgentKnowledgeBaseModel from "./agent-knowledge-base";
 import AgentLabelModel from "./agent-label";
 import AgentTeamModel from "./agent-team";
 import ToolModel from "./tool";
@@ -61,8 +63,38 @@ class AgentModel {
     }
   }
 
+  /**
+   * Populate knowledgeBaseIds on agents via batch lookup from the junction table.
+   */
+  private static async populateKnowledgeBaseIds(
+    agents: Agent[],
+  ): Promise<void> {
+    const agentIds = agents.map((a) => a.id);
+    if (agentIds.length === 0) return;
+
+    const kbMap =
+      await AgentKnowledgeBaseModel.getKnowledgeBaseIdsForAgents(agentIds);
+    for (const agent of agents) {
+      agent.knowledgeBaseIds = kbMap.get(agent.id) ?? [];
+    }
+  }
+
+  /**
+   * Populate connectorIds on agents via batch lookup from the junction table.
+   */
+  private static async populateConnectorIds(agents: Agent[]): Promise<void> {
+    const agentIds = agents.map((a) => a.id);
+    if (agentIds.length === 0) return;
+
+    const connectorMap =
+      await AgentConnectorAssignmentModel.getConnectorIdsForAgents(agentIds);
+    for (const agent of agents) {
+      agent.connectorIds = connectorMap.get(agent.id) ?? [];
+    }
+  }
+
   static async create(
-    { teams, labels, ...agent }: InsertAgent,
+    { teams, labels, knowledgeBaseIds, connectorIds, ...agent }: InsertAgent,
     authorId?: string,
   ): Promise<Agent> {
     // Auto-assign organizationId if not provided
@@ -90,6 +122,22 @@ class AgentModel {
       await AgentLabelModel.syncAgentLabels(createdAgent.id, labels);
     }
 
+    // Assign knowledge bases if provided
+    if (knowledgeBaseIds && knowledgeBaseIds.length > 0) {
+      await AgentKnowledgeBaseModel.syncForAgent(
+        createdAgent.id,
+        knowledgeBaseIds,
+      );
+    }
+
+    // Assign connectors if provided
+    if (connectorIds && connectorIds.length > 0) {
+      await AgentConnectorAssignmentModel.syncForAgent(
+        createdAgent.id,
+        connectorIds,
+      );
+    }
+
     // For internal agents, create a delegation tool so other agents can delegate to this one
     if (createdAgent.agentType === "agent") {
       await ToolModel.findOrCreateDelegationTool(createdAgent.id);
@@ -115,6 +163,8 @@ class AgentModel {
       tools: assignedTools.map((row) => row.tool),
       teams: teamDetails,
       labels: await AgentLabelModel.getLabelsForAgent(createdAgent.id),
+      knowledgeBaseIds: knowledgeBaseIds ?? [],
+      connectorIds: connectorIds ?? [],
     };
   }
 
@@ -196,6 +246,8 @@ class AgentModel {
           tools: [],
           teams: [] as Array<{ id: string; name: string }>,
           labels: [],
+          knowledgeBaseIds: [],
+          connectorIds: [],
         });
       }
 
@@ -220,7 +272,11 @@ class AgentModel {
       agent.labels = labelsMap.get(agent.id) || [];
     }
 
-    await AgentModel.populateAuthorNames(agents);
+    await Promise.all([
+      AgentModel.populateAuthorNames(agents),
+      AgentModel.populateKnowledgeBaseIds(agents),
+      AgentModel.populateConnectorIds(agents),
+    ]);
 
     return agents;
   }
@@ -253,21 +309,24 @@ class AgentModel {
       return [];
     }
 
-    const [teamsMap, labelsMap, toolsResult] = await Promise.all([
-      AgentTeamModel.getTeamDetailsForAgents(agentIds),
-      AgentLabelModel.getLabelsForAgents(agentIds),
-      db
-        .select({
-          agentId: schema.agentToolsTable.agentId,
-          tool: schema.toolsTable,
-        })
-        .from(schema.agentToolsTable)
-        .innerJoin(
-          schema.toolsTable,
-          eq(schema.agentToolsTable.toolId, schema.toolsTable.id),
-        )
-        .where(inArray(schema.agentToolsTable.agentId, agentIds)),
-    ]);
+    const [teamsMap, labelsMap, kbMap, connectorMap, toolsResult] =
+      await Promise.all([
+        AgentTeamModel.getTeamDetailsForAgents(agentIds),
+        AgentLabelModel.getLabelsForAgents(agentIds),
+        AgentKnowledgeBaseModel.getKnowledgeBaseIdsForAgents(agentIds),
+        AgentConnectorAssignmentModel.getConnectorIdsForAgents(agentIds),
+        db
+          .select({
+            agentId: schema.agentToolsTable.agentId,
+            tool: schema.toolsTable,
+          })
+          .from(schema.agentToolsTable)
+          .innerJoin(
+            schema.toolsTable,
+            eq(schema.agentToolsTable.toolId, schema.toolsTable.id),
+          )
+          .where(inArray(schema.agentToolsTable.agentId, agentIds)),
+      ]);
 
     // Group tools by agent
     const toolsByAgent = new Map<
@@ -285,6 +344,8 @@ class AgentModel {
       tools: toolsByAgent.get(agent.id) || [],
       teams: teamsMap.get(agent.id) || [],
       labels: labelsMap.get(agent.id) || [],
+      knowledgeBaseIds: kbMap.get(agent.id) || [],
+      connectorIds: connectorMap.get(agent.id) || [],
     }));
   }
 
@@ -322,21 +383,24 @@ class AgentModel {
       return [];
     }
 
-    const [teamsMap, labelsMap, toolsResult] = await Promise.all([
-      AgentTeamModel.getTeamDetailsForAgents(agentIds),
-      AgentLabelModel.getLabelsForAgents(agentIds),
-      db
-        .select({
-          agentId: schema.agentToolsTable.agentId,
-          tool: schema.toolsTable,
-        })
-        .from(schema.agentToolsTable)
-        .innerJoin(
-          schema.toolsTable,
-          eq(schema.agentToolsTable.toolId, schema.toolsTable.id),
-        )
-        .where(inArray(schema.agentToolsTable.agentId, agentIds)),
-    ]);
+    const [teamsMap, labelsMap, kbMap, connectorMap, toolsResult] =
+      await Promise.all([
+        AgentTeamModel.getTeamDetailsForAgents(agentIds),
+        AgentLabelModel.getLabelsForAgents(agentIds),
+        AgentKnowledgeBaseModel.getKnowledgeBaseIdsForAgents(agentIds),
+        AgentConnectorAssignmentModel.getConnectorIdsForAgents(agentIds),
+        db
+          .select({
+            agentId: schema.agentToolsTable.agentId,
+            tool: schema.toolsTable,
+          })
+          .from(schema.agentToolsTable)
+          .innerJoin(
+            schema.toolsTable,
+            eq(schema.agentToolsTable.toolId, schema.toolsTable.id),
+          )
+          .where(inArray(schema.agentToolsTable.agentId, agentIds)),
+      ]);
 
     // Group tools by agent
     const toolsByAgent = new Map<
@@ -354,6 +418,8 @@ class AgentModel {
       tools: toolsByAgent.get(agent.id) || [],
       teams: teamsMap.get(agent.id) || [],
       labels: labelsMap.get(agent.id) || [],
+      knowledgeBaseIds: kbMap.get(agent.id) || [],
+      connectorIds: connectorMap.get(agent.id) || [],
     }));
   }
 
@@ -677,6 +743,8 @@ class AgentModel {
           tools: [],
           teams: [] as Array<{ id: string; name: string }>,
           labels: [],
+          knowledgeBaseIds: [],
+          connectorIds: [],
         });
       }
 
@@ -701,7 +769,11 @@ class AgentModel {
       agent.labels = labelsMap.get(agent.id) || [];
     }
 
-    await AgentModel.populateAuthorNames(agents);
+    await Promise.all([
+      AgentModel.populateAuthorNames(agents),
+      AgentModel.populateKnowledgeBaseIds(agents),
+      AgentModel.populateConnectorIds(agents),
+    ]);
 
     return createPaginatedResult(agents, Number(totalResult), pagination);
   }
@@ -799,14 +871,20 @@ class AgentModel {
       .map((row) => row.tools)
       .filter((tool): tool is NonNullable<typeof tool> => tool !== null);
 
-    const teams = await AgentTeamModel.getTeamDetailsForAgent(id);
-    const labels = await AgentLabelModel.getLabelsForAgent(id);
+    const [teams, labels, knowledgeBaseIds, connectorIds] = await Promise.all([
+      AgentTeamModel.getTeamDetailsForAgent(id),
+      AgentLabelModel.getLabelsForAgent(id),
+      AgentKnowledgeBaseModel.getKnowledgeBaseIds(id),
+      AgentConnectorAssignmentModel.getConnectorIds(id),
+    ]);
 
     const result: Agent = {
       ...agent,
       tools,
       teams,
       labels,
+      knowledgeBaseIds,
+      connectorIds,
     };
 
     await AgentModel.populateAuthorNames([result]);
@@ -872,6 +950,12 @@ class AgentModel {
       tools,
       teams: await AgentTeamModel.getTeamDetailsForAgent(agent.id),
       labels: await AgentLabelModel.getLabelsForAgent(agent.id),
+      knowledgeBaseIds: await AgentKnowledgeBaseModel.getKnowledgeBaseIds(
+        agent.id,
+      ),
+      connectorIds: await AgentConnectorAssignmentModel.getConnectorIds(
+        agent.id,
+      ),
     };
   }
 
@@ -911,6 +995,12 @@ class AgentModel {
         tools,
         teams: await AgentTeamModel.getTeamDetailsForAgent(agent.id),
         labels: await AgentLabelModel.getLabelsForAgent(agent.id),
+        knowledgeBaseIds: await AgentKnowledgeBaseModel.getKnowledgeBaseIds(
+          agent.id,
+        ),
+        connectorIds: await AgentConnectorAssignmentModel.getConnectorIds(
+          agent.id,
+        ),
       };
     }
 
@@ -938,9 +1028,20 @@ class AgentModel {
 
   static async update(
     id: string,
-    { teams, labels, ...agent }: Partial<UpdateAgent>,
+    {
+      teams,
+      labels,
+      knowledgeBaseIds,
+      connectorIds,
+      ...agent
+    }: Partial<UpdateAgent>,
   ): Promise<Agent | null> {
-    let updatedAgent: Omit<Agent, "tools" | "teams" | "labels"> | undefined;
+    let updatedAgent:
+      | Omit<
+          Agent,
+          "tools" | "teams" | "labels" | "knowledgeBaseIds" | "connectorIds"
+        >
+      | undefined;
 
     // Fetch existing agent to check for name changes (needed for delegation tool sync)
     const [existingAgent] = await db
@@ -1002,7 +1103,23 @@ class AgentModel {
       await AgentLabelModel.syncAgentLabels(id, labels);
     }
 
-    const [toolRows, currentTeams, currentLabels] = await Promise.all([
+    // Sync knowledge base assignments if knowledgeBaseIds is provided
+    if (knowledgeBaseIds !== undefined) {
+      await AgentKnowledgeBaseModel.syncForAgent(id, knowledgeBaseIds);
+    }
+
+    // Sync connector assignments if connectorIds is provided
+    if (connectorIds !== undefined) {
+      await AgentConnectorAssignmentModel.syncForAgent(id, connectorIds);
+    }
+
+    const [
+      toolRows,
+      currentTeams,
+      currentLabels,
+      currentKbIds,
+      currentConnectorIds,
+    ] = await Promise.all([
       db
         .select({ tool: schema.toolsTable })
         .from(schema.agentToolsTable)
@@ -1013,6 +1130,8 @@ class AgentModel {
         .where(eq(schema.agentToolsTable.agentId, updatedAgent.id)),
       AgentTeamModel.getTeamDetailsForAgent(id),
       AgentLabelModel.getLabelsForAgent(id),
+      AgentKnowledgeBaseModel.getKnowledgeBaseIds(id),
+      AgentConnectorAssignmentModel.getConnectorIds(id),
     ]);
 
     return {
@@ -1020,6 +1139,8 @@ class AgentModel {
       tools: toolRows.map((row) => row.tool),
       teams: currentTeams,
       labels: currentLabels,
+      knowledgeBaseIds: currentKbIds,
+      connectorIds: currentConnectorIds,
     };
   }
 
@@ -1188,6 +1309,10 @@ class AgentModel {
       tools: toolRows.map((r) => r.tool),
       teams,
       labels,
+      knowledgeBaseIds: await AgentKnowledgeBaseModel.getKnowledgeBaseIds(
+        row.id,
+      ),
+      connectorIds: await AgentConnectorAssignmentModel.getConnectorIds(row.id),
     };
   }
 

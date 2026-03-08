@@ -28,6 +28,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ConnectorTypeIcon } from "@/app/knowledge/knowledge-bases/_parts/connector-icons";
 import { AgentBadge } from "@/components/agent-badge";
 import { AgentIconPicker } from "@/components/agent-icon-picker";
 import {
@@ -107,6 +108,8 @@ import { useModelsByProvider } from "@/lib/chat-models.query";
 import { useAvailableChatApiKeys } from "@/lib/chat-settings.query";
 import config from "@/lib/config";
 import { useFeatures } from "@/lib/config.query";
+import { useConnectors } from "@/lib/connector.query";
+import { useKnowledgeBases } from "@/lib/knowledge-base.query";
 import { cn } from "@/lib/utils";
 
 const { useIdentityProviders } = config.enterpriseFeatures.core
@@ -576,6 +579,10 @@ export function AgentDialog({
   );
   const { data: features } = useFeatures();
   const { data: identityProviders = [] } = useIdentityProviders();
+  const { data: knowledgeBasesData } = useKnowledgeBases();
+  const knowledgeBases = knowledgeBasesData?.data ?? [];
+  const { data: connectorsData } = useConnectors();
+  const connectors = connectorsData?.data ?? [];
   const agentLlmApiKeyId = agent?.llmApiKeyId;
   const { data: availableApiKeys = [] } = useAvailableChatApiKeys({
     includeKeyId: agentLlmApiKeyId,
@@ -627,6 +634,8 @@ export function AgentDialog({
     null,
   );
   const [scope, setScope] = useState<"personal" | "team" | "org">("personal");
+  const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<string[]>([]);
+  const [connectorIds, setConnectorIds] = useState<string[]>([]);
   const [autoConfigureOnToolAssignment, setAutoConfigureOnToolAssignment] =
     useState(false);
 
@@ -678,6 +687,17 @@ export function AgentDialog({
         );
         // Identity provider ID (for MCP Gateway JWKS auth)
         setIdentityProviderId(agentData.identityProviderId ?? null);
+        // Knowledge graph
+        setKnowledgeBaseIds(
+          ((agentData as Record<string, unknown>).knowledgeBaseIds as
+            | string[]
+            | undefined) ?? [],
+        );
+        setConnectorIds(
+          ((agentData as Record<string, unknown>).connectorIds as
+            | string[]
+            | undefined) ?? [],
+        );
         // Scope
         setScope(
           ((agentData as Record<string, unknown>).scope as
@@ -711,6 +731,8 @@ export function AgentDialog({
         setLabels([]);
         setConsiderContextUntrusted(false);
         setIdentityProviderId(null);
+        setKnowledgeBaseIds([]);
+        setConnectorIds([]);
         setScope("personal");
         setIncomingEmailEnabled(false);
         setIncomingEmailSecurityMode("private");
@@ -934,6 +956,10 @@ export function AgentDialog({
             ...(agentType === "mcp_gateway" && {
               identityProviderId: identityProviderId || null,
             }),
+            ...(agentType !== "llm_proxy" && {
+              knowledgeBaseIds: knowledgeBaseIds,
+              connectorIds: connectorIds,
+            }),
             teams: assignedTeamIds,
             labels: updatedLabels,
             scope,
@@ -960,6 +986,10 @@ export function AgentDialog({
           }),
           ...(agentType === "mcp_gateway" && {
             identityProviderId: identityProviderId || null,
+          }),
+          ...(agentType !== "llm_proxy" && {
+            knowledgeBaseIds: knowledgeBaseIds,
+            connectorIds: connectorIds,
           }),
           teams: assignedTeamIds,
           labels: updatedLabels,
@@ -1022,6 +1052,8 @@ export function AgentDialog({
     incomingEmailSecurityMode,
     incomingEmailAllowedDomain,
     identityProviderId,
+    knowledgeBaseIds,
+    connectorIds,
     scope,
     agentType,
     agent,
@@ -1087,6 +1119,7 @@ export function AgentDialog({
               </Alert>
             )}
 
+            {/* Section 1: Name, Description, Visibility, LLM Configuration */}
             <div className="rounded-lg border bg-card p-4 space-y-4">
               {/* Name + Icon (hidden for built-in agents, shown in dialog title) */}
               {!isBuiltIn && (
@@ -1324,7 +1357,7 @@ export function AgentDialog({
               </div>
             )}
 
-            {/* Section 3: Capabilities (Tools, Subagents) */}
+            {/* Section 3: Capabilities (Tools, Subagents, Knowledge Sources) */}
             {showToolsAndSubagents && (
               <div className="rounded-lg border bg-card p-4 space-y-4">
                 <h3 className="text-sm font-semibold">Capabilities</h3>
@@ -1357,6 +1390,213 @@ export function AgentDialog({
                     currentAgentId={agent?.id}
                   />
                 </div>
+
+                {/* Knowledge Sources */}
+                {(knowledgeBases.length > 0 || connectors.length > 0) && (
+                  <div className="space-y-2">
+                    <Label>Knowledge Sources</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Attach knowledge bases or connectors to enable RAG
+                      queries.
+                    </p>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-between font-normal"
+                        >
+                          {(() => {
+                            const totalSelected =
+                              knowledgeBaseIds.length + connectorIds.length;
+                            return totalSelected === 0
+                              ? "Select knowledge sources..."
+                              : `${totalSelected} source${totalSelected > 1 ? "s" : ""} selected`;
+                          })()}
+                          <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-96 p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search knowledge sources..." />
+                          <CommandList>
+                            <CommandEmpty>
+                              No knowledge sources found.
+                            </CommandEmpty>
+                            {knowledgeBases.length > 0 && (
+                              <CommandGroup heading="Knowledge Bases">
+                                {knowledgeBases.map((kb) => {
+                                  const isSelected = knowledgeBaseIds.includes(
+                                    kb.id,
+                                  );
+                                  const connectorTypes = [
+                                    ...new Set(
+                                      kb.connectors?.map(
+                                        (c: { connectorType: string }) =>
+                                          c.connectorType,
+                                      ) ?? [],
+                                    ),
+                                  ];
+                                  const visibleIcons = connectorTypes.slice(
+                                    0,
+                                    3,
+                                  );
+                                  const overflowCount =
+                                    connectorTypes.length - 3;
+                                  return (
+                                    <CommandItem
+                                      key={kb.id}
+                                      value={kb.name}
+                                      className="data-[selected=true]:bg-transparent"
+                                      onSelect={() => {
+                                        setKnowledgeBaseIds((prev) =>
+                                          isSelected
+                                            ? prev.filter((id) => id !== kb.id)
+                                            : [...prev, kb.id],
+                                        );
+                                      }}
+                                    >
+                                      <CheckIcon
+                                        className={cn(
+                                          "mr-2 h-4 w-4 shrink-0",
+                                          isSelected
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="truncate text-sm">
+                                          {kb.name}
+                                        </div>
+                                        {kb.description && (
+                                          <div className="truncate text-xs text-muted-foreground">
+                                            {kb.description}
+                                          </div>
+                                        )}
+                                      </div>
+                                      {connectorTypes.length > 0 && (
+                                        <div className="flex items-center -space-x-1 ml-2 shrink-0">
+                                          {visibleIcons.map((type: string) => (
+                                            <div
+                                              key={type}
+                                              className="rounded-full bg-muted p-0.5 ring-1 ring-background"
+                                            >
+                                              <ConnectorTypeIcon
+                                                type={type}
+                                                className="h-3.5 w-3.5"
+                                              />
+                                            </div>
+                                          ))}
+                                          {overflowCount > 0 && (
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <div className="rounded-full bg-muted px-1 py-0.5 ring-1 ring-background text-[10px] font-medium text-muted-foreground">
+                                                    +{overflowCount}
+                                                  </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="right">
+                                                  {connectorTypes
+                                                    .slice(3)
+                                                    .join(", ")}
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          )}
+                                        </div>
+                                      )}
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            )}
+                            {connectors.length > 0 && (
+                              <CommandGroup heading="Connectors">
+                                {connectors.map((connector) => {
+                                  const isSelected = connectorIds.includes(
+                                    connector.id,
+                                  );
+                                  return (
+                                    <CommandItem
+                                      key={connector.id}
+                                      value={connector.name}
+                                      className="data-[selected=true]:bg-transparent"
+                                      onSelect={() => {
+                                        setConnectorIds((prev) =>
+                                          isSelected
+                                            ? prev.filter(
+                                                (id) => id !== connector.id,
+                                              )
+                                            : [...prev, connector.id],
+                                        );
+                                      }}
+                                    >
+                                      <CheckIcon
+                                        className={cn(
+                                          "mr-2 h-4 w-4 shrink-0",
+                                          isSelected
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="truncate text-sm">
+                                          {connector.name}
+                                        </div>
+                                        <div className="truncate text-xs text-muted-foreground capitalize">
+                                          {connector.connectorType}
+                                        </div>
+                                      </div>
+                                      <div className="ml-2 shrink-0">
+                                        <ConnectorTypeIcon
+                                          type={connector.connectorType}
+                                          className="h-4 w-4"
+                                        />
+                                      </div>
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Section 3: Prompts (Agent only) */}
+            {isInternalAgent && (
+              <div className="rounded-lg border bg-card p-4 space-y-4">
+                <h3 className="text-sm font-semibold">Prompts</h3>
+
+                {/* System Prompt (read-only for built-in) */}
+                <div className="space-y-2">
+                  <Label htmlFor="systemPrompt">System Prompt</Label>
+                  <Textarea
+                    id="systemPrompt"
+                    value={systemPrompt}
+                    onChange={(e) => setSystemPrompt(e.target.value)}
+                    placeholder="Enter system prompt (instructions for the LLM)"
+                    className="min-h-[150px] font-mono"
+                    disabled={isBuiltIn}
+                  />
+                </div>
+
+                {/* User Prompt (hidden for built-in) */}
+                {!isBuiltIn && (
+                  <div className="space-y-2">
+                    <Label htmlFor="userPrompt">User Prompt</Label>
+                    <Textarea
+                      id="userPrompt"
+                      value={userPrompt}
+                      onChange={(e) => setUserPrompt(e.target.value)}
+                      placeholder="Enter user prompt (shown to user, sent to LLM)"
+                      className="min-h-[150px] font-mono"
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -1635,6 +1875,17 @@ export function AgentDialog({
                   </div>
                 </Collapsible>
               )}
+
+            {/* Labels for built-in agents (outside advanced section since advanced is hidden) */}
+            {isBuiltIn && (
+              <div className="rounded-lg border bg-card p-4 space-y-4">
+                <ProfileLabels
+                  ref={agentLabelsRef}
+                  labels={labels}
+                  onLabelsChange={setLabels}
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter className="mt-4">

@@ -16,10 +16,6 @@ import {
   type EmailProviderType,
   EmailProviderTypeSchema,
 } from "@/types/email-provider-type";
-import {
-  type KnowledgeGraphProviderType,
-  KnowledgeGraphProviderTypeSchema,
-} from "@/types/knowledge-graph";
 import packageJson from "../../package.json";
 
 /**
@@ -34,6 +30,8 @@ const sentryDsn = process.env.ARCHESTRA_SENTRY_BACKEND_DSN || "";
 const environment = process.env.NODE_ENV?.toLowerCase() ?? "";
 const isProduction = ["production", "prod"].includes(environment);
 const isDevelopment = !isProduction;
+
+const packageJsonVersion = packageJson.version;
 
 const frontendBaseUrl =
   process.env.ARCHESTRA_FRONTEND_URL?.trim() || "http://localhost:3000";
@@ -239,18 +237,6 @@ const parseIncomingEmailProvider = (): EmailProviderType | undefined => {
 };
 
 /**
- * Parse knowledge graph provider from environment variable
- */
-const parseKnowledgeGraphProvider = ():
-  | KnowledgeGraphProviderType
-  | undefined => {
-  const provider =
-    process.env.ARCHESTRA_KNOWLEDGE_GRAPH_PROVIDER?.toLowerCase();
-  const result = KnowledgeGraphProviderTypeSchema.safeParse(provider);
-  return result.success ? result.data : undefined;
-};
-
-/**
  * Parse body limit from environment variable.
  * Supports numeric bytes (e.g., "52428800") or human-readable format (e.g., "50MB", "100KB").
  */
@@ -440,6 +426,24 @@ const parsePositiveInt = (
   return !Number.isNaN(parsed) && parsed > 0 ? parsed : defaultValue;
 };
 
+/**
+ * Resolve the connector CronJob image.
+ *
+ * When running inside a K8s cluster, auto-detect to `archestra/platform:<version>`.
+ * Otherwise (local dev with a kubeconfig file) return empty string so
+ * connector syncs run in-process via InProcessScheduler.
+ */
+export const getConnectorImage = (): string => {
+  const runningInsideCluster =
+    process.env.ARCHESTRA_ORCHESTRATOR_LOAD_KUBECONFIG_FROM_CURRENT_CLUSTER ===
+    "true";
+
+  if (runningInsideCluster) {
+    return `archestra/platform:${packageJsonVersion}`;
+  }
+  return "";
+};
+
 export const parseSampleRate = (
   envValue: string | undefined,
   defaultRate: number,
@@ -450,13 +454,16 @@ export const parseSampleRate = (
   return parsed;
 };
 
+export const CONNECTOR_CONTINUATION_COUNT_ENV_VAR =
+  "ARCHESTRA_KNOWLEDGE_BASE_CONNECTOR_CONTINUATION_COUNT";
+
 const config = {
   frontendBaseUrl,
   api: {
     host: isDevelopment ? "127.0.0.1" : "0.0.0.0",
     port: getPortFromUrl(),
     name: "Archestra",
-    version: process.env.ARCHESTRA_VERSION || packageJson.version,
+    version: process.env.ARCHESTRA_VERSION || packageJsonVersion,
     corsOrigins: getCorsOrigins(),
     apiKeyAuthorizationHeaderName: "Authorization",
     /**
@@ -500,13 +507,6 @@ const config = {
           process.env.ARCHESTRA_AGENTS_INCOMING_EMAIL_OUTLOOK_WEBHOOK_URL ||
           undefined,
       },
-    },
-  },
-  knowledgeGraph: {
-    provider: parseKnowledgeGraphProvider(),
-    lightrag: {
-      apiUrl: process.env.ARCHESTRA_KNOWLEDGE_GRAPH_LIGHTRAG_API_URL || "",
-      apiKey: process.env.ARCHESTRA_KNOWLEDGE_GRAPH_LIGHTRAG_API_KEY,
     },
   },
   auth: {
@@ -679,8 +679,11 @@ const config = {
   },
   enterpriseFeatures: {
     core: process.env.ARCHESTRA_ENTERPRISE_LICENSE_ACTIVATED === "true",
+    knowledgeBase:
+      process.env.ARCHESTRA_ENTERPRISE_LICENSE_KNOWLEDGE_BASE_ACTIVATED ===
+      "true",
     fullWhiteLabeling:
-      process.env.ARCHESTRA_ENTERPRISE_FULL_WHITE_LABELING === "true",
+      process.env.ARCHESTRA_ENTERPRISE_LICENSE_FULL_WHITE_LABELING === "true",
   },
   /**
    * Codegen mode is set when running `pnpm codegen` via turbo.
@@ -689,11 +692,9 @@ const config = {
    */
   codegenMode: process.env.CODEGEN === "true",
   orchestrator: {
-    // The MCP server base image version is automatically updated by release-please during releases.
-    // See: https://github.com/googleapis/release-please/blob/main/docs/customizing.md#updating-arbitrary-files
     mcpServerBaseImage:
       process.env.ARCHESTRA_ORCHESTRATOR_MCP_SERVER_BASE_IMAGE ||
-      "europe-west1-docker.pkg.dev/friendly-path-465518-r6/archestra-public/mcp-server-base:1.0.60", // x-release-please-version
+      `europe-west1-docker.pkg.dev/friendly-path-465518-r6/archestra-public/mcp-server-base:${packageJsonVersion}`,
     kubernetes: {
       namespace: process.env.ARCHESTRA_ORCHESTRATOR_K8S_NAMESPACE || "default",
       kubeconfig: process.env.ARCHESTRA_ORCHESTRATOR_KUBECONFIG,
@@ -763,6 +764,34 @@ const config = {
   benchmark: {
     mockMode: process.env.BENCHMARK_MOCK_MODE === "true",
   },
+  kb: {
+    embeddingApiKey:
+      process.env.ARCHESTRA_KNOWLEDGE_BASE_EMBEDDING_API_KEY || "",
+    hybridSearchEnabled:
+      process.env.ARCHESTRA_KNOWLEDGE_BASE_HYBRID_SEARCH_ENABLED !== "false",
+    rerankerEnabled:
+      process.env.ARCHESTRA_KNOWLEDGE_BASE_RERANKER_ENABLED !== "false",
+    connectorSyncMaxDurationSeconds: parseConnectorSyncMaxDuration(
+      process.env.ARCHESTRA_KNOWLEDGE_BASE_CONNECTOR_SYNC_MAX_DURATION_SECONDS,
+    ),
+    connectorNamespace:
+      process.env.ARCHESTRA_KNOWLEDGE_BASE_CONNECTOR_K8S_CRONJOB_NAMESPACE ||
+      "archestra-connectors",
+    connectorImage: getConnectorImage(),
+    connectorContinuationCount: Number.parseInt(
+      process.env[CONNECTOR_CONTINUATION_COUNT_ENV_VAR] || "0",
+      10,
+    ),
+  },
+  secretsManager: {
+    type: process.env.ARCHESTRA_SECRETS_MANAGER?.toUpperCase() || "DB",
+    vaultKvVersion: process.env.ARCHESTRA_HASHICORP_VAULT_KV_VERSION || "2",
+  },
+  test: {
+    enableE2eTestEndpoints: process.env.ENABLE_E2E_TEST_ENDPOINTS === "true",
+    enableTestMcpServer: process.env.ENABLE_TEST_MCP_SERVER === "true",
+    testValue: process.env.TEST_VALUE ?? null,
+  },
   authRateLimitDisabled:
     process.env.ARCHESTRA_AUTH_RATE_LIMIT_DISABLED === "true",
   isQuickstart: process.env.ARCHESTRA_QUICKSTART === "true",
@@ -770,6 +799,17 @@ const config = {
 };
 
 export default config;
+
+// ===== Internal helpers =====
+
+export function parseConnectorSyncMaxDuration(
+  value: string | undefined,
+): number | undefined {
+  const DEFAULT = 3300; // 55 minutes
+  const seconds = Number.parseInt(value || String(DEFAULT), 10);
+  if (Number.isNaN(seconds) || seconds <= 0) return undefined;
+  return seconds;
+}
 
 /**
  * Get the environment variable API key for a provider.

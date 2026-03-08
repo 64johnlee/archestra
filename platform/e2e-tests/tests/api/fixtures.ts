@@ -57,9 +57,14 @@ export interface TestFixtures {
   getOrganization: typeof getOrganization;
   updateLlmSettings: typeof updateLlmSettings;
   updateSecuritySettings: typeof updateSecuritySettings;
+  updateKnowledgeSettings: typeof updateKnowledgeSettings;
   getInteractions: typeof getInteractions;
   getWiremockRequests: typeof getWiremockRequests;
   clearWiremockRequests: typeof clearWiremockRequests;
+  createKnowledgeBase: typeof createKnowledgeBase;
+  deleteKnowledgeBase: typeof deleteKnowledgeBase;
+  createConnector: typeof createConnector;
+  deleteConnector: typeof deleteConnector;
   /** API request context authenticated as admin (same as default `request`) */
   adminRequest: APIRequestContext;
   /** API request context authenticated as editor */
@@ -866,6 +871,26 @@ const updateSecuritySettings = async (
   });
 
 /**
+ * Update knowledge settings (embedding model)
+ * (authnz is handled by the authenticated session)
+ */
+const updateKnowledgeSettings = async (
+  request: APIRequestContext,
+  updates: {
+    embeddingModel?:
+      | "text-embedding-3-small"
+      | "text-embedding-3-large"
+      | "text-embedding-ada-002";
+  },
+) =>
+  makeApiRequest({
+    request,
+    method: "patch",
+    urlSuffix: "/api/organization/knowledge-settings",
+    data: updates,
+  });
+
+/**
  * Get interactions with optional filtering by profileId
  * (authnz is handled by the authenticated session)
  */
@@ -959,6 +984,84 @@ const getWiremockRequests = async (
 const clearWiremockRequests = async (request: APIRequestContext) => {
   await request.delete(`${WIREMOCK_BASE_URL}/__admin/requests`);
 };
+
+/**
+ * Create a knowledge base
+ * (authnz is handled by the authenticated session)
+ */
+const createKnowledgeBase = async (request: APIRequestContext, name?: string) =>
+  makeApiRequest({
+    request,
+    method: "post",
+    urlSuffix: "/api/knowledge-bases",
+    data: {
+      name: name ?? `Test KG ${crypto.randomUUID().slice(0, 8)}`,
+    },
+  });
+
+/**
+ * Delete a knowledge base by ID
+ * (authnz is handled by the authenticated session)
+ */
+const deleteKnowledgeBase = async (request: APIRequestContext, id: string) =>
+  makeApiRequest({
+    request,
+    method: "delete",
+    urlSuffix: `/api/knowledge-bases/${id}`,
+    ignoreStatusCheck: true,
+  });
+
+/**
+ * Create a connector for a knowledge base
+ * (authnz is handled by the authenticated session)
+ */
+const createConnector = async (
+  request: APIRequestContext,
+  kgId: string,
+  name?: string,
+  overrides?: {
+    connectorType?: string;
+    config?: Record<string, unknown>;
+    credentials?: { email: string; apiToken: string };
+    schedule?: string;
+    enabled?: boolean;
+  },
+) =>
+  makeApiRequest({
+    request,
+    method: "post",
+    urlSuffix: `/api/knowledge-bases/${kgId}/connectors`,
+    data: {
+      name: name ?? `Test Connector ${crypto.randomUUID().slice(0, 8)}`,
+      connectorType: overrides?.connectorType ?? "jira",
+      config: overrides?.config ?? {
+        baseUrl: "https://test.atlassian.net",
+        projectKey: "TEST",
+      },
+      credentials: overrides?.credentials ?? {
+        email: "test@example.com",
+        apiToken: "test-token-123",
+      },
+      schedule: overrides?.schedule ?? "0 */6 * * *",
+      enabled: overrides?.enabled ?? true,
+    },
+  });
+
+/**
+ * Delete a connector by ID
+ * (authnz is handled by the authenticated session)
+ */
+const deleteConnector = async (
+  request: APIRequestContext,
+  kgId: string,
+  connectorId: string,
+) =>
+  makeApiRequest({
+    request,
+    method: "delete",
+    urlSuffix: `/api/knowledge-bases/${kgId}/connectors/${connectorId}`,
+    ignoreStatusCheck: true,
+  });
 
 export * from "@playwright/test";
 export const test = base.extend<TestFixtures>({
@@ -1079,6 +1182,9 @@ export const test = base.extend<TestFixtures>({
   updateSecuritySettings: async ({}, use) => {
     await use(updateSecuritySettings);
   },
+  updateKnowledgeSettings: async ({}, use) => {
+    await use(updateKnowledgeSettings);
+  },
   getInteractions: async ({}, use) => {
     await use(getInteractions);
   },
@@ -1087,6 +1193,18 @@ export const test = base.extend<TestFixtures>({
   },
   clearWiremockRequests: async ({}, use) => {
     await use(clearWiremockRequests);
+  },
+  createKnowledgeBase: async ({}, use) => {
+    await use(createKnowledgeBase);
+  },
+  deleteKnowledgeBase: async ({}, use) => {
+    await use(deleteKnowledgeBase);
+  },
+  createConnector: async ({}, use) => {
+    await use(createConnector);
+  },
+  deleteConnector: async ({}, use) => {
+    await use(deleteConnector);
   },
   /**
    * Admin request - same auth as default `request` fixture

@@ -13,8 +13,8 @@ import {
   MCP_CATALOG_SERVER_QUERY_PARAM,
 } from "@shared";
 import config from "@/config";
+import { McpServerRuntimeManager } from "@/k8s/mcp-server-runtime";
 import logger from "@/logging";
-import { McpServerRuntimeManager } from "@/mcp-server-runtime";
 import {
   InternalMcpCatalogModel,
   McpHttpSessionModel,

@@ -536,6 +536,20 @@ For production deployments, we strongly recommend using a cloud-hosted PostgreSQ
 
 To use an external database, specify the connection string via the `ARCHESTRA_DATABASE_URL` environment variable. When using an external database, the bundled PostgreSQL instance is automatically disabled. See the [Environment Variables](#environment-variables) section for details.
 
+##### pgvector Extension (Knowledge Base Feature)
+
+The [Knowledge Base](/docs/platform-knowledge-bases) enterprise feature requires the [pgvector](https://github.com/pgvector/pgvector) PostgreSQL extension for vector similarity search. The database user specified in `ARCHESTRA_DATABASE_URL` must have permission to run `CREATE EXTENSION vector`, which typically requires **superuser** privileges.
+
+**Cloud-managed databases:**
+
+- **AWS RDS** — pgvector is available as a [trusted extension](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html#PostgreSQL.Concepts.General.Extensions). Enable it via `CREATE EXTENSION vector` without superuser.
+- **Google Cloud SQL** — pgvector is [supported natively](https://cloud.google.com/sql/docs/postgres/extensions#pgvector). Enable it via the Cloud SQL console or `CREATE EXTENSION vector`.
+- **Azure Database for PostgreSQL** — pgvector is [available as an extension](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/concepts-extensions). Allow-list it in server parameters, then run `CREATE EXTENSION vector`.
+
+**Self-managed PostgreSQL:** Install the pgvector package for your distribution (e.g., `apt install postgresql-17-pgvector`) and ensure the database user has `CREATE` privilege on the database, or grant `SUPERUSER` to allow extension creation.
+
+If pgvector is not installed or the database user lacks permissions, the Knowledge Base migration will fail. This does not affect other Archestra features.
+
 #### SSRF Protection
 
 Enable the SSRF protection `NetworkPolicy` to prevent MCP server pods from accessing private/internal networks. This is especially important when MCP servers execute untrusted code or connect to external services. See [SSRF Protection for MCP Server Pods](#ssrf-protection-for-mcp-server-pods) for configuration details.
@@ -617,9 +631,6 @@ The following environment variables can be used to configure Archestra Platform.
 - **`ARCHESTRA_LOGGING_LEVEL`** - Log level for Archestra
   - Default: `info`
   - Supported values: `trace`, `debug`, `info`, `warn`, `error`, `fatal`
-
-- **`ARCHESTRA_ENTERPRISE_LICENSE_ACTIVATED`** - Activates enterprise features in Archestra.
-  - Please reach out to <sales@archestra.ai> to learn more about the license.
 
 ### Authentication & Security
 
@@ -924,20 +935,45 @@ See [Slack](/docs/platform-slack) for setup instructions.
   - Starts with `xapp-`
   - Generated in: Basic Information page → App-Level Tokens (with `connections:write` scope)
 
-### Knowledge Graph Configuration
+### Knowledge Base Configuration
 
-These environment variables configure the Knowledge Graph feature, which automatically ingests documents uploaded via chat into a knowledge graph for enhanced retrieval. See [Knowledge Graphs](/docs/platform-knowledge-graphs) for setup instructions.
+> **Enterprise feature:** Requires `ARCHESTRA_ENTERPRISE_LICENSE_KNOWLEDGE_BASE_ACTIVATED=true`. See [Enterprise Licensing](#enterprise-licensing) below.
 
-- **`ARCHESTRA_KNOWLEDGE_GRAPH_PROVIDER`** - Knowledge graph provider to use.
-  - Default: Not set (feature disabled)
-  - Options: `lightrag`
-  - Required to enable the knowledge graph feature
+These environment variables configure the [Knowledge Base](/docs/platform-knowledge-bases) enterprise feature. Knowledge bases use a built-in RAG stack powered by pgvector for document chunking, embedding, and hybrid search. Connectors sync external data into knowledge bases on a schedule. See [Knowledge Connectors](/docs/platform-adding-knowledge-connectors) for connector setup instructions.
 
-- **`ARCHESTRA_KNOWLEDGE_GRAPH_LIGHTRAG_API_URL`** - URL of the LightRAG API server.
-  - Required when: `ARCHESTRA_KNOWLEDGE_GRAPH_PROVIDER=lightrag`
-  - Example: `http://lightrag:9621`
-  - The LightRAG server must be accessible from the Archestra backend
+- **`ARCHESTRA_KNOWLEDGE_BASE_EMBEDDING_API_KEY`** - API key for generating text embeddings (OpenAI-compatible endpoint).
+  - Required for the chunking and embedding pipeline
+  - Used by the embedder to call the OpenAI embeddings API (default model: `text-embedding-3-small`)
 
-- **`ARCHESTRA_KNOWLEDGE_GRAPH_LIGHTRAG_API_KEY`** - API key for authenticating with LightRAG.
-  - Optional: Only required if your LightRAG server is configured with authentication
-  - Note: Keep this value secure; do not commit to version control
+- **`ARCHESTRA_KNOWLEDGE_BASE_CONNECTOR_K8S_CRONJOB_NAMESPACE`** - Kubernetes namespace where connector sync CronJobs run.
+  - Default: `archestra-connectors`
+  - Requires K8s runtime to be configured (`ARCHESTRA_ORCHESTRATOR_KUBECONFIG` or `ARCHESTRA_ORCHESTRATOR_LOAD_KUBECONFIG_FROM_CURRENT_CLUSTER`)
+
+- **`ARCHESTRA_KNOWLEDGE_BASE_CONNECTOR_SYNC_MAX_DURATION_SECONDS`** - Maximum duration for a single connector sync run before it stops and triggers a continuation.
+  - Default: `3300` (55 minutes)
+  - Only applies to K8s CronJob runs. When a sync exceeds 90% of this budget, it stops and creates a continuation Job to resume from the last checkpoint.
+  - Set to `0` to disable time-bounded runs.
+
+- **`ARCHESTRA_KNOWLEDGE_BASE_HYBRID_SEARCH_ENABLED`** - Enable or disable hybrid search (combines vector similarity with full-text search using Reciprocal Rank Fusion).
+  - Default: `true`
+  - Set to `false` to use vector similarity search only.
+
+- **`ARCHESTRA_KNOWLEDGE_BASE_RERANKER_ENABLED`** - Enable or disable the reranker for knowledge base search results.
+  - Default: `true`
+  - Set to `false` to disable reranking and use raw retrieval scores only.
+
+### Enterprise Licensing
+
+To learn more about enterprise licensing, please reach out to [sales@archestra.ai](mailto:sales@archestra.ai).
+
+- **`ARCHESTRA_ENTERPRISE_LICENSE_ACTIVATED`** - Activates enterprise features in Archestra.
+  - Set to `true` to enable the enterprise license
+  - Required as a prerequisite for all other enterprise feature flags
+
+- **`ARCHESTRA_ENTERPRISE_LICENSE_KNOWLEDGE_BASE_ACTIVATED`** - Enables the Knowledge Base enterprise feature.
+  - Set to `true` to enable
+  - Requires the core enterprise license (`ARCHESTRA_ENTERPRISE_LICENSE_ACTIVATED=true`)
+
+- **`ARCHESTRA_ENTERPRISE_LICENSE_FULL_WHITE_LABELING`** - Enables full white-labeling (removes "Powered by Archestra" attribution).
+  - Set to `true` to enable
+  - Requires the core enterprise license (`ARCHESTRA_ENTERPRISE_LICENSE_ACTIVATED=true`)

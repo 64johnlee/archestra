@@ -46,12 +46,12 @@ import { cacheManager } from "@/cache-manager";
 import config from "@/config";
 import { initializeDatabase, isDatabaseHealthy } from "@/database";
 import { seedRequiredStartingData } from "@/database/seed";
+import { McpServerRuntimeManager } from "@/k8s/mcp-server-runtime";
 import {
-  cleanupKnowledgeGraphProvider,
-  initializeKnowledgeGraphProvider,
-} from "@/knowledge-graph";
+  reconcileConnectorCronJobs,
+  startEmbeddingCron,
+} from "@/knowledge-base";
 import logger from "@/logging";
-import { McpServerRuntimeManager } from "@/mcp-server-runtime";
 import { enterpriseLicenseMiddleware } from "@/middleware";
 import AgentLabelModel from "@/models/agent-label";
 import OrganizationModel from "@/models/organization";
@@ -103,6 +103,7 @@ const {
     corsOrigins,
     apiKeyAuthorizationHeaderName,
   },
+  test: { enableE2eTestEndpoints, testValue },
   observability,
 } = config;
 
@@ -649,9 +650,17 @@ const start = async () => {
     // Seeds DB from env vars on first run, then loads config from DB.
     await chatOpsManager.initialize();
 
-    // Initialize knowledge graph provider (if configured)
-    // This enables automatic document ingestion from chat uploads
-    await initializeKnowledgeGraphProvider();
+    // Start embedding cron to process pending document embeddings
+    startEmbeddingCron();
+
+    // Reconcile CronJobs for knowledge base connectors
+    // Ensures CronJobs exist for all enabled connectors (e.g., if a CronJob was deleted)
+    reconcileConnectorCronJobs().catch((error) => {
+      logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Failed to reconcile connector CronJobs on startup",
+      );
+    });
 
     // Background job to renew email subscriptions before they expire
     const emailRenewalIntervalId = setInterval(() => {
@@ -722,9 +731,9 @@ const start = async () => {
     registerHealthEndpoint(fastify);
     registerReadinessEndpoint(fastify);
 
-    if (process.env.ENABLE_E2E_TEST_ENDPOINTS === "true") {
+    if (enableE2eTestEndpoints) {
       fastify.get("/test", async () => ({
-        value: process.env.TEST_VALUE ?? null,
+        value: testValue,
       }));
     }
 
@@ -769,19 +778,13 @@ const start = async () => {
         cacheManager.shutdown();
 
         // Track which cleanup operations have completed
-        const completedCleanups = new Set<
-          "emailProvider" | "knowledgeGraph" | "chatOps"
-        >();
+        const completedCleanups = new Set<"emailProvider" | "chatOps">();
 
         // Run remaining cleanup in parallel with a timeout to avoid blocking shutdown
         const cleanupPromise = Promise.allSettled([
           cleanupEmailProvider().then(() => {
             completedCleanups.add("emailProvider");
             fastify.log.info("Email provider cleanup completed");
-          }),
-          cleanupKnowledgeGraphProvider().then(() => {
-            completedCleanups.add("knowledgeGraph");
-            fastify.log.info("Knowledge graph provider cleanup completed");
           }),
           chatOpsManager.cleanup().then(() => {
             completedCleanups.add("chatOps");
@@ -790,11 +793,7 @@ const start = async () => {
         ]).then(() => "completed" as const);
 
         // Wait for cleanup with timeout, then exit anyway
-        const allCleanupNames = [
-          "emailProvider",
-          "knowledgeGraph",
-          "chatOps",
-        ] as const;
+        const allCleanupNames = ["emailProvider", "chatOps"] as const;
         const result = await Promise.race([
           cleanupPromise,
           new Promise<"timeout">((resolve) =>

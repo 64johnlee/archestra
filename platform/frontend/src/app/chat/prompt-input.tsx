@@ -19,6 +19,7 @@ import {
   PromptInputBody,
   PromptInputButton,
   PromptInputFooter,
+  PromptInputHeader,
   type PromptInputMessage,
   PromptInputProvider,
   PromptInputSpeechButton,
@@ -32,7 +33,8 @@ import {
 import { ChatApiKeySelector } from "@/components/chat/chat-api-key-selector";
 import { ContextIndicator } from "@/components/chat/context-indicator";
 import { InitialAgentSelector } from "@/components/chat/initial-agent-selector";
-import { KnowledgeGraphUploadIndicator } from "@/components/chat/knowledge-graph-upload-indicator";
+import { KnowledgeBaseIndicator } from "@/components/chat/knowledge-base-indicator";
+import { KnowledgeBaseUploadIndicator } from "@/components/chat/knowledge-base-upload-indicator";
 import { ModelSelector } from "@/components/chat/model-selector";
 import { PlaywrightInstallInline } from "@/components/chat/playwright-install-dialog";
 import { Button } from "@/components/ui/button";
@@ -41,6 +43,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useProfile } from "@/lib/agent.query";
 import { useHasPermissions } from "@/lib/auth.query";
 import { conversationStorageKeys } from "@/lib/chat-utils";
 
@@ -129,6 +132,9 @@ const PromptInputContent = ({
   const supportedTypesDescription =
     getSupportedFileTypesDescription(inputModalities);
 
+  // Check if agent has a knowledge base
+  const { data: agentData } = useProfile(agentId);
+
   // Check if user can update organization settings (to show settings link in tooltip)
   const { data: canUpdateOrganization } = useHasPermissions({
     securitySettings: ["update"],
@@ -178,6 +184,16 @@ const PromptInputContent = ({
     [controller.textInput],
   );
 
+  const knowledgeBaseIds =
+    ((agentData as Record<string, unknown> | null | undefined)
+      ?.knowledgeBaseIds as string[] | undefined) ?? [];
+  const connectorIds =
+    ((agentData as Record<string, unknown> | null | undefined)?.connectorIds as
+      | string[]
+      | undefined) ?? [];
+  const hasKnowledgeSources =
+    knowledgeBaseIds.length > 0 || connectorIds.length > 0;
+
   // Determine if file uploads should be shown
   // 1. Organization must allow file uploads (allowFileUploads)
   // 2. Model must support at least one file type (modelSupportsFiles)
@@ -198,6 +214,14 @@ const PromptInputContent = ({
       onSubmit={handleWrappedSubmit}
       accept={acceptedFileTypes}
     >
+      {agentId && hasKnowledgeSources && (
+        <PromptInputHeader>
+          <KnowledgeBaseIndicator
+            knowledgeBaseIds={knowledgeBaseIds}
+            connectorIds={connectorIds}
+          />
+        </PromptInputHeader>
+      )}
       {/* File attachments display - shown inline above textarea */}
       <PromptInputAttachments className="px-3 pt-2 pb-0">
         {(attachment) => <PromptInputAttachment data={attachment} />}
@@ -327,8 +351,9 @@ const PromptInputContent = ({
           )}
         </PromptInputTools>
         <div className="flex items-center gap-2">
-          <KnowledgeGraphUploadIndicator
+          <KnowledgeBaseUploadIndicator
             attachmentCount={controller.attachments.files.length}
+            hasKnowledgeBase={hasKnowledgeSources}
           />
           <PromptInputSpeechButton
             textareaRef={textareaRef}

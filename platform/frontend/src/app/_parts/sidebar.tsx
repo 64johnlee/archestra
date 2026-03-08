@@ -7,6 +7,7 @@ import {
   Bot,
   Bug,
   Cable,
+  Database,
   Github,
   type LucideIcon,
   MessageCircle,
@@ -48,6 +49,7 @@ import {
 import { useIsAuthenticated } from "@/lib/auth.hook";
 import { usePermissionMap } from "@/lib/auth.query";
 import config from "@/lib/config";
+import { useEnterpriseFeature } from "@/lib/features.hook";
 import { useGithubStars } from "@/lib/github.query";
 
 interface NavSubItem {
@@ -160,6 +162,22 @@ const contentNavGroups: NavGroup[] = [
   {
     label: "Other",
     items: [
+      {
+        title: "Knowledge",
+        url: "/knowledge/knowledge-bases",
+        icon: Database,
+        customIsActive: (pathname: string) =>
+          pathname.startsWith("/knowledge") &&
+          !pathname.startsWith("/knowledge/connectors"),
+        subItems: [
+          {
+            title: "Connectors",
+            url: "/knowledge/connectors",
+            customIsActive: (pathname: string) =>
+              pathname.startsWith("/knowledge/connectors"),
+          },
+        ],
+      },
       {
         title: "Logs",
         url: "/llm/logs",
@@ -386,6 +404,16 @@ export function AppSidebar() {
   const { data: starCount } = useGithubStars();
   const formattedStarCount = starCount ?? "";
   const permissionMap = usePermissionMap(requiredPagePermissionsMap);
+  const knowledgeBaseEnabled = useEnterpriseFeature("knowledgeBase");
+
+  // Filter nav groups based on enterprise features
+  const filteredNavGroups = React.useMemo(() => {
+    if (knowledgeBaseEnabled) return contentNavGroups;
+    return contentNavGroups.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => item.title !== "Knowledge"),
+    }));
+  }, [knowledgeBaseEnabled]);
 
   return (
     <Sidebar>
@@ -397,7 +425,7 @@ export function AppSidebar() {
           <>
             <NavPrimary
               items={headerNavItems}
-              groups={contentNavGroups}
+              groups={filteredNavGroups}
               pathname={pathname}
               searchParams={searchParams}
               permissionMap={permissionMap}

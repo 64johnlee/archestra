@@ -1,5 +1,7 @@
 export { default as accountsTable } from "./account";
 export { default as agentsTable } from "./agent";
+export { default as agentConnectorAssignmentsTable } from "./agent-connector-assignment";
+export { default as agentKnowledgeBasesTable } from "./agent-knowledge-base";
 export { default as agentLabelsTable } from "./agent-label";
 export { default as agentTeamsTable } from "./agent-team";
 export { default as agentToolsTable } from "./agent-tool";
@@ -12,6 +14,7 @@ export {
 } from "./chat-api-key";
 export { default as chatopsChannelBindingsTable } from "./chatops-channel-binding";
 export { default as chatopsProcessedMessagesTable } from "./chatops-processed-message";
+export { default as connectorRunsTable } from "./connector-run";
 export { default as conversationsTable } from "./conversation";
 export { default as conversationEnabledToolsTable } from "./conversation-enabled-tool";
 export { default as conversationSharesTable } from "./conversation-share";
@@ -23,6 +26,13 @@ export { default as interactionsTable } from "./interaction";
 export { default as internalMcpCatalogTable } from "./internal-mcp-catalog";
 export { default as invitationsTable } from "./invitation";
 export { default as jwksTable } from "./jwks";
+export { default as kbChunksTable } from "./kb-chunk";
+export { default as kbDocumentsTable } from "./kb-document";
+export { default as knowledgeBasesTable } from "./knowledge-base";
+export {
+  default as knowledgeBaseConnectorsTable,
+  knowledgeBaseConnectorAssignmentsTable,
+} from "./knowledge-base-connector";
 export { default as labelKeysTable } from "./label-key";
 export { default as labelValuesTable } from "./label-value";
 export { default as limitsTable } from "./limit";

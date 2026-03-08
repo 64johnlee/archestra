@@ -29,7 +29,7 @@ import {
 } from "@/clients/llm-client";
 import config from "@/config";
 import { browserStreamFeature } from "@/features/browser-stream/services/browser-stream.feature";
-import { extractAndIngestDocuments } from "@/knowledge-graph/chat-document-extractor";
+import { extractAndIngestDocuments } from "@/knowledge-base";
 import logger from "@/logging";
 import {
   AgentModel,
@@ -119,15 +119,6 @@ const chatRoutes: FastifyPluginAsyncZod = async (fastify) => {
         conversationId,
       });
 
-      // Extract and ingest documents to knowledge graph (fire and forget)
-      // This runs asynchronously to avoid blocking the chat response
-      extractAndIngestDocuments(messages).catch((error) => {
-        logger.warn(
-          { error: error instanceof Error ? error.message : String(error) },
-          "[Chat] Background document ingestion failed",
-        );
-      });
-
       const userIsAgentAdmin = await hasAnyAgentTypeAdminPermission({
         userId: user.id,
         organizationId,
@@ -153,6 +144,15 @@ const chatRoutes: FastifyPluginAsyncZod = async (fastify) => {
       }
 
       const { agentId, agent } = conversation;
+
+      // Extract and ingest documents to agent's knowledge base (fire and forget)
+      // This runs asynchronously to avoid blocking the chat response
+      extractAndIngestDocuments(messages, agentId).catch((error) => {
+        logger.warn(
+          { error: error instanceof Error ? error.message : String(error) },
+          "[Chat] Background document ingestion failed",
+        );
+      });
 
       const externalAgentId = agentId;
 
@@ -1347,7 +1347,7 @@ async function persistNewMessages(
       return 0;
     }
 
-    let messagesToStore = messagesToSave as UiMessage[];
+    let messagesToStore: UiMessage[];
 
     // Strip base64 images and large browser tool results before storing
     if (context === "onFinish") {
@@ -1369,7 +1369,7 @@ async function persistNewMessages(
       );
     } else {
       // For onError, just strip without detailed logging
-      messagesToStore = stripImagesFromMessages(messagesToStore);
+      messagesToStore = stripImagesFromMessages(messagesToSave);
     }
 
     // Append only new messages with timestamps

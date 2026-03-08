@@ -84,9 +84,15 @@ vi.mock("@/components/chat/chat-tools-display", () => ({
   ChatToolsDisplay: () => <div data-testid="chat-tools-display" />,
 }));
 
-vi.mock("@/components/chat/knowledge-graph-upload-indicator", () => ({
-  KnowledgeGraphUploadIndicator: () => (
-    <div data-testid="knowledge-graph-indicator" />
+vi.mock("@/components/chat/knowledge-base-indicator", () => ({
+  KnowledgeBaseIndicator: () => (
+    <div data-testid="knowledge-base-indicator-header" />
+  ),
+}));
+
+vi.mock("@/components/chat/knowledge-base-upload-indicator", () => ({
+  KnowledgeBaseUploadIndicator: () => (
+    <div data-testid="knowledge-base-indicator" />
   ),
 }));
 
@@ -105,6 +111,15 @@ vi.mock("@/components/ui/tooltip", () => ({
   TooltipTrigger: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
   ),
+}));
+
+// Mock agent query hooks
+vi.mock("@/lib/agent.query", () => ({
+  useProfile: () => ({
+    data: null,
+    isLoading: false,
+    error: null,
+  }),
 }));
 
 // Mock the React Query hooks that the component uses

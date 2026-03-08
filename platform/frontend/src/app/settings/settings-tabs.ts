@@ -1,11 +1,13 @@
 import { requiredPagePermissionsMap } from "@shared/access-control";
 import { usePermissionMap } from "@/lib/auth.query";
 import config from "@/lib/config";
+import { useEnterpriseFeature } from "@/lib/features.hook";
 import { useSecretsType } from "@/lib/secrets.query";
 
 export function useSettingsTabs() {
   const permissionMap = usePermissionMap(requiredPagePermissionsMap);
   const { data: secretsType } = useSecretsType();
+  const knowledgeBaseEnabled = useEnterpriseFeature("knowledgeBase");
 
   return [
     { label: "Your Account", href: "/settings/account" },
@@ -34,6 +36,9 @@ export function useSettingsTabs() {
       : []),
     ...(secretsType?.type === "Vault" && permissionMap?.["/settings/secrets"]
       ? [{ label: "Secrets", href: "/settings/secrets" }]
+      : []),
+    ...(knowledgeBaseEnabled && permissionMap?.["/settings/knowledge"]
+      ? [{ label: "Knowledge", href: "/settings/knowledge" }]
       : []),
     ...(permissionMap?.["/settings/appearance"]
       ? [{ label: "Appearance", href: "/settings/appearance" }]

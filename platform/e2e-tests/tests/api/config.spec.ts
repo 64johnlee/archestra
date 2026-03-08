@@ -14,8 +14,8 @@ test.describe("Config endpoint", () => {
 
     const data = (await response.json()) as {
       features: Record<string, unknown>;
-      providerBaseUrls: Record<string, string | null>;
       enterpriseFeatures: Record<string, unknown>;
+      providerBaseUrls: Record<string, string | null>;
     };
 
     // Verify top-level structure
@@ -29,13 +29,13 @@ test.describe("Config endpoint", () => {
     expect(features).toHaveProperty("byosEnabled");
     expect(features).toHaveProperty("globalToolPolicy");
     expect(features).toHaveProperty("incomingEmail");
-    expect(features).toHaveProperty("knowledgeGraph");
     expect(features).toHaveProperty("mcpServerBaseImage");
     expect(features).toHaveProperty("virtualKeyDefaultExpirationSeconds");
 
     // Verify enterpriseFeatures has expected keys
     const enterpriseFeatures = data.enterpriseFeatures;
     expect(enterpriseFeatures).toHaveProperty("core");
+    expect(enterpriseFeatures).toHaveProperty("knowledgeBase");
     expect(enterpriseFeatures).toHaveProperty("fullWhiteLabeling");
 
     // Verify providerBaseUrls has an entry for every supported provider

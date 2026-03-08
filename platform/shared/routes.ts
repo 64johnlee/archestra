@@ -292,6 +292,9 @@ export const RouteId = {
   // LLM Settings Routes (organization-level)
   UpdateLlmSettings: "updateLlmSettings",
 
+  // Knowledge Settings Routes (organization-level)
+  UpdateKnowledgeSettings: "updateKnowledgeSettings",
+
   // Identity Provider Routes
   GetPublicIdentityProviders: "getPublicIdentityProviders",
   GetIdentityProviders: "getIdentityProviders",
@@ -352,6 +355,32 @@ export const RouteId = {
   UpdateChatOpsConfigInQuickstart: "updateChatOpsConfigInQuickstart",
   UpdateSlackChatOpsConfig: "updateSlackChatOpsConfig",
   RefreshChatOpsChannelDiscovery: "refreshChatOpsChannelDiscovery",
+
+  // Knowledge Base Routes
+  GetKnowledgeBases: "getKnowledgeBases",
+  CreateKnowledgeBase: "createKnowledgeBase",
+  GetKnowledgeBase: "getKnowledgeBase",
+  UpdateKnowledgeBase: "updateKnowledgeBase",
+  DeleteKnowledgeBase: "deleteKnowledgeBase",
+  GetKnowledgeBaseHealth: "getKnowledgeBaseHealth",
+
+  // Knowledge Base Connector Routes
+  GetConnectors: "getConnectors",
+  CreateConnector: "createConnector",
+  GetConnector: "getConnector",
+  UpdateConnector: "updateConnector",
+  DeleteConnector: "deleteConnector",
+  SyncConnector: "syncConnector",
+  TestConnectorConnection: "testConnectorConnection",
+
+  // Connector Knowledge Base Assignment Routes
+  AssignConnectorToKnowledgeBases: "assignConnectorToKnowledgeBases",
+  UnassignConnectorFromKnowledgeBase: "unassignConnectorFromKnowledgeBase",
+  GetConnectorKnowledgeBases: "getConnectorKnowledgeBases",
+
+  // Connector Run Routes
+  GetConnectorRuns: "getConnectorRuns",
+  GetConnectorRun: "getConnectorRun",
 
   // Invitation Routes
   CheckInvitation: "checkInvitation",

@@ -16,6 +16,7 @@ import {
   getOtlpAuthHeaders,
   getTrustedOrigins,
   parseBodyLimit,
+  parseConnectorSyncMaxDuration,
   parseContentMaxLength,
   parseSampleRate,
   parseVirtualKeyDefaultExpiration,
@@ -906,6 +907,44 @@ describe("getCorsOrigins", () => {
   });
 });
 
+describe("getConnectorImage (config.kb.connectorImage)", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+    vi.resetModules();
+    delete process.env.ARCHESTRA_ORCHESTRATOR_KUBECONFIG;
+    delete process.env
+      .ARCHESTRA_ORCHESTRATOR_LOAD_KUBECONFIG_FROM_CURRENT_CLUSTER;
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  test("should default to platform image when running inside K8s cluster", async () => {
+    process.env.ARCHESTRA_ORCHESTRATOR_LOAD_KUBECONFIG_FROM_CURRENT_CLUSTER =
+      "true";
+
+    const { default: cfg } = await import("./config");
+    expect(cfg.kb.connectorImage).toMatch(
+      /^archestra\/platform:\d+\.\d+\.\d+$/,
+    );
+  });
+
+  test("should return empty string when using local kubeconfig (local dev)", async () => {
+    process.env.ARCHESTRA_ORCHESTRATOR_KUBECONFIG = "/path/to/kubeconfig";
+
+    const { default: cfg } = await import("./config");
+    expect(cfg.kb.connectorImage).toBe("");
+  });
+
+  test("should return empty string when K8s is not configured at all", async () => {
+    const { default: cfg } = await import("./config");
+    expect(cfg.kb.connectorImage).toBe("");
+  });
+});
+
 describe("parseVirtualKeyDefaultExpiration", () => {
   test("should return default 2592000 when undefined", () => {
     expect(parseVirtualKeyDefaultExpiration(undefined)).toBe(2592000);
@@ -958,6 +997,36 @@ describe("parseVirtualKeyDefaultExpiration", () => {
 
   test("should cap value just over 1 year", () => {
     expect(parseVirtualKeyDefaultExpiration("31536001")).toBe(31_536_000);
+  });
+});
+
+describe("parseConnectorSyncMaxDuration", () => {
+  test("should return default 3300 when undefined", () => {
+    expect(parseConnectorSyncMaxDuration(undefined)).toBe(3300);
+  });
+
+  test("should return default 3300 when empty string", () => {
+    expect(parseConnectorSyncMaxDuration("")).toBe(3300);
+  });
+
+  test("should parse valid positive integer", () => {
+    expect(parseConnectorSyncMaxDuration("1800")).toBe(1800);
+  });
+
+  test("should return undefined for zero (disables time-bounded runs)", () => {
+    expect(parseConnectorSyncMaxDuration("0")).toBeUndefined();
+  });
+
+  test("should return undefined for negative value", () => {
+    expect(parseConnectorSyncMaxDuration("-100")).toBeUndefined();
+  });
+
+  test("should return undefined for non-numeric value", () => {
+    expect(parseConnectorSyncMaxDuration("abc")).toBeUndefined();
+  });
+
+  test("should parse large value", () => {
+    expect(parseConnectorSyncMaxDuration("7200")).toBe(7200);
   });
 });
 

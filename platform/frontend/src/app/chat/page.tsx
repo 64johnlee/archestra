@@ -1271,6 +1271,7 @@ export default function ChatPage() {
                   <FileText className="h-3 w-3 mr-1" />
                   Artifact
                 </Button>
+
                 <div className="w-px h-4 bg-border" />
                 <Button
                   variant={

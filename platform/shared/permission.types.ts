@@ -30,6 +30,8 @@ export const resources = [
   "identityProvider",
   "mcpRegistry",
   "mcpServerInstallation",
+  "knowledgeBase",
+  "knowledgeSettings",
   "mcpServerInstallationRequest",
   "chat",
   "llmCost",
@@ -75,6 +77,8 @@ export const resourceLabels: Record<Resource, string> = {
   invitation: "Invitations",
   mcpRegistry: "MCP Registry",
   mcpServerInstallation: "MCP Server Installations",
+  knowledgeBase: "Knowledge Bases",
+  knowledgeSettings: "Knowledge Settings",
   mcpServerInstallationRequest: "MCP Server Installation Requests",
   team: "Teams",
   ac: "Roles",
@@ -114,6 +118,8 @@ export const resourceDescriptions: Record<Resource, string> = {
   secret: "Secrets manager configuration and connectivity",
   appearance: "White-labeling settings (theme, logo, fonts)",
   securitySettings: "Security settings (tool policy, chat file uploads)",
+  knowledgeBase: "Knowledge bases for RAG-based document retrieval",
+  knowledgeSettings: "Knowledge settings (embedding model configuration)",
   organization: "Organization (internal, used by authentication system)",
 };
 
@@ -137,6 +143,7 @@ export const resourceCategories: Record<string, Resource[]> = {
     "mcpServerInstallationRequest",
   ],
   LLM: ["llmProxy", "llmProvider", "llmLimit", "llmSettings", "llmCost"],
+  Knowledge: ["knowledgeBase", "knowledgeSettings"],
   Other: ["chat", "log", "dualLlmConfig", "dualLlmResult"],
   Administration: [
     "member",

@@ -19,6 +19,7 @@ import {
   PublicAppearanceSchema,
   SelectOrganizationSchema,
   UpdateAppearanceSchema,
+  UpdateKnowledgeSettingsSchema,
   UpdateLlmSettingsSchema,
   UpdateSecuritySettingsSchema,
 } from "@/types";
@@ -99,6 +100,28 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
           "Update LLM settings (TOON compression, compression scope, limit cleanup interval)",
         tags: ["Organization"],
         body: UpdateLlmSettingsSchema,
+        response: constructResponseSchema(SelectOrganizationSchema),
+      },
+    },
+    async ({ organizationId, body }, reply) => {
+      const organization = await OrganizationModel.patch(organizationId, body);
+
+      if (!organization) {
+        throw new ApiError(404, "Organization not found");
+      }
+
+      return reply.send(organization);
+    },
+  );
+
+  fastify.patch(
+    "/api/organization/knowledge-settings",
+    {
+      schema: {
+        operationId: RouteId.UpdateKnowledgeSettings,
+        description: "Update knowledge settings (embedding model)",
+        tags: ["Organization"],
+        body: UpdateKnowledgeSettingsSchema,
         response: constructResponseSchema(SelectOrganizationSchema),
       },
     },

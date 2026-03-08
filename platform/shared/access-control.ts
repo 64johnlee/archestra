@@ -44,6 +44,10 @@ export const allAvailableActions: Record<Resource, Action[]> = {
   mcpServerInstallation: ["read", "create", "update", "delete", "admin"],
   mcpServerInstallationRequest: ["read", "create", "update", "delete", "admin"],
 
+  // Knowledge
+  knowledgeBase: ["read", "create", "update", "delete"],
+  knowledgeSettings: ["read", "update"],
+
   // Dual LLM
   dualLlmConfig: ["read", "create", "update", "delete"],
   dualLlmResult: ["read", "create", "update", "delete"],
@@ -87,6 +91,10 @@ export const editorPermissions: Record<Resource, Action[]> = {
   dualLlmConfig: ["read"],
   dualLlmResult: ["read"],
 
+  // Knowledge
+  knowledgeBase: ["read", "create", "update", "delete"],
+  knowledgeSettings: ["read", "update"],
+
   // Administration
   team: ["read"],
   secret: ["read"],
@@ -129,6 +137,10 @@ export const memberPermissions: Record<Resource, Action[]> = {
   // Dual LLM
   dualLlmConfig: [],
   dualLlmResult: ["read"],
+
+  // Knowledge
+  knowledgeBase: ["read"],
+  knowledgeSettings: [],
 
   // Administration
   team: ["read"],
@@ -270,6 +282,12 @@ export const permissionDescriptions: Record<string, string> = {
   "appearance:update": "Customize theme, logo, and font settings",
   "securitySettings:read": "View security settings (tool policy, file uploads)",
   "securitySettings:update": "Modify security settings",
+  "knowledgeBase:read": "View knowledge bases and connectors",
+  "knowledgeBase:create": "Create knowledge bases and connectors",
+  "knowledgeBase:update": "Modify knowledge bases and connectors",
+  "knowledgeBase:delete": "Delete knowledge bases and connectors",
+  "knowledgeSettings:read": "View knowledge settings (embedding model)",
+  "knowledgeSettings:update": "Modify knowledge settings",
 };
 
 /**
@@ -728,6 +746,9 @@ export const requiredEndpointPermissionsMap: Partial<
   [RouteId.UpdateLlmSettings]: {
     llmSettings: ["update"],
   },
+  [RouteId.UpdateKnowledgeSettings]: {
+    knowledgeSettings: ["update"],
+  },
 
   /**
    * Get public identity providers route (minimal info for login page)
@@ -857,6 +878,32 @@ export const requiredEndpointPermissionsMap: Partial<
   [RouteId.RefreshChatOpsChannelDiscovery]: {
     agentTrigger: ["read"],
   },
+  // Knowledge Base Routes
+  [RouteId.GetKnowledgeBases]: { knowledgeBase: ["read"] },
+  [RouteId.CreateKnowledgeBase]: { knowledgeBase: ["create"] },
+  [RouteId.GetKnowledgeBase]: { knowledgeBase: ["read"] },
+  [RouteId.UpdateKnowledgeBase]: { knowledgeBase: ["update"] },
+  [RouteId.DeleteKnowledgeBase]: { knowledgeBase: ["delete"] },
+  [RouteId.GetKnowledgeBaseHealth]: { knowledgeBase: ["read"] },
+
+  // Knowledge Base Connector Routes
+  [RouteId.GetConnectors]: { knowledgeBase: ["read"] },
+  [RouteId.CreateConnector]: { knowledgeBase: ["create"] },
+  [RouteId.GetConnector]: { knowledgeBase: ["read"] },
+  [RouteId.UpdateConnector]: { knowledgeBase: ["update"] },
+  [RouteId.DeleteConnector]: { knowledgeBase: ["delete"] },
+  [RouteId.SyncConnector]: { knowledgeBase: ["update"] },
+  [RouteId.TestConnectorConnection]: { knowledgeBase: ["read"] },
+
+  // Connector Knowledge Base Assignment Routes
+  [RouteId.AssignConnectorToKnowledgeBases]: { knowledgeBase: ["update"] },
+  [RouteId.UnassignConnectorFromKnowledgeBase]: { knowledgeBase: ["update"] },
+  [RouteId.GetConnectorKnowledgeBases]: { knowledgeBase: ["read"] },
+
+  // Connector Run Routes
+  [RouteId.GetConnectorRuns]: { knowledgeBase: ["read"] },
+  [RouteId.GetConnectorRun]: { knowledgeBase: ["read"] },
+
   // Config endpoint - any authenticated user can access
   [RouteId.GetConfig]: {},
 };
@@ -898,12 +945,17 @@ export const requiredPagePermissionsMap: Record<string, Permissions> = {
   "/llm/logs": { log: ["read"] },
   "/mcp/logs": { log: ["read"] },
 
+  // Knowledge
+  "/knowledge/knowledge-bases": { knowledgeBase: ["read"] },
+  "/knowledge/connectors": { knowledgeBase: ["read"] },
+
   // Settings
   "/settings/account": {},
   "/settings/auth": {},
   "/settings/dual-llm": { dualLlmConfig: ["read"] },
   "/settings/security": { securitySettings: ["read"] },
   "/settings/llm": { llmSettings: ["read"] },
+  "/settings/knowledge": { knowledgeSettings: ["read"] },
   "/settings/users": { member: ["read"] },
   "/settings/teams": { team: ["read"] },
   "/settings/roles": { ac: ["read"] },

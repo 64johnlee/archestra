@@ -5,24 +5,27 @@ import {
   MCP_SERVER_TOOL_NAME_SEPARATOR,
   TOOL_ARTIFACT_WRITE_FULL_NAME,
   TOOL_CREATE_MCP_SERVER_INSTALLATION_REQUEST_FULL_NAME,
-  TOOL_QUERY_KNOWLEDGE_GRAPH_FULL_NAME,
+  TOOL_QUERY_KNOWLEDGE_BASE_FULL_NAME,
   TOOL_TODO_WRITE_FULL_NAME,
 } from "@shared";
 import { executeA2AMessage } from "@/agents/a2a-executor";
 import { userHasPermission } from "@/auth/utils";
 import type { TokenAuthContext } from "@/clients/mcp-client";
-import { getKnowledgeGraphProvider } from "@/knowledge-graph";
+import { buildUserAcl, queryService } from "@/knowledge-base";
 import logger from "@/logging";
 import {
   AgentModel,
   AgentTeamModel,
   ConversationModel,
   InternalMcpCatalogModel,
+  KnowledgeBaseModel,
   LimitModel,
   McpServerModel,
+  TeamModel,
   ToolInvocationPolicyModel,
   ToolModel,
   TrustedDataPolicyModel,
+  UserModel,
 } from "@/models";
 import { assignToolToAgent } from "@/routes/agent-tool";
 import { ProviderError } from "@/routes/chat/errors";
@@ -35,7 +38,7 @@ import {
   type ToolInvocation,
   type TrustedData,
 } from "@/types";
-import { type QueryMode, QueryModeSchema } from "@/types/knowledge-graph";
+import type { AclEntry } from "@/types/kb-document";
 
 /**
  * Constants for Archestra MCP server
@@ -1777,104 +1780,111 @@ export async function executeArchestraTool(
     }
   }
 
-  if (toolName === TOOL_QUERY_KNOWLEDGE_GRAPH_FULL_NAME) {
+  if (toolName === TOOL_QUERY_KNOWLEDGE_BASE_FULL_NAME) {
     logger.info(
       { agentId: contextAgent.id, queryArgs: args },
-      "query_knowledge_graph tool called",
+      "query_knowledge_base tool called",
     );
 
     try {
-      const query = args?.query as string;
-      const modeArg = args?.mode as string | undefined;
+      const query = args?.query as string | undefined;
+      if (!query) {
+        return {
+          content: [
+            { type: "text", text: "Error: query parameter is required" },
+          ],
+          isError: true,
+        };
+      }
 
-      if (!query || query.trim() === "") {
+      const agent = await AgentModel.findById(contextAgent.id);
+      if (!agent?.knowledgeBaseIds?.length) {
         return {
           content: [
             {
               type: "text",
-              text: "Error: query parameter is required and cannot be empty",
+              text: "No knowledge base assigned to this agent. Assign a knowledge base in agent settings to enable knowledge search.",
             },
           ],
           isError: true,
         };
       }
 
-      // Validate mode if provided
-      let mode: QueryMode = "hybrid";
-      if (modeArg) {
-        const parseResult = QueryModeSchema.safeParse(modeArg);
-        if (!parseResult.success) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Error: Invalid mode "${modeArg}". Must be one of: local, global, hybrid, naive`,
-              },
-            ],
-            isError: true,
-          };
-        }
-        mode = parseResult.data;
-      }
-
-      // Get the knowledge graph provider
-      const provider = getKnowledgeGraphProvider();
-      if (!provider) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "Error: Knowledge graph provider is not configured. Please configure the ARCHESTRA_KNOWLEDGE_GRAPH_PROVIDER environment variable.",
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      logger.info(
-        {
-          agentId: contextAgent.id,
-          agentName: contextAgent.name,
-          mode,
-        },
-        "Querying knowledge graph",
+      // Query all assigned knowledge bases and merge results
+      const kbs = await Promise.all(
+        agent.knowledgeBaseIds.map((id) => KnowledgeBaseModel.findById(id)),
       );
-
-      // Execute the query
-      const result = await provider.queryDocument(query, {
-        mode,
-      });
-
-      if (result.error) {
+      const validKbs = kbs.filter(
+        (kb): kb is NonNullable<typeof kb> => kb !== null,
+      );
+      if (validKbs.length === 0) {
         return {
-          content: [
-            {
-              type: "text",
-              text: `Error querying knowledge graph: ${result.error}`,
-            },
-          ],
+          content: [{ type: "text", text: "Knowledge base not found." }],
           isError: true,
         };
       }
+
+      let userAcl: AclEntry[] = ["org:*"];
+      if (context.userId) {
+        const [user, teamIds] = await Promise.all([
+          UserModel.getById(context.userId),
+          TeamModel.getUserTeamIds(context.userId),
+        ]);
+        if (user?.email) {
+          // Use the broadest visibility among all assigned KBs
+          const visibility = validKbs.some((kb) => kb.visibility === "org-wide")
+            ? "org-wide"
+            : validKbs.some((kb) => kb.visibility === "team-scoped")
+              ? "team-scoped"
+              : "auto-sync-permissions";
+          userAcl = buildUserAcl({
+            userEmail: user.email,
+            teamIds,
+            visibility,
+          });
+        }
+      }
+
+      const allResults = await Promise.all(
+        validKbs.map((kb) =>
+          queryService.query({
+            knowledgeBaseId: kb.id,
+            queryText: query,
+            userAcl,
+            limit: 10,
+          }),
+        ),
+      );
+      // Flatten and take top results by score
+      const results = allResults
+        .flat()
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+        .slice(0, 10);
 
       return {
         content: [
           {
             type: "text",
-            text: result.answer,
+            text: JSON.stringify({
+              results,
+              totalChunks: results.length,
+            }),
           },
         ],
-        isError: false,
       };
     } catch (error) {
-      logger.error({ err: error }, "Error querying knowledge graph");
+      logger.error(
+        {
+          agentId: contextAgent.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "query_knowledge_base failed",
+      );
       return {
         content: [
           {
             type: "text",
-            text: `Error querying knowledge graph: ${
-              error instanceof Error ? error.message : "Unknown error"
-            }`,
+            text: `Error querying knowledge base: ${error instanceof Error ? error.message : "Unknown error"}`,
           },
         ],
         isError: true,
@@ -2904,17 +2914,17 @@ export function getArchestraMcpTools(): Tool[] {
       _meta: {},
     },
     {
-      name: TOOL_QUERY_KNOWLEDGE_GRAPH_FULL_NAME,
-      title: "Query Knowledge Graph",
+      name: TOOL_QUERY_KNOWLEDGE_BASE_FULL_NAME,
+      title: "Query Knowledge Base",
       description:
-        "Query the organization's knowledge graph to retrieve information from uploaded documents. Uses graph-based retrieval augmented generation (GraphRAG) for accurate and contextual results.",
+        "Query the organization's knowledge base to retrieve information from ingested documents (uploaded files, Jira issues, Confluence pages, etc.). Uses graph-based retrieval augmented generation (GraphRAG) for accurate and contextual results. IMPORTANT: formulate queries about the actual content you are looking for, not about the source system. For example, instead of 'get information from jira', ask 'what tasks or issues are being tracked' or 'what are the open bugs'.",
       inputSchema: {
         type: "object",
         properties: {
           query: {
             type: "string",
             description:
-              "The natural language query to search the knowledge graph",
+              "A natural language query about the content stored in the knowledge base. Ask about topics, concepts, or information — not about source systems (e.g. ask 'what tasks are in progress' rather than 'get jira data').",
           },
           mode: {
             type: "string",

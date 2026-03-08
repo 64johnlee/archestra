@@ -11799,6 +11799,8 @@ export type GetAgentsResponses = {
                 valueId?: string;
             }>;
             authorName?: string | null;
+            knowledgeBaseIds: Array<string>;
+            connectorIds: Array<string>;
         }>;
         pagination: {
             currentPage: number;
@@ -11843,6 +11845,8 @@ export type CreateAgentData = {
             keyId?: string;
             valueId?: string;
         }>;
+        knowledgeBaseIds?: Array<string>;
+        connectorIds?: Array<string>;
     };
     path?: never;
     query?: never;
@@ -11984,6 +11988,8 @@ export type CreateAgentResponses = {
             valueId?: string;
         }>;
         authorName?: string | null;
+        knowledgeBaseIds: Array<string>;
+        connectorIds: Array<string>;
     };
 };
 
@@ -12144,6 +12150,8 @@ export type GetAllAgentsResponses = {
             valueId?: string;
         }>;
         authorName?: string | null;
+        knowledgeBaseIds: Array<string>;
+        connectorIds: Array<string>;
     }>;
 };
 
@@ -12291,6 +12299,8 @@ export type GetDefaultMcpGatewayResponses = {
             valueId?: string;
         }>;
         authorName?: string | null;
+        knowledgeBaseIds: Array<string>;
+        connectorIds: Array<string>;
     };
 };
 
@@ -12438,6 +12448,8 @@ export type GetDefaultLlmProxyResponses = {
             valueId?: string;
         }>;
         authorName?: string | null;
+        knowledgeBaseIds: Array<string>;
+        connectorIds: Array<string>;
     };
 };
 
@@ -12666,6 +12678,8 @@ export type GetAgentResponses = {
             valueId?: string;
         }>;
         authorName?: string | null;
+        knowledgeBaseIds: Array<string>;
+        connectorIds: Array<string>;
     };
 };
 
@@ -12701,6 +12715,8 @@ export type UpdateAgentData = {
             keyId?: string;
             valueId?: string;
         }>;
+        knowledgeBaseIds?: Array<string>;
+        connectorIds?: Array<string>;
     };
     path: {
         id: string;
@@ -12844,6 +12860,8 @@ export type UpdateAgentResponses = {
             valueId?: string;
         }>;
         authorName?: string | null;
+        knowledgeBaseIds: Array<string>;
+        connectorIds: Array<string>;
     };
 };
 
@@ -12994,6 +13012,8 @@ export type GetAgentVersionsResponses = {
                 valueId?: string;
             }>;
             authorName?: string | null;
+            knowledgeBaseIds: Array<string>;
+            connectorIds: Array<string>;
         };
         history: Array<{
             version: number;
@@ -13155,6 +13175,8 @@ export type RollbackAgentResponses = {
             valueId?: string;
         }>;
         authorName?: string | null;
+        knowledgeBaseIds: Array<string>;
+        connectorIds: Array<string>;
     };
 };
 
@@ -21201,6 +21223,7 @@ export type GetConfigResponses = {
     200: {
         enterpriseFeatures: {
             core: boolean;
+            knowledgeBase: boolean;
             fullWhiteLabeling: boolean;
         };
         features: {
@@ -21214,11 +21237,6 @@ export type GetConfigResponses = {
                 provider?: 'outlook';
                 displayName?: string;
                 emailDomain?: string;
-            };
-            knowledgeGraph: {
-                enabled: boolean;
-                provider?: 'lightrag';
-                displayName?: string;
             };
             mcpServerBaseImage: string;
             orchestratorK8sNamespace: string;
@@ -26824,6 +26842,1834 @@ export type CheckInvitationResponses = {
 
 export type CheckInvitationResponse = CheckInvitationResponses[keyof CheckInvitationResponses];
 
+export type GetKnowledgeBasesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        limit?: number;
+        offset?: number;
+    };
+    url: '/api/knowledge-bases';
+};
+
+export type GetKnowledgeBasesErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type GetKnowledgeBasesError = GetKnowledgeBasesErrors[keyof GetKnowledgeBasesErrors];
+
+export type GetKnowledgeBasesResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        data: Array<{
+            id: string;
+            organizationId: string;
+            name: string;
+            description: string | null;
+            visibility: 'org-wide' | 'team-scoped' | 'auto-sync-permissions';
+            teamIds: Array<string>;
+            status: string;
+            createdAt: string;
+            updatedAt: string;
+            connectors: Array<{
+                id: string;
+                name: string;
+                connectorType: 'jira' | 'confluence' | 'github' | 'gitlab';
+            }>;
+            totalDocsIndexed: number;
+            assignedAgents: Array<{
+                id: string;
+                name: string;
+                agentType: string;
+            }>;
+        }>;
+        pagination: {
+            currentPage: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+            hasNext: boolean;
+            hasPrev: boolean;
+        };
+    };
+};
+
+export type GetKnowledgeBasesResponse = GetKnowledgeBasesResponses[keyof GetKnowledgeBasesResponses];
+
+export type CreateKnowledgeBaseData = {
+    body: {
+        name: string;
+        description?: string;
+        visibility?: 'org-wide' | 'team-scoped' | 'auto-sync-permissions';
+        teamIds?: Array<string>;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/knowledge-bases';
+};
+
+export type CreateKnowledgeBaseErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type CreateKnowledgeBaseError = CreateKnowledgeBaseErrors[keyof CreateKnowledgeBaseErrors];
+
+export type CreateKnowledgeBaseResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        organizationId: string;
+        name: string;
+        description: string | null;
+        visibility: 'org-wide' | 'team-scoped' | 'auto-sync-permissions';
+        teamIds: Array<string>;
+        status: string;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type CreateKnowledgeBaseResponse = CreateKnowledgeBaseResponses[keyof CreateKnowledgeBaseResponses];
+
+export type DeleteKnowledgeBaseData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/knowledge-bases/{id}';
+};
+
+export type DeleteKnowledgeBaseErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type DeleteKnowledgeBaseError = DeleteKnowledgeBaseErrors[keyof DeleteKnowledgeBaseErrors];
+
+export type DeleteKnowledgeBaseResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        success: boolean;
+    };
+};
+
+export type DeleteKnowledgeBaseResponse = DeleteKnowledgeBaseResponses[keyof DeleteKnowledgeBaseResponses];
+
+export type GetKnowledgeBaseData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/knowledge-bases/{id}';
+};
+
+export type GetKnowledgeBaseErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type GetKnowledgeBaseError = GetKnowledgeBaseErrors[keyof GetKnowledgeBaseErrors];
+
+export type GetKnowledgeBaseResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        organizationId: string;
+        name: string;
+        description: string | null;
+        visibility: 'org-wide' | 'team-scoped' | 'auto-sync-permissions';
+        teamIds: Array<string>;
+        status: string;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type GetKnowledgeBaseResponse = GetKnowledgeBaseResponses[keyof GetKnowledgeBaseResponses];
+
+export type UpdateKnowledgeBaseData = {
+    body?: {
+        name?: string;
+        description?: string | null;
+        visibility?: 'org-wide' | 'team-scoped' | 'auto-sync-permissions';
+        teamIds?: Array<string>;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/knowledge-bases/{id}';
+};
+
+export type UpdateKnowledgeBaseErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type UpdateKnowledgeBaseError = UpdateKnowledgeBaseErrors[keyof UpdateKnowledgeBaseErrors];
+
+export type UpdateKnowledgeBaseResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        organizationId: string;
+        name: string;
+        description: string | null;
+        visibility: 'org-wide' | 'team-scoped' | 'auto-sync-permissions';
+        teamIds: Array<string>;
+        status: string;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type UpdateKnowledgeBaseResponse = UpdateKnowledgeBaseResponses[keyof UpdateKnowledgeBaseResponses];
+
+export type GetKnowledgeBaseHealthData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/knowledge-bases/{id}/health';
+};
+
+export type GetKnowledgeBaseHealthErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type GetKnowledgeBaseHealthError = GetKnowledgeBaseHealthErrors[keyof GetKnowledgeBaseHealthErrors];
+
+export type GetKnowledgeBaseHealthResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        status: 'healthy' | 'unhealthy';
+        message?: string;
+    };
+};
+
+export type GetKnowledgeBaseHealthResponse = GetKnowledgeBaseHealthResponses[keyof GetKnowledgeBaseHealthResponses];
+
+export type GetConnectorsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        limit?: number;
+        offset?: number;
+        knowledgeBaseId?: string;
+    };
+    url: '/api/connectors';
+};
+
+export type GetConnectorsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type GetConnectorsError = GetConnectorsErrors[keyof GetConnectorsErrors];
+
+export type GetConnectorsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        data: Array<{
+            id: string;
+            organizationId: string;
+            name: string;
+            connectorType: 'jira' | 'confluence' | 'github' | 'gitlab';
+            config: {
+                type: 'jira';
+                jiraBaseUrl: unknown;
+                isCloud: boolean;
+                projectKey?: string;
+                jqlQuery?: string;
+                commentEmailBlacklist?: Array<string>;
+                labelsToSkip?: Array<string>;
+            } | {
+                type: 'confluence';
+                confluenceUrl: unknown;
+                isCloud: boolean;
+                spaceKeys?: Array<string>;
+                pageIds?: Array<string>;
+                cqlQuery?: string;
+                labelsToSkip?: Array<string>;
+                batchSize?: number;
+            } | {
+                type: 'github';
+                githubUrl: unknown;
+                owner: string;
+                repos?: Array<string>;
+                includeIssues?: boolean;
+                includePullRequests?: boolean;
+                labelsToSkip?: Array<string>;
+            } | {
+                type: 'gitlab';
+                gitlabUrl: unknown;
+                projectIds?: Array<number>;
+                groupId?: string;
+                includeIssues?: boolean;
+                includeMergeRequests?: boolean;
+                labelsToSkip?: Array<string>;
+            };
+            secretId: string | null;
+            schedule: string;
+            enabled: boolean;
+            lastSyncAt: string | null;
+            lastSyncStatus: 'running' | 'success' | 'failed' | 'partial';
+            lastSyncError: string | null;
+            checkpoint: string | number | boolean | null | {
+                [key: string]: unknown;
+            } | Array<unknown> | null;
+            createdAt: string;
+            updatedAt: string;
+            assignedAgents: Array<{
+                id: string;
+                name: string;
+                agentType: string;
+            }>;
+        }>;
+        pagination: {
+            currentPage: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+            hasNext: boolean;
+            hasPrev: boolean;
+        };
+    };
+};
+
+export type GetConnectorsResponse = GetConnectorsResponses[keyof GetConnectorsResponses];
+
+export type CreateConnectorData = {
+    body: {
+        name: string;
+        connectorType: 'jira' | 'confluence' | 'github' | 'gitlab';
+        config: {
+            type: 'jira';
+            jiraBaseUrl: string;
+            isCloud: boolean;
+            projectKey?: string;
+            jqlQuery?: string;
+            commentEmailBlacklist?: Array<string>;
+            labelsToSkip?: Array<string>;
+        } | {
+            type: 'confluence';
+            confluenceUrl: string;
+            isCloud: boolean;
+            spaceKeys?: Array<string>;
+            pageIds?: Array<string>;
+            cqlQuery?: string;
+            labelsToSkip?: Array<string>;
+            batchSize?: number;
+        } | {
+            type: 'github';
+            githubUrl: string;
+            owner: string;
+            repos?: Array<string>;
+            includeIssues?: boolean;
+            includePullRequests?: boolean;
+            labelsToSkip?: Array<string>;
+        } | {
+            type: 'gitlab';
+            gitlabUrl: string;
+            projectIds?: Array<number>;
+            groupId?: string;
+            includeIssues?: boolean;
+            includeMergeRequests?: boolean;
+            labelsToSkip?: Array<string>;
+        };
+        credentials: {
+            email?: string;
+            apiToken: string;
+        };
+        schedule?: string;
+        enabled?: boolean;
+        knowledgeBaseIds?: Array<string>;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/connectors';
+};
+
+export type CreateConnectorErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type CreateConnectorError = CreateConnectorErrors[keyof CreateConnectorErrors];
+
+export type CreateConnectorResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        organizationId: string;
+        name: string;
+        connectorType: 'jira' | 'confluence' | 'github' | 'gitlab';
+        config: {
+            type: 'jira';
+            jiraBaseUrl: unknown;
+            isCloud: boolean;
+            projectKey?: string;
+            jqlQuery?: string;
+            commentEmailBlacklist?: Array<string>;
+            labelsToSkip?: Array<string>;
+        } | {
+            type: 'confluence';
+            confluenceUrl: unknown;
+            isCloud: boolean;
+            spaceKeys?: Array<string>;
+            pageIds?: Array<string>;
+            cqlQuery?: string;
+            labelsToSkip?: Array<string>;
+            batchSize?: number;
+        } | {
+            type: 'github';
+            githubUrl: unknown;
+            owner: string;
+            repos?: Array<string>;
+            includeIssues?: boolean;
+            includePullRequests?: boolean;
+            labelsToSkip?: Array<string>;
+        } | {
+            type: 'gitlab';
+            gitlabUrl: unknown;
+            projectIds?: Array<number>;
+            groupId?: string;
+            includeIssues?: boolean;
+            includeMergeRequests?: boolean;
+            labelsToSkip?: Array<string>;
+        };
+        secretId: string | null;
+        schedule: string;
+        enabled: boolean;
+        lastSyncAt: string | null;
+        lastSyncStatus: 'running' | 'success' | 'failed' | 'partial';
+        lastSyncError: string | null;
+        checkpoint: string | number | boolean | null | {
+            [key: string]: unknown;
+        } | Array<unknown> | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type CreateConnectorResponse = CreateConnectorResponses[keyof CreateConnectorResponses];
+
+export type DeleteConnectorData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/connectors/{id}';
+};
+
+export type DeleteConnectorErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type DeleteConnectorError = DeleteConnectorErrors[keyof DeleteConnectorErrors];
+
+export type DeleteConnectorResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        success: boolean;
+    };
+};
+
+export type DeleteConnectorResponse = DeleteConnectorResponses[keyof DeleteConnectorResponses];
+
+export type GetConnectorData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/connectors/{id}';
+};
+
+export type GetConnectorErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type GetConnectorError = GetConnectorErrors[keyof GetConnectorErrors];
+
+export type GetConnectorResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        organizationId: string;
+        name: string;
+        connectorType: 'jira' | 'confluence' | 'github' | 'gitlab';
+        config: {
+            type: 'jira';
+            jiraBaseUrl: unknown;
+            isCloud: boolean;
+            projectKey?: string;
+            jqlQuery?: string;
+            commentEmailBlacklist?: Array<string>;
+            labelsToSkip?: Array<string>;
+        } | {
+            type: 'confluence';
+            confluenceUrl: unknown;
+            isCloud: boolean;
+            spaceKeys?: Array<string>;
+            pageIds?: Array<string>;
+            cqlQuery?: string;
+            labelsToSkip?: Array<string>;
+            batchSize?: number;
+        } | {
+            type: 'github';
+            githubUrl: unknown;
+            owner: string;
+            repos?: Array<string>;
+            includeIssues?: boolean;
+            includePullRequests?: boolean;
+            labelsToSkip?: Array<string>;
+        } | {
+            type: 'gitlab';
+            gitlabUrl: unknown;
+            projectIds?: Array<number>;
+            groupId?: string;
+            includeIssues?: boolean;
+            includeMergeRequests?: boolean;
+            labelsToSkip?: Array<string>;
+        };
+        secretId: string | null;
+        schedule: string;
+        enabled: boolean;
+        lastSyncAt: string | null;
+        lastSyncStatus: 'running' | 'success' | 'failed' | 'partial';
+        lastSyncError: string | null;
+        checkpoint: string | number | boolean | null | {
+            [key: string]: unknown;
+        } | Array<unknown> | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type GetConnectorResponse = GetConnectorResponses[keyof GetConnectorResponses];
+
+export type UpdateConnectorData = {
+    body?: {
+        name?: string;
+        config?: {
+            type: 'jira';
+            jiraBaseUrl: string;
+            isCloud: boolean;
+            projectKey?: string;
+            jqlQuery?: string;
+            commentEmailBlacklist?: Array<string>;
+            labelsToSkip?: Array<string>;
+        } | {
+            type: 'confluence';
+            confluenceUrl: string;
+            isCloud: boolean;
+            spaceKeys?: Array<string>;
+            pageIds?: Array<string>;
+            cqlQuery?: string;
+            labelsToSkip?: Array<string>;
+            batchSize?: number;
+        } | {
+            type: 'github';
+            githubUrl: string;
+            owner: string;
+            repos?: Array<string>;
+            includeIssues?: boolean;
+            includePullRequests?: boolean;
+            labelsToSkip?: Array<string>;
+        } | {
+            type: 'gitlab';
+            gitlabUrl: string;
+            projectIds?: Array<number>;
+            groupId?: string;
+            includeIssues?: boolean;
+            includeMergeRequests?: boolean;
+            labelsToSkip?: Array<string>;
+        };
+        schedule?: string;
+        enabled?: boolean;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/connectors/{id}';
+};
+
+export type UpdateConnectorErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type UpdateConnectorError = UpdateConnectorErrors[keyof UpdateConnectorErrors];
+
+export type UpdateConnectorResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        organizationId: string;
+        name: string;
+        connectorType: 'jira' | 'confluence' | 'github' | 'gitlab';
+        config: {
+            type: 'jira';
+            jiraBaseUrl: unknown;
+            isCloud: boolean;
+            projectKey?: string;
+            jqlQuery?: string;
+            commentEmailBlacklist?: Array<string>;
+            labelsToSkip?: Array<string>;
+        } | {
+            type: 'confluence';
+            confluenceUrl: unknown;
+            isCloud: boolean;
+            spaceKeys?: Array<string>;
+            pageIds?: Array<string>;
+            cqlQuery?: string;
+            labelsToSkip?: Array<string>;
+            batchSize?: number;
+        } | {
+            type: 'github';
+            githubUrl: unknown;
+            owner: string;
+            repos?: Array<string>;
+            includeIssues?: boolean;
+            includePullRequests?: boolean;
+            labelsToSkip?: Array<string>;
+        } | {
+            type: 'gitlab';
+            gitlabUrl: unknown;
+            projectIds?: Array<number>;
+            groupId?: string;
+            includeIssues?: boolean;
+            includeMergeRequests?: boolean;
+            labelsToSkip?: Array<string>;
+        };
+        secretId: string | null;
+        schedule: string;
+        enabled: boolean;
+        lastSyncAt: string | null;
+        lastSyncStatus: 'running' | 'success' | 'failed' | 'partial';
+        lastSyncError: string | null;
+        checkpoint: string | number | boolean | null | {
+            [key: string]: unknown;
+        } | Array<unknown> | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type UpdateConnectorResponse = UpdateConnectorResponses[keyof UpdateConnectorResponses];
+
+export type SyncConnectorData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/connectors/{id}/sync';
+};
+
+export type SyncConnectorErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type SyncConnectorError = SyncConnectorErrors[keyof SyncConnectorErrors];
+
+export type SyncConnectorResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        runId: string;
+        status: string;
+    };
+};
+
+export type SyncConnectorResponse = SyncConnectorResponses[keyof SyncConnectorResponses];
+
+export type TestConnectorConnectionData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/connectors/{id}/test';
+};
+
+export type TestConnectorConnectionErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type TestConnectorConnectionError = TestConnectorConnectionErrors[keyof TestConnectorConnectionErrors];
+
+export type TestConnectorConnectionResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        success: boolean;
+        error?: string;
+    };
+};
+
+export type TestConnectorConnectionResponse = TestConnectorConnectionResponses[keyof TestConnectorConnectionResponses];
+
+export type GetConnectorKnowledgeBasesData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/connectors/{id}/knowledge-bases';
+};
+
+export type GetConnectorKnowledgeBasesErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type GetConnectorKnowledgeBasesError = GetConnectorKnowledgeBasesErrors[keyof GetConnectorKnowledgeBasesErrors];
+
+export type GetConnectorKnowledgeBasesResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        data: Array<{
+            id: string;
+            organizationId: string;
+            name: string;
+            description: string | null;
+            visibility: 'org-wide' | 'team-scoped' | 'auto-sync-permissions';
+            teamIds: Array<string>;
+            status: string;
+            createdAt: string;
+            updatedAt: string;
+        }>;
+    };
+};
+
+export type GetConnectorKnowledgeBasesResponse = GetConnectorKnowledgeBasesResponses[keyof GetConnectorKnowledgeBasesResponses];
+
+export type AssignConnectorToKnowledgeBasesData = {
+    body: {
+        knowledgeBaseIds: Array<string>;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/connectors/{id}/knowledge-bases';
+};
+
+export type AssignConnectorToKnowledgeBasesErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type AssignConnectorToKnowledgeBasesError = AssignConnectorToKnowledgeBasesErrors[keyof AssignConnectorToKnowledgeBasesErrors];
+
+export type AssignConnectorToKnowledgeBasesResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        success: boolean;
+    };
+};
+
+export type AssignConnectorToKnowledgeBasesResponse = AssignConnectorToKnowledgeBasesResponses[keyof AssignConnectorToKnowledgeBasesResponses];
+
+export type UnassignConnectorFromKnowledgeBaseData = {
+    body?: never;
+    path: {
+        id: string;
+        kbId: string;
+    };
+    query?: never;
+    url: '/api/connectors/{id}/knowledge-bases/{kbId}';
+};
+
+export type UnassignConnectorFromKnowledgeBaseErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type UnassignConnectorFromKnowledgeBaseError = UnassignConnectorFromKnowledgeBaseErrors[keyof UnassignConnectorFromKnowledgeBaseErrors];
+
+export type UnassignConnectorFromKnowledgeBaseResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        success: boolean;
+    };
+};
+
+export type UnassignConnectorFromKnowledgeBaseResponse = UnassignConnectorFromKnowledgeBaseResponses[keyof UnassignConnectorFromKnowledgeBaseResponses];
+
+export type GetConnectorRunsData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        limit?: number;
+        offset?: number;
+    };
+    url: '/api/connectors/{id}/runs';
+};
+
+export type GetConnectorRunsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type GetConnectorRunsError = GetConnectorRunsErrors[keyof GetConnectorRunsErrors];
+
+export type GetConnectorRunsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        data: Array<{
+            id: string;
+            connectorId: string;
+            status: 'running' | 'success' | 'failed' | 'partial';
+            startedAt: string;
+            completedAt: string | null;
+            documentsProcessed: number | null;
+            documentsIngested: number | null;
+            totalItems: number | null;
+            error: string | null;
+            checkpoint: string | number | boolean | null | {
+                [key: string]: unknown;
+            } | Array<unknown> | null;
+            createdAt: string;
+        }>;
+        pagination: {
+            currentPage: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+            hasNext: boolean;
+            hasPrev: boolean;
+        };
+    };
+};
+
+export type GetConnectorRunsResponse = GetConnectorRunsResponses[keyof GetConnectorRunsResponses];
+
+export type GetConnectorRunData = {
+    body?: never;
+    path: {
+        id: string;
+        runId: string;
+    };
+    query?: never;
+    url: '/api/connectors/{id}/runs/{runId}';
+};
+
+export type GetConnectorRunErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type GetConnectorRunError = GetConnectorRunErrors[keyof GetConnectorRunErrors];
+
+export type GetConnectorRunResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        connectorId: string;
+        status: 'running' | 'success' | 'failed' | 'partial';
+        startedAt: string;
+        completedAt: string | null;
+        documentsProcessed: number | null;
+        documentsIngested: number | null;
+        totalItems: number | null;
+        error: string | null;
+        logs: string | null;
+        checkpoint: string | number | boolean | null | {
+            [key: string]: unknown;
+        } | Array<unknown> | null;
+        createdAt: string;
+    };
+};
+
+export type GetConnectorRunResponse = GetConnectorRunResponses[keyof GetConnectorRunResponses];
+
 export type GetLimitsData = {
     body?: never;
     path?: never;
@@ -31838,6 +33684,8 @@ export type GetOrganizationResponses = {
         compressionScope: 'organization' | 'team';
         globalToolPolicy: 'permissive' | 'restrictive';
         allowChatFileUploads: boolean;
+        embeddingModel: 'text-embedding-3-small' | 'text-embedding-3-large' | 'text-embedding-ada-002';
+        embeddingApiKeySecretId: string | null;
     };
 };
 
@@ -32014,6 +33862,8 @@ export type UpdateAppearanceResponses = {
         compressionScope: 'organization' | 'team';
         globalToolPolicy: 'permissive' | 'restrictive';
         allowChatFileUploads: boolean;
+        embeddingModel: 'text-embedding-3-small' | 'text-embedding-3-large' | 'text-embedding-ada-002';
+        embeddingApiKeySecretId: string | null;
     };
 };
 
@@ -32108,6 +33958,8 @@ export type UpdateSecuritySettingsResponses = {
         compressionScope: 'organization' | 'team';
         globalToolPolicy: 'permissive' | 'restrictive';
         allowChatFileUploads: boolean;
+        embeddingModel: 'text-embedding-3-small' | 'text-embedding-3-large' | 'text-embedding-ada-002';
+        embeddingApiKeySecretId: string | null;
     };
 };
 
@@ -32203,10 +34055,107 @@ export type UpdateLlmSettingsResponses = {
         compressionScope: 'organization' | 'team';
         globalToolPolicy: 'permissive' | 'restrictive';
         allowChatFileUploads: boolean;
+        embeddingModel: 'text-embedding-3-small' | 'text-embedding-3-large' | 'text-embedding-ada-002';
+        embeddingApiKeySecretId: string | null;
     };
 };
 
 export type UpdateLlmSettingsResponse = UpdateLlmSettingsResponses[keyof UpdateLlmSettingsResponses];
+
+export type UpdateKnowledgeSettingsData = {
+    body?: {
+        embeddingModel?: 'text-embedding-3-small' | 'text-embedding-3-large' | 'text-embedding-ada-002';
+    };
+    path?: never;
+    query?: never;
+    url: '/api/organization/knowledge-settings';
+};
+
+export type UpdateKnowledgeSettingsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        error: {
+            message: string;
+            type: 'api_validation_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        error: {
+            message: string;
+            type: 'api_authentication_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        error: {
+            message: string;
+            type: 'api_authorization_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    404: {
+        error: {
+            message: string;
+            type: 'api_not_found_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        error: {
+            message: string;
+            type: 'api_conflict_error';
+        };
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        error: {
+            message: string;
+            type: 'api_internal_server_error';
+        };
+    };
+};
+
+export type UpdateKnowledgeSettingsError = UpdateKnowledgeSettingsErrors[keyof UpdateKnowledgeSettingsErrors];
+
+export type UpdateKnowledgeSettingsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        name: string;
+        slug: string;
+        logo: string | null;
+        logoDark: string | null;
+        createdAt: string;
+        metadata: string | null;
+        limitCleanupInterval: '1h' | '12h' | '24h' | '1w' | '1m';
+        onboardingComplete: boolean;
+        theme: 'modern-minimal' | 'clean-slate' | 'mono' | 'twitter' | 'tangerine' | 'bubblegum' | 'caffeine' | 'amber-minimal' | 'cosmic-night' | 'doom-64' | 'mocha-mousse' | 'nature' | 'sunset-horizon' | 'neo-brutalism' | 'vercel' | 'claude' | 'vintage-paper' | 'boxy-minimalistic' | 'catppuccin' | 'solarized-dark' | 'gruvbox-dark' | 'dracula-dark' | 'monokai-dark' | 'moonlight-dark';
+        customFont: 'lato' | 'inter' | 'open-sans' | 'roboto' | 'source-sans-pro' | 'jetbrains-mono';
+        convertToolResultsToToon: boolean;
+        compressionScope: 'organization' | 'team';
+        globalToolPolicy: 'permissive' | 'restrictive';
+        allowChatFileUploads: boolean;
+        embeddingModel: 'text-embedding-3-small' | 'text-embedding-3-large' | 'text-embedding-ada-002';
+        embeddingApiKeySecretId: string | null;
+    };
+};
+
+export type UpdateKnowledgeSettingsResponse = UpdateKnowledgeSettingsResponses[keyof UpdateKnowledgeSettingsResponses];
 
 export type CompleteOnboardingData = {
     body: {
@@ -32296,6 +34245,8 @@ export type CompleteOnboardingResponses = {
         compressionScope: 'organization' | 'team';
         globalToolPolicy: 'permissive' | 'restrictive';
         allowChatFileUploads: boolean;
+        embeddingModel: 'text-embedding-3-small' | 'text-embedding-3-large' | 'text-embedding-ada-002';
+        embeddingApiKeySecretId: string | null;
     };
 };
 
