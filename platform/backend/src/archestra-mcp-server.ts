@@ -1873,8 +1873,21 @@ export async function executeArchestraTool(
         }
       }
 
+      if (!organizationId) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Error: Organization context not available.",
+            },
+          ],
+          isError: true,
+        };
+      }
+
       const results = await queryService.query({
         connectorIds,
+        organizationId,
         queryText: query,
         userAcl,
         limit: 10,

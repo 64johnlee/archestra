@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import type pino from "pino";
-import config from "@/config";
 import defaultLogger from "@/logging";
 import {
   ConnectorRunModel,
@@ -361,13 +360,6 @@ class ConnectorSyncService {
     documentIds: string[];
     log: pino.Logger;
   }): Promise<void> {
-    if (!config.kb.embeddingApiKey) {
-      params.log.debug(
-        "[ConnectorSync] Embedding API key not set, skipping inline embedding",
-      );
-      return;
-    }
-
     await embeddingService.processDocuments(params.documentIds);
   }
 

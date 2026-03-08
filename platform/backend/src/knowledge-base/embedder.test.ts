@@ -20,17 +20,12 @@ vi.mock("openai", () => {
   return { default: MockOpenAI };
 });
 
-vi.mock("@/config", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/config")>();
-  return {
-    ...original,
-    default: {
-      ...original.default,
-      kb: { openaiApiKey: "test-api-key" },
-    },
-  };
-});
+const mockGetDefaultOrgEmbeddingConfig = vi.hoisted(() => vi.fn());
+vi.mock("./kb-llm-client", () => ({
+  getDefaultOrgEmbeddingConfig: mockGetDefaultOrgEmbeddingConfig,
+}));
 
+import OpenAI from "openai";
 import { KbChunkModel, KbDocumentModel } from "@/models";
 import { describe, expect, test } from "@/test";
 
@@ -39,6 +34,14 @@ import { embeddingService } from "./embedder";
 
 function makeFakeEmbedding(seed: number): number[] {
   return Array.from({ length: 1536 }, (_, i) => (seed + i) * 0.001);
+}
+
+function makeEmbeddingContext() {
+  return {
+    client: new OpenAI({ apiKey: "test-key" }),
+    model: "text-embedding-3-small" as const,
+    dimensions: 1536,
+  };
 }
 
 describe("EmbeddingService", () => {
@@ -79,7 +82,7 @@ describe("EmbeddingService", () => {
       data: [{ embedding: emb0 }, { embedding: emb1 }],
     });
 
-    await embeddingService.processDocument(doc.id);
+    await embeddingService.processDocument(doc.id, makeEmbeddingContext());
 
     const updated = await KbDocumentModel.findById(doc.id);
     expect(updated?.embeddingStatus).toBe("completed");
@@ -95,6 +98,7 @@ describe("EmbeddingService", () => {
     expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
       model: "text-embedding-3-small",
       input: ["Chunk one content", "Chunk two content"],
+      dimensions: 1536,
     });
   });
 
@@ -126,7 +130,7 @@ describe("EmbeddingService", () => {
 
     mockEmbeddingsCreate.mockRejectedValueOnce(new Error("API rate limited"));
 
-    await embeddingService.processDocument(doc.id);
+    await embeddingService.processDocument(doc.id, makeEmbeddingContext());
 
     const updated = await KbDocumentModel.findById(doc.id);
     expect(updated?.embeddingStatus).toBe("failed");
@@ -150,7 +154,7 @@ describe("EmbeddingService", () => {
       embeddingStatus: "pending",
     });
 
-    await embeddingService.processDocument(doc.id);
+    await embeddingService.processDocument(doc.id, makeEmbeddingContext());
 
     const updated = await KbDocumentModel.findById(doc.id);
     expect(updated?.embeddingStatus).toBe("completed");
@@ -177,7 +181,7 @@ describe("EmbeddingService", () => {
       chunkCount: 5,
     });
 
-    await embeddingService.processDocument(doc.id);
+    await embeddingService.processDocument(doc.id, makeEmbeddingContext());
 
     expect(mockEmbeddingsCreate).not.toHaveBeenCalled();
   });
@@ -225,7 +229,7 @@ describe("EmbeddingService", () => {
         data: [{ embedding: emb }],
       });
 
-    await embeddingService.processDocument(doc.id);
+    await embeddingService.processDocument(doc.id, makeEmbeddingContext());
 
     const updated = await KbDocumentModel.findById(doc.id);
     expect(updated?.embeddingStatus).toBe("completed");
@@ -271,7 +275,7 @@ describe("EmbeddingService", () => {
       .mockRejectedValueOnce(makeServerError())
       .mockRejectedValueOnce(makeServerError());
 
-    await embeddingService.processDocument(doc.id);
+    await embeddingService.processDocument(doc.id, makeEmbeddingContext());
 
     const updated = await KbDocumentModel.findById(doc.id);
     expect(updated?.embeddingStatus).toBe("failed");
@@ -286,6 +290,11 @@ describe("EmbeddingService", () => {
     const org = await makeOrganization();
     const kb = await makeKnowledgeBase(org.id);
     const connector = await makeKnowledgeBaseConnector(kb.id, org.id);
+
+    mockGetDefaultOrgEmbeddingConfig.mockResolvedValue({
+      organizationId: org.id,
+      config: makeEmbeddingContext(),
+    });
 
     const doc1 = await KbDocumentModel.create({
       connectorId: connector.id,
@@ -327,6 +336,7 @@ describe("EmbeddingService", () => {
     expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
       model: "text-embedding-3-small",
       input: ["Doc1 Chunk A", "Doc1 Chunk B", "Doc2 Chunk A"],
+      dimensions: 1536,
     });
 
     const updated1 = await KbDocumentModel.findById(doc1.id);
@@ -345,6 +355,41 @@ describe("EmbeddingService", () => {
     expect(chunks2[0].embedding).toHaveLength(1536);
   });
 
+  test("processDocuments resets docs to pending when no embedding config", async ({
+    makeOrganization,
+    makeKnowledgeBase,
+    makeKnowledgeBaseConnector,
+  }) => {
+    const org = await makeOrganization();
+    const kb = await makeKnowledgeBase(org.id);
+    const connector = await makeKnowledgeBaseConnector(kb.id, org.id);
+
+    // No embedding config available
+    mockGetDefaultOrgEmbeddingConfig.mockResolvedValue(null);
+
+    const doc = await KbDocumentModel.create({
+      connectorId: connector.id,
+      organizationId: org.id,
+      title: "No Config Doc",
+      content: "Content",
+      contentHash: "hash-noconfig",
+      embeddingStatus: "pending",
+    });
+
+    await KbChunkModel.insertMany([
+      { documentId: doc.id, content: "Chunk", chunkIndex: 0 },
+    ]);
+
+    await embeddingService.processDocuments([doc.id]);
+
+    // Document should be reset to pending (not failed, not completed)
+    const updated = await KbDocumentModel.findById(doc.id);
+    expect(updated?.embeddingStatus).toBe("pending");
+
+    // No OpenAI API call should have been made
+    expect(mockEmbeddingsCreate).not.toHaveBeenCalled();
+  });
+
   test("processDocuments marks only affected documents as failed on partial API failure", async ({
     makeOrganization,
     makeKnowledgeBase,
@@ -354,10 +399,11 @@ describe("EmbeddingService", () => {
     const kb = await makeKnowledgeBase(org.id);
     const connector = await makeKnowledgeBaseConnector(kb.id, org.id);
 
-    // Create 2 docs: doc1 gets chunks in the first API batch (succeeds),
-    // doc2 gets chunks that end up in a failing batch.
-    // With EMBEDDING_BATCH_SIZE=100, we need >100 chunks to trigger a second batch.
-    // Simpler: just have all chunks fail in one batch.
+    mockGetDefaultOrgEmbeddingConfig.mockResolvedValue({
+      organizationId: org.id,
+      config: makeEmbeddingContext(),
+    });
+
     const doc1 = await KbDocumentModel.create({
       connectorId: connector.id,
       organizationId: org.id,

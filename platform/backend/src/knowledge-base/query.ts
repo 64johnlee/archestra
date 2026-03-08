@@ -1,9 +1,9 @@
-import OpenAI from "openai";
 import config from "@/config";
 import logger from "@/logging";
 import { KbChunkModel } from "@/models";
 import type { VectorSearchResult } from "@/models/kb-chunk";
 import type { AclEntry } from "@/types/kb-document";
+import { resolveEmbeddingConfig } from "./kb-llm-client";
 import rerank from "./reranker";
 import reciprocalRankFusion from "./rrf";
 
@@ -20,23 +20,32 @@ interface ChunkResult {
 }
 
 class QueryService {
-  private openai: OpenAI | null = null;
-
   async query(params: {
     connectorIds: string[];
+    organizationId: string;
     queryText: string;
     userAcl: AclEntry[];
     limit?: number;
   }): Promise<ChunkResult[]> {
-    const { connectorIds, queryText, limit = 10 } = params;
+    const { connectorIds, organizationId, queryText, limit = 10 } = params;
     if (connectorIds.length === 0) return [];
 
     const hybridEnabled = config.kb.hybridSearchEnabled;
     const overFetchLimit = hybridEnabled ? limit * 2 : limit;
 
-    const embeddingPromise = this.getOpenAIClient().embeddings.create({
-      model: "text-embedding-3-small",
+    const embeddingConfig = await resolveEmbeddingConfig(organizationId);
+    if (!embeddingConfig) {
+      logger.warn(
+        { organizationId, connectorIds },
+        "[QueryService] No embedding API key configured, cannot query",
+      );
+      return [];
+    }
+
+    const embeddingPromise = embeddingConfig.client.embeddings.create({
+      model: embeddingConfig.model,
       input: queryText,
+      dimensions: embeddingConfig.dimensions,
     });
 
     const fullTextPromise = hybridEnabled
@@ -67,7 +76,6 @@ class QueryService {
         vectorCount: vectorRows.length,
         fullTextCount: fullTextRows.length,
         hybridEnabled,
-        rerankerEnabled: config.kb.rerankerEnabled,
       },
       "[QueryService] Search candidates retrieved",
     );
@@ -78,22 +86,17 @@ class QueryService {
         rankings: [vectorRows, fullTextRows],
         idExtractor: (row) => row.id,
       });
-      topResults = fused.slice(
-        0,
-        config.kb.rerankerEnabled ? overFetchLimit : limit,
-      );
+      topResults = fused.slice(0, overFetchLimit);
     } else {
       topResults = vectorRows;
     }
 
-    if (config.kb.rerankerEnabled) {
-      topResults = await rerank({
-        queryText,
-        chunks: topResults,
-        openaiApiKey: config.kb.embeddingApiKey,
-      });
-      topResults = topResults.slice(0, limit);
-    }
+    topResults = await rerank({
+      queryText,
+      chunks: topResults,
+      organizationId,
+    });
+    topResults = topResults.slice(0, limit);
 
     logger.info(
       {
@@ -123,13 +126,6 @@ class QueryService {
         connectorType: row.connectorType,
       },
     }));
-  }
-
-  private getOpenAIClient(): OpenAI {
-    if (!this.openai) {
-      this.openai = new OpenAI({ apiKey: config.kb.embeddingApiKey });
-    }
-    return this.openai;
   }
 }
 

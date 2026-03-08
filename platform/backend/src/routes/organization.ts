@@ -4,6 +4,7 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import db, { schema } from "@/database";
 import {
+  ChatApiKeyModel,
   InteractionModel,
   InvitationModel,
   McpToolCallModel,
@@ -126,6 +127,37 @@ const organizationRoutes: FastifyPluginAsyncZod = async (fastify) => {
       },
     },
     async ({ organizationId, body }, reply) => {
+      // Embedding model is locked once both key and model have been saved
+      if (body.embeddingModel) {
+        const currentOrg = await OrganizationModel.getById(organizationId);
+        if (
+          currentOrg?.embeddingChatApiKeyId &&
+          currentOrg?.embeddingModel &&
+          body.embeddingModel !== currentOrg.embeddingModel
+        ) {
+          throw new ApiError(
+            400,
+            "Embedding model cannot be changed once configured. Changing models requires re-embedding all documents.",
+          );
+        }
+      }
+
+      // Validate embedding API key is an OpenAI provider key
+      if (body.embeddingChatApiKeyId) {
+        const chatApiKey = await ChatApiKeyModel.findById(
+          body.embeddingChatApiKeyId,
+        );
+        if (!chatApiKey) {
+          throw new ApiError(404, "Embedding API key not found");
+        }
+        if (chatApiKey.provider !== "openai") {
+          throw new ApiError(
+            400,
+            "Embedding API key must be an OpenAI provider key",
+          );
+        }
+      }
+
       const organization = await OrganizationModel.patch(organizationId, body);
 
       if (!organization) {

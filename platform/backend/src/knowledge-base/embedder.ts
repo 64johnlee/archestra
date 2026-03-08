@@ -1,17 +1,24 @@
+import type { EmbeddingModel } from "@shared";
+import { EMBEDDING_BATCH_SIZE } from "@shared";
 import OpenAI from "openai";
-import config from "@/config";
 import logger from "@/logging";
 import { KbChunkModel, KbDocumentModel } from "@/models";
+import { getDefaultOrgEmbeddingConfig } from "./kb-llm-client";
 
-const EMBEDDING_MODEL = "text-embedding-3-small";
-const EMBEDDING_BATCH_SIZE = 100;
 const RETRY_MAX_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 1000;
 
-class EmbeddingService {
-  private openai: OpenAI | null = null;
+interface EmbeddingContext {
+  client: OpenAI;
+  model: EmbeddingModel;
+  dimensions: number;
+}
 
-  async processDocument(documentId: string): Promise<void> {
+class EmbeddingService {
+  async processDocument(
+    documentId: string,
+    ctx: EmbeddingContext,
+  ): Promise<void> {
     const document = await KbDocumentModel.findById(documentId);
     if (!document) {
       logger.warn({ documentId }, "[Embedder] Document not found");
@@ -39,14 +46,13 @@ class EmbeddingService {
         return;
       }
 
-      const client = this.getOpenAIClient();
       const allUpdates: Array<{ chunkId: string; embedding: number[] }> = [];
 
       for (let i = 0; i < chunks.length; i += EMBEDDING_BATCH_SIZE) {
         const batch = chunks.slice(i, i + EMBEDDING_BATCH_SIZE);
         const texts = batch.map((c) => c.content);
 
-        const response = await this.callEmbeddingApiWithRetry(client, texts);
+        const response = await this.callEmbeddingApiWithRetry(ctx, texts);
 
         for (let j = 0; j < batch.length; j++) {
           allUpdates.push({
@@ -83,7 +89,7 @@ class EmbeddingService {
 
   /**
    * Embed multiple documents in a single pass, batching chunks across documents
-   * into groups of EMBEDDING_BATCH_SIZE for fewer OpenAI API calls.
+   * into groups of EMBEDDING_BATCH_SIZE for fewer API calls.
    * Per-document error isolation: if embedding fails, only the affected documents
    * are marked as "failed"; the rest still complete.
    */
@@ -137,8 +143,19 @@ class EmbeddingService {
 
     if (allChunks.length === 0) return;
 
-    // 2. Call OpenAI in batches of EMBEDDING_BATCH_SIZE across all chunks
-    const client = this.getOpenAIClient();
+    // 2. Get embedding config
+    const orgConfig = await getDefaultOrgEmbeddingConfig();
+    if (!orgConfig) {
+      logger.debug("[Embedder] No embedding API key configured, skipping");
+      for (const { documentId } of docChunkMap) {
+        await KbDocumentModel.update(documentId, {
+          embeddingStatus: "pending",
+        });
+      }
+      return;
+    }
+
+    const ctx = orgConfig.config;
     const embeddingResults = new Map<string, number[]>();
     const failedChunkIds = new Set<string>();
 
@@ -146,7 +163,7 @@ class EmbeddingService {
       const batch = allChunks.slice(i, i + EMBEDDING_BATCH_SIZE);
       try {
         const response = await this.callEmbeddingApiWithRetry(
-          client,
+          ctx,
           batch.map((c) => c.text),
         );
         for (let j = 0; j < batch.length; j++) {
@@ -199,14 +216,15 @@ class EmbeddingService {
   }
 
   private async callEmbeddingApiWithRetry(
-    client: OpenAI,
+    ctx: EmbeddingContext,
     texts: string[],
   ): Promise<OpenAI.Embeddings.CreateEmbeddingResponse> {
     for (let attempt = 1; attempt <= RETRY_MAX_ATTEMPTS; attempt++) {
       try {
-        return await client.embeddings.create({
-          model: EMBEDDING_MODEL,
+        return await ctx.client.embeddings.create({
+          model: ctx.model,
           input: texts,
+          dimensions: ctx.dimensions,
         });
       } catch (error) {
         const isLastAttempt = attempt === RETRY_MAX_ATTEMPTS;
@@ -240,13 +258,6 @@ class EmbeddingService {
       return true;
     }
     return false;
-  }
-
-  private getOpenAIClient(): OpenAI {
-    if (!this.openai) {
-      this.openai = new OpenAI({ apiKey: config.kb.embeddingApiKey });
-    }
-    return this.openai;
   }
 }
 
