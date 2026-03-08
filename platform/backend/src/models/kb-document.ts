@@ -18,10 +18,35 @@ class KbDocumentModel {
     offset?: number;
   }): Promise<KbDocument[]> {
     let query = db
-      .select()
+      .select({
+        id: schema.kbDocumentsTable.id,
+        organizationId: schema.kbDocumentsTable.organizationId,
+        sourceId: schema.kbDocumentsTable.sourceId,
+        connectorId: schema.kbDocumentsTable.connectorId,
+        title: schema.kbDocumentsTable.title,
+        content: schema.kbDocumentsTable.content,
+        contentHash: schema.kbDocumentsTable.contentHash,
+        sourceUrl: schema.kbDocumentsTable.sourceUrl,
+        acl: schema.kbDocumentsTable.acl,
+        metadata: schema.kbDocumentsTable.metadata,
+        embeddingStatus: schema.kbDocumentsTable.embeddingStatus,
+        chunkCount: schema.kbDocumentsTable.chunkCount,
+        createdAt: schema.kbDocumentsTable.createdAt,
+        updatedAt: schema.kbDocumentsTable.updatedAt,
+      })
       .from(schema.kbDocumentsTable)
+      .innerJoin(
+        schema.knowledgeBaseConnectorAssignmentsTable,
+        eq(
+          schema.knowledgeBaseConnectorAssignmentsTable.connectorId,
+          schema.kbDocumentsTable.connectorId,
+        ),
+      )
       .where(
-        eq(schema.kbDocumentsTable.knowledgeBaseId, params.knowledgeBaseId),
+        eq(
+          schema.knowledgeBaseConnectorAssignmentsTable.knowledgeBaseId,
+          params.knowledgeBaseId,
+        ),
       )
       .orderBy(desc(schema.kbDocumentsTable.createdAt))
       .$dynamic();
@@ -36,26 +61,8 @@ class KbDocumentModel {
     return await query;
   }
 
-  static async findByContentHash(params: {
-    knowledgeBaseId: string;
-    contentHash: string;
-  }): Promise<KbDocument | null> {
-    const [result] = await db
-      .select()
-      .from(schema.kbDocumentsTable)
-      .where(
-        and(
-          eq(schema.kbDocumentsTable.knowledgeBaseId, params.knowledgeBaseId),
-          eq(schema.kbDocumentsTable.contentHash, params.contentHash),
-        ),
-      );
-
-    return result ?? null;
-  }
-
   static async findBySourceId(params: {
-    knowledgeBaseId: string;
-    sourceType: "connector" | "api";
+    connectorId: string;
     sourceId: string;
   }): Promise<KbDocument | null> {
     const [result] = await db
@@ -63,8 +70,7 @@ class KbDocumentModel {
       .from(schema.kbDocumentsTable)
       .where(
         and(
-          eq(schema.kbDocumentsTable.knowledgeBaseId, params.knowledgeBaseId),
-          eq(schema.kbDocumentsTable.sourceType, params.sourceType),
+          eq(schema.kbDocumentsTable.connectorId, params.connectorId),
           eq(schema.kbDocumentsTable.sourceId, params.sourceId),
         ),
       );
@@ -106,7 +112,19 @@ class KbDocumentModel {
     const [result] = await db
       .select({ count: count() })
       .from(schema.kbDocumentsTable)
-      .where(eq(schema.kbDocumentsTable.knowledgeBaseId, knowledgeBaseId));
+      .innerJoin(
+        schema.knowledgeBaseConnectorAssignmentsTable,
+        eq(
+          schema.knowledgeBaseConnectorAssignmentsTable.connectorId,
+          schema.kbDocumentsTable.connectorId,
+        ),
+      )
+      .where(
+        eq(
+          schema.knowledgeBaseConnectorAssignmentsTable.knowledgeBaseId,
+          knowledgeBaseId,
+        ),
+      );
 
     return result?.count ?? 0;
   }
