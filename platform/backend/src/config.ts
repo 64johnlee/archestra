@@ -18,6 +18,8 @@ import {
 } from "@/types/email-provider-type";
 import packageJson from "../../package.json";
 
+type ProcessType = "web" | "worker" | "all";
+
 /**
  * Load .env from platform root
  *
@@ -777,7 +779,11 @@ const config = {
     process.env.ARCHESTRA_AUTH_RATE_LIMIT_DISABLED === "true",
   isQuickstart: process.env.ARCHESTRA_QUICKSTART === "true",
   ngrokDomain: process.env.ARCHESTRA_NGROK_DOMAIN || "",
+  processType: parseProcessType(process.env.ARCHESTRA_PROCESS_TYPE),
 };
+
+export const shouldRunWebServer = config.processType !== "worker";
+export const shouldRunWorker = config.processType !== "web";
 
 export default config;
 
@@ -804,4 +810,10 @@ export function getProviderEnvApiKey(
     return entry.apiKey || undefined;
   }
   return undefined;
+}
+
+export function parseProcessType(value: string | undefined): ProcessType {
+  const normalized = value?.toLowerCase();
+  if (normalized === "web" || normalized === "worker") return normalized;
+  return "all";
 }
