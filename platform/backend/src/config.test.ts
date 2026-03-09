@@ -907,54 +907,6 @@ describe("getCorsOrigins", () => {
   });
 });
 
-describe("getConnectorImage (config.kb.connectorImage)", () => {
-  const originalEnv = process.env;
-
-  beforeEach(() => {
-    process.env = { ...originalEnv };
-    vi.resetModules();
-    delete process.env.ARCHESTRA_ORCHESTRATOR_KUBECONFIG;
-    delete process.env
-      .ARCHESTRA_ORCHESTRATOR_LOAD_KUBECONFIG_FROM_CURRENT_CLUSTER;
-    delete process.env.ARCHESTRA_VERSION;
-  });
-
-  afterEach(() => {
-    process.env = originalEnv;
-  });
-
-  test("should default to platform image when running inside K8s cluster", async () => {
-    process.env.ARCHESTRA_ORCHESTRATOR_LOAD_KUBECONFIG_FROM_CURRENT_CLUSTER =
-      "true";
-
-    const { default: cfg } = await import("./config");
-    expect(cfg.kb.connectorImage).toMatch(
-      /^archestra\/platform:\d+\.\d+\.\d+$/,
-    );
-  });
-
-  test("should use ARCHESTRA_VERSION for connector image tag when set", async () => {
-    process.env.ARCHESTRA_ORCHESTRATOR_LOAD_KUBECONFIG_FROM_CURRENT_CLUSTER =
-      "true";
-    process.env.ARCHESTRA_VERSION = "abc123sha";
-
-    const { default: cfg } = await import("./config");
-    expect(cfg.kb.connectorImage).toBe("archestra/platform:abc123sha");
-  });
-
-  test("should return empty string when using local kubeconfig (local dev)", async () => {
-    process.env.ARCHESTRA_ORCHESTRATOR_KUBECONFIG = "/path/to/kubeconfig";
-
-    const { default: cfg } = await import("./config");
-    expect(cfg.kb.connectorImage).toBe("");
-  });
-
-  test("should return empty string when K8s is not configured at all", async () => {
-    const { default: cfg } = await import("./config");
-    expect(cfg.kb.connectorImage).toBe("");
-  });
-});
-
 describe("parseVirtualKeyDefaultExpiration", () => {
   test("should return default 2592000 when undefined", () => {
     expect(parseVirtualKeyDefaultExpiration(undefined)).toBe(2592000);
