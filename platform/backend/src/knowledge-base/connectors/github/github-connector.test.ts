@@ -441,6 +441,87 @@ describe("GithubConnector", () => {
       expect(metadata.author).toBe("author");
     });
 
+    test("continues sync when comment fetch fails for one item", async () => {
+      const issues = [
+        makeIssue(1, "First issue"),
+        makeIssue(2, "Second issue"),
+        makeIssue(3, "Third issue"),
+      ];
+
+      mockListForRepo.mockResolvedValueOnce({ data: issues });
+      mockListComments
+        .mockResolvedValueOnce({ data: [] })
+        .mockRejectedValueOnce(new Error("502 Bad Gateway"))
+        .mockResolvedValueOnce({ data: [] });
+
+      // PR pass
+      mockListForRepo.mockResolvedValueOnce({ data: [] });
+
+      const batches: ConnectorSyncBatch[] = [];
+      for await (const batch of connector.sync({
+        config: validConfig,
+        credentials,
+        checkpoint: null,
+      })) {
+        batches.push(batch);
+      }
+
+      // All 3 documents should still be yielded
+      expect(batches[0].documents).toHaveLength(3);
+      expect(batches[0].documents[0].id).toBe("my-repo#1");
+      expect(batches[0].documents[1].id).toBe("my-repo#2");
+      expect(batches[0].documents[2].id).toBe("my-repo#3");
+
+      // Second doc should have no comments (fallback)
+      expect(batches[0].documents[1].content).not.toContain("## Comments");
+
+      // Failures array should contain 1 entry
+      expect(batches[0].failures).toHaveLength(1);
+      expect(batches[0].failures?.[0]).toEqual({
+        itemId: 2,
+        resource: "comments",
+        error: "502 Bad Gateway",
+      });
+    });
+
+    test("skips repo when issues endpoint returns 404 (issues disabled)", async () => {
+      const configWithTwoRepos = {
+        githubUrl: "https://api.github.com",
+        owner: "test-org",
+        repos: ["no-issues-repo", "normal-repo"],
+      };
+
+      const notFoundError = Object.assign(new Error("Not Found"), {
+        status: 404,
+      });
+
+      // no-issues-repo: issues pass returns 404
+      mockListForRepo.mockRejectedValueOnce(notFoundError);
+      // no-issues-repo: PR pass also returns 404
+      mockListForRepo.mockRejectedValueOnce(notFoundError);
+
+      // normal-repo: issues pass
+      mockListForRepo.mockResolvedValueOnce({
+        data: [makeIssue(1, "Normal issue")],
+      });
+      mockListComments.mockResolvedValueOnce({ data: [] });
+      // normal-repo: PR pass
+      mockListForRepo.mockResolvedValueOnce({ data: [] });
+
+      const batches: ConnectorSyncBatch[] = [];
+      for await (const batch of connector.sync({
+        config: configWithTwoRepos,
+        credentials,
+        checkpoint: null,
+      })) {
+        batches.push(batch);
+      }
+
+      const allDocs = batches.flatMap((b) => b.documents);
+      expect(allDocs).toHaveLength(1);
+      expect(allDocs[0].title).toContain("Normal issue");
+    });
+
     test("throws on API error", async () => {
       mockListForRepo.mockRejectedValueOnce(
         new Error("Request failed with status code 403"),

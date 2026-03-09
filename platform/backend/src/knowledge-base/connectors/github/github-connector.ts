@@ -157,16 +157,31 @@ export class GithubConnector extends BaseConnector {
     while (pageHasMore) {
       await this.rateLimit();
 
-      const response = await octokit.rest.issues.listForRepo({
-        owner: repo.owner,
-        repo: repo.name,
-        state: "all",
-        per_page: BATCH_SIZE,
-        page,
-        sort: "updated",
-        direction: "asc",
-        ...(checkpoint.lastSyncedAt ? { since: checkpoint.lastSyncedAt } : {}),
-      });
+      let response: Awaited<ReturnType<typeof octokit.rest.issues.listForRepo>>;
+      try {
+        response = await octokit.rest.issues.listForRepo({
+          owner: repo.owner,
+          repo: repo.name,
+          state: "all",
+          per_page: BATCH_SIZE,
+          page,
+          sort: "updated",
+          direction: "asc",
+          ...(checkpoint.lastSyncedAt
+            ? { since: checkpoint.lastSyncedAt }
+            : {}),
+        });
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          "status" in err &&
+          (err as Record<string, unknown>).status === 404
+        ) {
+          // Repo has issues disabled or doesn't exist — skip it
+          break;
+        }
+        throw err;
+      }
 
       const items = response.data.filter((item) => {
         const isPr = !!item.pull_request;
@@ -178,7 +193,12 @@ export class GithubConnector extends BaseConnector {
       const documents: ConnectorDocument[] = [];
       for (const item of items) {
         await this.rateLimit();
-        const comments = await getItemComments(octokit, repo, item.number);
+        const comments = await this.safeItemFetch({
+          fetch: () => getItemComments(octokit, repo, item.number),
+          fallback: [],
+          itemId: item.number,
+          resource: "comments",
+        });
         documents.push(itemToDocument(item, comments, repo, kind));
       }
 
@@ -189,6 +209,7 @@ export class GithubConnector extends BaseConnector {
 
       yield {
         documents,
+        failures: this.flushFailures(),
         checkpoint: buildCheckpoint({
           type: "github",
           itemUpdatedAt: lastItem?.updated_at,
