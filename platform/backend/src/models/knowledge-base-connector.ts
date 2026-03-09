@@ -5,6 +5,7 @@ import type {
   KnowledgeBaseConnector,
   UpdateKnowledgeBaseConnector,
 } from "@/types";
+import type { ConnectorSyncStatus } from "@/types/knowledge-connector";
 
 class KnowledgeBaseConnectorModel {
   static async findByOrganization(params: {
@@ -159,6 +160,15 @@ class KnowledgeBaseConnectorModel {
       .select()
       .from(schema.knowledgeBaseConnectorsTable)
       .where(eq(schema.knowledgeBaseConnectorsTable.enabled, true));
+  }
+
+  static async findAllWithStatus(
+    status: ConnectorSyncStatus,
+  ): Promise<KnowledgeBaseConnector[]> {
+    return await db
+      .select()
+      .from(schema.knowledgeBaseConnectorsTable)
+      .where(eq(schema.knowledgeBaseConnectorsTable.lastSyncStatus, status));
   }
 
   static async delete(id: string): Promise<boolean> {
