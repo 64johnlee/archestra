@@ -65,7 +65,7 @@ export function CreateCatalogDialog({
   };
 
   const footer = (
-    <DialogFooter className="sticky bottom-0 bg-background pt-4 pb-2 border-t mt-6 -mx-1 px-1">
+    <DialogFooter className="sticky bottom-[-24px] bg-background pt-4 pb-6 border-t mt-6 -mx-6 px-6">
       <Button variant="outline" onClick={handleClose} type="button">
         Cancel
       </Button>
@@ -89,7 +89,7 @@ export function CreateCatalogDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+      <DialogContent className="max-w-5xl h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Add MCP Server to the Private Registry</DialogTitle>
           <DialogDescription>
@@ -99,35 +99,33 @@ export function CreateCatalogDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
-          {step === "form" && (
-            <McpCatalogForm
-              mode="create"
-              onSubmit={onSubmit}
-              footer={footer}
-              catalogButton={catalogButton}
-              formValues={prefilledValues}
-            />
-          )}
+        {step === "form" && (
+          <McpCatalogForm
+            mode="create"
+            onSubmit={onSubmit}
+            footer={footer}
+            catalogButton={catalogButton}
+            formValues={prefilledValues}
+          />
+        )}
 
-          {step === "catalog-browse" && (
-            <div className="flex flex-col h-full">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setStep("form")}
-                className="self-start mb-2"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to form
-              </Button>
-              <ArchestraCatalogTab
-                catalogItems={catalogItems}
-                onSelectServer={handleSelectFromCatalog}
-              />
-            </div>
-          )}
-        </div>
+        {step === "catalog-browse" && (
+          <div className="flex flex-col">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStep("form")}
+              className="self-start mb-2"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to form
+            </Button>
+            <ArchestraCatalogTab
+              catalogItems={catalogItems}
+              onSelectServer={handleSelectFromCatalog}
+            />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

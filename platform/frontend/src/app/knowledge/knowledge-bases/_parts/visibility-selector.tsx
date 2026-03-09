@@ -68,18 +68,28 @@ export function VisibilitySelector({
             {visibilityEntries.map(([value, option]) => {
               const Icon = option.icon;
               const isSelected = visibility === value;
-              return (
+              // TODO: Enable when ACL support is implemented
+              // https://github.com/archestra-ai/archestra/issues/3218
+              const noTeamsAvailable =
+                value === "team-scoped" && (teams ?? []).length === 0;
+              const isDisabled =
+                value === "auto-sync-permissions" || noTeamsAvailable;
+
+              const button = (
                 <button
                   key={value}
                   type="button"
+                  disabled={isDisabled}
                   onClick={() => {
                     onVisibilityChange(value);
                     setExpanded(false);
                   }}
                   className={`w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
-                    isSelected
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "hover:bg-muted/50 cursor-pointer"
+                    isDisabled
+                      ? "opacity-50 cursor-not-allowed"
+                      : isSelected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "hover:bg-muted/50 cursor-pointer"
                   }`}
                 >
                   <div
@@ -90,7 +100,16 @@ export function VisibilitySelector({
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium">{option.label}</div>
+                    <div className="text-sm font-medium">
+                      {option.label}
+                      {isDisabled && (
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">
+                          {noTeamsAvailable
+                            ? "No teams available"
+                            : "Coming Soon"}
+                        </span>
+                      )}
+                    </div>
                     <div
                       className={`text-xs ${
                         isSelected
@@ -112,6 +131,8 @@ export function VisibilitySelector({
                   </div>
                 </button>
               );
+
+              return button;
             })}
           </div>
         ) : (
