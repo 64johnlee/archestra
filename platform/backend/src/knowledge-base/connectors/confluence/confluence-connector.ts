@@ -7,7 +7,11 @@ import type {
   ConnectorSyncBatch,
 } from "@/types/knowledge-connector";
 import { ConfluenceConfigSchema } from "@/types/knowledge-connector";
-import { BaseConnector, buildCheckpoint } from "../base-connector";
+import {
+  BaseConnector,
+  buildCheckpoint,
+  extractErrorMessage,
+} from "../base-connector";
 
 const DEFAULT_BATCH_SIZE = 50;
 
@@ -50,7 +54,7 @@ export class ConfluenceConnector extends BaseConnector {
       await client.space.getSpaces({ limit: 1 });
       return { success: true };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = extractErrorMessage(error);
       return { success: false, error: `Connection failed: ${message}` };
     }
   }
