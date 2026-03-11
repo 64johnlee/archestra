@@ -24,12 +24,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { CreateCatalogDialog } from "@/app/mcp/registry/_parts/create-catalog-dialog";
 import { CustomServerRequestDialog } from "@/app/mcp/registry/_parts/custom-server-request-dialog";
 import { AgentDialog } from "@/components/agent-dialog";
 import type { PromptInputProps } from "@/components/ai-elements/prompt-input";
+import { AppLogo } from "@/components/app-logo";
 import { ButtonWithTooltip } from "@/components/button-with-tooltip";
 import { BrowserPanel } from "@/components/chat/browser-panel";
 import { ChatMessages } from "@/components/chat/chat-messages";
@@ -79,6 +79,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { useSidebar } from "@/components/ui/sidebar";
 import { TruncatedTooltip } from "@/components/ui/truncated-tooltip";
 import { TypingText } from "@/components/ui/typing-text";
 import { Version } from "@/components/version";
@@ -134,6 +135,7 @@ export default function ChatPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { open: sidebarOpen } = useSidebar();
 
   const [conversationId, setConversationId] = useState<string | undefined>(
     () => searchParams.get(CONVERSATION_QUERY_PARAM) || undefined,
@@ -186,15 +188,7 @@ export default function ChatPage() {
   const cannotCreateDueToNoTeams =
     !isAgentAdmin && (!teams || teams.length === 0);
 
-  const isMobile = useIsMobile();
-
-  // Portal target for rendering actions into the mobile app shell header
-  const [mobileHeaderEl, setMobileHeaderEl] = useState<HTMLElement | null>(
-    null,
-  );
-  useEffect(() => {
-    setMobileHeaderEl(document.getElementById("mobile-header-actions"));
-  }, []);
+  const _isMobile = useIsMobile();
 
   // State for browser panel - initialize from localStorage
   const [isBrowserPanelOpen, setIsBrowserPanelOpen] = useState(() => {
@@ -1604,42 +1598,6 @@ export default function ChatPage() {
                   }
                 }}
               >
-                {/* Browser toggle - portaled to mobile header bar, inline on desktop */}
-                {isMobile && mobileHeaderEl
-                  ? createPortal(
-                      <Button
-                        variant={
-                          isBrowserPanelOpen && !isPlaywrightSetupVisible
-                            ? "secondary"
-                            : "ghost"
-                        }
-                        size="sm"
-                        onClick={toggleBrowserPanel}
-                        className="text-xs -mr-2"
-                        disabled={isPlaywrightSetupVisible}
-                      >
-                        <Globe className="h-3 w-3 mr-1" />
-                        Browser
-                      </Button>,
-                      mobileHeaderEl,
-                    )
-                  : null}
-                <div className="hidden md:flex justify-end p-2">
-                  <Button
-                    variant={
-                      isBrowserPanelOpen && !isPlaywrightSetupVisible
-                        ? "secondary"
-                        : "ghost"
-                    }
-                    size="sm"
-                    onClick={toggleBrowserPanel}
-                    className="text-xs"
-                    disabled={isPlaywrightSetupVisible}
-                  >
-                    <Globe className="h-3 w-3 mr-1" />
-                    Browser
-                  </Button>
-                </div>
                 {isPlaywrightSetupRequired && (
                   <PlaywrightInstallDialog
                     agentId={playwrightSetupAgentId}
@@ -1647,7 +1605,12 @@ export default function ChatPage() {
                   />
                 )}
                 <div className="flex-1 flex items-center justify-center p-4">
-                  <div className="w-full max-w-4xl">
+                  <div className="w-full max-w-4xl space-y-24">
+                    {!sidebarOpen && (
+                      <div className="flex justify-center scale-150">
+                        <AppLogo />
+                      </div>
+                    )}
                     <ArchestraPromptInput
                       onSubmit={handleInitialSubmit}
                       status={
