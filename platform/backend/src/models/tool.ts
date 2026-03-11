@@ -5,7 +5,7 @@ import {
   MCP_SERVER_TOOL_NAME_SEPARATOR,
   parseFullToolName,
   slugify,
-  TOOL_QUERY_KNOWLEDGE_BASE_FULL_NAME,
+  TOOL_QUERY_KNOWLEDGE_SOURCES_FULL_NAME,
 } from "@shared";
 import {
   and,
@@ -375,10 +375,7 @@ class ToolModel {
    * All tools are linked via the agent_tools junction table.
    */
   static async getToolsByAgent(agentId: string): Promise<Tool[]> {
-    const [assignedToolIds, hasKnowledgeBase] = await Promise.all([
-      AgentToolModel.findToolIdsByAgent(agentId),
-      ToolModel.getAgentHasKnowledgeBase(agentId),
-    ]);
+    const assignedToolIds = await AgentToolModel.findToolIdsByAgent(agentId);
 
     if (assignedToolIds.length === 0) {
       return [];
@@ -387,10 +384,16 @@ class ToolModel {
     const tools = await db
       .select()
       .from(schema.toolsTable)
-      .where(inArray(schema.toolsTable.id, assignedToolIds))
+      .where(
+        and(
+          inArray(schema.toolsTable.id, assignedToolIds),
+          // Always hide query_knowledge_sources from UI — it's auto-injected behind the scenes
+          ne(schema.toolsTable.name, TOOL_QUERY_KNOWLEDGE_SOURCES_FULL_NAME),
+        ),
+      )
       .orderBy(desc(schema.toolsTable.createdAt));
 
-    return ToolModel.filterUnavailableTools(tools, hasKnowledgeBase);
+    return tools;
   }
 
   /**
@@ -433,15 +436,15 @@ class ToolModel {
             .orderBy(desc(schema.toolsTable.createdAt))
         : [];
 
-    // Auto-inject query_knowledge_base when the agent has a knowledge base assigned,
+    // Auto-inject query_knowledge_sources when the agent has a knowledge base assigned,
     // regardless of whether the tool was manually assigned
     if (hasKnowledgeBase) {
       const hasKbTool = tools.some(
-        (t) => t.name === TOOL_QUERY_KNOWLEDGE_BASE_FULL_NAME,
+        (t) => t.name === TOOL_QUERY_KNOWLEDGE_SOURCES_FULL_NAME,
       );
       if (!hasKbTool) {
         const kbTool = await ToolModel.findByName(
-          TOOL_QUERY_KNOWLEDGE_BASE_FULL_NAME,
+          TOOL_QUERY_KNOWLEDGE_SOURCES_FULL_NAME,
         );
         if (kbTool) {
           tools.push(kbTool as (typeof tools)[number]);
@@ -668,9 +671,9 @@ class ToolModel {
    * Default tools are those listed in {@link DEFAULT_ARCHESTRA_TOOL_NAMES}:
    * - artifact_write: for artifact management
    * - todo_write: for task tracking
-   * - query_knowledge_base: for querying the knowledge base
+   * - query_knowledge_sources: for querying the knowledge base
    *
-   * All default tools are always assigned. The query_knowledge_base tool
+   * All default tools are always assigned. The query_knowledge_sources tool
    * is filtered out at query time if the agent has no knowledge base assigned.
    *
    * Only tools that have already been seeded (via {@link seedArchestraTools})
@@ -807,7 +810,12 @@ class ToolModel {
         createdAt: schema.toolsTable.createdAt,
       })
       .from(schema.toolsTable)
-      .where(eq(schema.toolsTable.catalogId, catalogId))
+      .where(
+        and(
+          eq(schema.toolsTable.catalogId, catalogId),
+          ne(schema.toolsTable.name, TOOL_QUERY_KNOWLEDGE_SOURCES_FULL_NAME),
+        ),
+      )
       .orderBy(desc(schema.toolsTable.createdAt));
 
     const toolIds = allTools.map((tool) => tool.id);
@@ -1552,9 +1560,9 @@ class ToolModel {
     }
 
     // Hide knowledge base tool in global tool listings (no agent context).
-    // The tool is only visible when queried per-agent and the agent has a KG assigned.
+    // The tool is only visible when queried per-agent and the agent has a knowledge base assigned.
     toolWhereConditions.push(
-      ne(schema.toolsTable.name, TOOL_QUERY_KNOWLEDGE_BASE_FULL_NAME),
+      ne(schema.toolsTable.name, TOOL_QUERY_KNOWLEDGE_SOURCES_FULL_NAME),
     );
 
     // Apply access control filtering for users that are not agent admins
@@ -1821,7 +1829,7 @@ class ToolModel {
 
   /**
    * Filter out tools that should not be visible based on current configuration.
-   * Filters out the query_knowledge_base tool when the agent has no knowledge base assigned.
+   * Filters out the query_knowledge_sources tool when the agent has no knowledge base assigned.
    */
   private static filterUnavailableTools<T extends { name: string }>(
     tools: T[],
@@ -1830,7 +1838,9 @@ class ToolModel {
     if (hasKnowledgeBase) {
       return tools;
     }
-    return tools.filter((t) => t.name !== TOOL_QUERY_KNOWLEDGE_BASE_FULL_NAME);
+    return tools.filter(
+      (t) => t.name !== TOOL_QUERY_KNOWLEDGE_SOURCES_FULL_NAME,
+    );
   }
 }
 

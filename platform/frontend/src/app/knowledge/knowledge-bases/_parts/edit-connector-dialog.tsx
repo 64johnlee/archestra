@@ -14,8 +14,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
+  DialogStickyFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
@@ -118,7 +118,7 @@ export function EditConnectorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-muted">
@@ -132,11 +132,8 @@ export function EditConnectorDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className="flex flex-col overflow-hidden"
-          >
-            <div className="space-y-4 overflow-y-auto py-1 pr-1">
+          <form onSubmit={form.handleSubmit(handleSubmit)}>
+            <div className="space-y-4">
               <FormField
                 control={form.control}
                 name="enabled"
@@ -299,7 +296,7 @@ export function EditConnectorDialog({
               </Collapsible>
             </div>
 
-            <DialogFooter className="pt-4">
+            <DialogStickyFooter>
               <Button
                 type="button"
                 variant="outline"
@@ -310,7 +307,7 @@ export function EditConnectorDialog({
               <Button type="submit" disabled={updateConnector.isPending}>
                 {updateConnector.isPending ? "Saving..." : "Save Changes"}
               </Button>
-            </DialogFooter>
+            </DialogStickyFooter>
           </form>
         </Form>
       </DialogContent>

@@ -449,7 +449,17 @@ const knowledgeBaseRoutes: FastifyPluginAsyncZod = async (fastify) => {
         }
       }
 
-      return reply.send(connector);
+      // Auto-trigger initial sync
+      await taskQueueService.enqueue({
+        taskType: "connector_sync",
+        payload: { connectorId: connector.id },
+      });
+      const updatedConnector = await KnowledgeBaseConnectorModel.update(
+        connector.id,
+        { lastSyncStatus: "running" },
+      );
+
+      return reply.send(updatedConnector ?? connector);
     },
   );
 
@@ -505,7 +515,12 @@ const knowledgeBaseRoutes: FastifyPluginAsyncZod = async (fastify) => {
       }
 
       const { credentials: _, ...updateData } = body;
-      const updated = await KnowledgeBaseConnectorModel.update(id, updateData);
+      // Reset checkpoint when config changes to force a full re-sync
+      // (filters, queries, inclusion/exclusion criteria affect which items get synced)
+      const updated = await KnowledgeBaseConnectorModel.update(id, {
+        ...updateData,
+        ...(updateData.config ? { checkpoint: null } : {}),
+      });
       if (!updated) {
         throw new ApiError(404, "Connector not found");
       }

@@ -13,6 +13,7 @@ import {
   MCP_SERVER_TOOL_NAME_SEPARATOR,
   OAUTH_TOKEN_ID_PREFIX,
   parseFullToolName,
+  TOOL_QUERY_KNOWLEDGE_SOURCES_FULL_NAME,
 } from "@shared";
 import { eq } from "drizzle-orm";
 import type { FastifyRequest } from "fastify";
@@ -26,8 +27,11 @@ import config from "@/config";
 import db, { schema as dbSchema } from "@/database";
 import logger from "@/logging";
 import {
+  AgentKnowledgeBaseModel,
   AgentModel,
   AgentTeamModel,
+  KnowledgeBaseConnectorModel,
+  KnowledgeBaseModel,
   McpToolCallModel,
   MemberModel,
   OAuthAccessTokenModel,
@@ -113,10 +117,17 @@ export async function createAgentServer(
     // Fetch fresh on every request to ensure we get newly assigned tools
     const mcpTools = await ToolModel.getMcpToolsByAgent(agentId);
 
+    // Dynamically enrich the knowledge sources tool description with
+    // the agent's actual knowledge base names and connector types
+    const kbToolDescription = await buildKnowledgeSourcesDescription(agentId);
+
     const toolsList = mcpTools.map(({ name, description, parameters }) => ({
       name,
       title: archestraToolTitles.get(name) || name,
-      description,
+      description:
+        name === TOOL_QUERY_KNOWLEDGE_SOURCES_FULL_NAME && kbToolDescription
+          ? kbToolDescription
+          : description,
       inputSchema: parameters,
       annotations: {},
       _meta: {},
@@ -136,7 +147,7 @@ export async function createAgentServer(
       });
       logger.info(
         { agentId, toolsCount: toolsList.length },
-        "✅ Saved tools/list request",
+        "Saved tools/list request",
       );
     } catch (dbError) {
       logger.warn({ err: dbError }, "Failed to persist tools/list request:");
@@ -965,4 +976,70 @@ async function fetchOidcJwksUrl(issuerUrl: string): Promise<string | null> {
     );
     return null;
   }
+}
+
+/**
+ * TTL cache for buildKnowledgeSourcesDescription to avoid repeated DB queries
+ * on every tools/list request. Invalidated after 30 seconds.
+ */
+const kbDescriptionCache = new Map<
+  string,
+  { description: string | null; expiresAt: number }
+>();
+const KB_DESCRIPTION_CACHE_TTL_MS = 30_000;
+
+/**
+ * Build a dynamic description for the query_knowledge_sources tool that includes
+ * the agent's actual knowledge base names and connector sources.
+ * Results are cached per agentId with a 30s TTL.
+ */
+export async function buildKnowledgeSourcesDescription(
+  agentId: string,
+): Promise<string | null> {
+  const cached = kbDescriptionCache.get(agentId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.description;
+  }
+
+  const assignments = await AgentKnowledgeBaseModel.findByAgent(agentId);
+  if (assignments.length === 0) {
+    kbDescriptionCache.set(agentId, {
+      description: null,
+      expiresAt: Date.now() + KB_DESCRIPTION_CACHE_TTL_MS,
+    });
+    return null;
+  }
+
+  const kbIds = assignments.map((a) => a.knowledgeBaseId);
+
+  const [knowledgeBases, connectors] = await Promise.all([
+    KnowledgeBaseModel.findByIds(kbIds),
+    KnowledgeBaseConnectorModel.findByKnowledgeBaseIds(kbIds),
+  ]);
+
+  const kbNames = knowledgeBases.map((kb) => kb.name);
+  const connectorTypes = [...new Set(connectors.map((c) => c.connectorType))];
+
+  let description =
+    "Query the organization's knowledge sources to retrieve relevant information. " +
+    "Use this tool when the user asks a question you cannot answer from your training data alone, " +
+    "or when they explicitly ask you to search internal documents and data sources.";
+
+  if (kbNames.length > 0) {
+    description += ` Available knowledge bases: ${kbNames.join(", ")}.`;
+  }
+  if (connectorTypes.length > 0) {
+    description += ` Connected sources: ${connectorTypes.join(", ")}.`;
+  }
+
+  description +=
+    " Formulate queries about the actual content you are looking for — " +
+    "ask about topics, concepts, or information rather than about source systems.";
+
+  kbDescriptionCache.set(agentId, {
+    description,
+    expiresAt: Date.now() + KB_DESCRIPTION_CACHE_TTL_MS,
+  });
+
+  return description;
 }

@@ -63,9 +63,9 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogForm,
   DialogHeader,
+  DialogStickyFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ExpandableText } from "@/components/ui/expandable-text";
@@ -1079,7 +1079,7 @@ export function AgentDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-5xl h-[90vh] flex flex-col overflow-hidden"
+        className="max-w-5xl h-[90vh] flex flex-col overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -1104,11 +1104,8 @@ export function AgentDialog({
           )}
         </DialogHeader>
 
-        <DialogForm
-          onSubmit={handleSave}
-          className="flex-1 flex flex-col overflow-hidden"
-        >
-          <div className="-mr-6 pr-6 flex-1 overflow-y-auto py-4 space-y-4">
+        <DialogForm onSubmit={handleSave}>
+          <div className="py-4 space-y-4">
             {agentType === "profile" && (
               <Alert variant="warning">
                 <AlertTriangle className="h-4 w-4" />
@@ -1837,7 +1834,7 @@ export function AgentDialog({
             )}
           </div>
 
-          <DialogFooter className="mt-4">
+          <DialogStickyFooter>
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
@@ -1856,7 +1853,7 @@ export function AgentDialog({
               )}
               {agent ? "Update" : "Create"}
             </Button>
-          </DialogFooter>
+          </DialogStickyFooter>
         </DialogForm>
       </DialogContent>
     </Dialog>

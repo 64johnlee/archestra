@@ -14,8 +14,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
+  DialogStickyFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
@@ -155,7 +155,7 @@ export function CreateConnectorDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-y-auto">
         {step === "select" ? (
           <>
             <DialogHeader>
@@ -187,10 +187,7 @@ export function CreateConnectorDialog({
           </>
         ) : (
           <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(handleSubmit)}
-              className="flex flex-col overflow-hidden"
-            >
+            <form onSubmit={form.handleSubmit(handleSubmit)}>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Button
@@ -218,7 +215,7 @@ export function CreateConnectorDialog({
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4 overflow-y-auto py-4 pr-1">
+              <div className="space-y-4 py-4">
                 <FormField
                   control={form.control}
                   name="name"
@@ -406,7 +403,7 @@ export function CreateConnectorDialog({
                 </Collapsible>
               </div>
 
-              <DialogFooter className="pt-4">
+              <DialogStickyFooter>
                 <Button type="button" variant="outline" onClick={handleBack}>
                   Back
                 </Button>
@@ -415,7 +412,7 @@ export function CreateConnectorDialog({
                     ? "Creating..."
                     : "Create Connector"}
                 </Button>
-              </DialogFooter>
+              </DialogStickyFooter>
             </form>
           </Form>
         )}

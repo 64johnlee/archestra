@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
-import { Fragment, useMemo } from "react";
+import { Fragment } from "react";
 import { Action, Actions } from "@/components/ai-elements/actions";
 import {
   Conversation,
@@ -66,7 +66,6 @@ const MessageThread = ({
   profileId?: string;
 }) => {
   const status: ChatStatus = "streaming" as ChatStatus;
-  const allParts = useMemo(() => messages.flatMap((m) => m.parts), [messages]);
 
   return (
     <div
@@ -173,9 +172,31 @@ const MessageThread = ({
                           message.parts
                             .slice(i + 1)
                             .every((p) => p.type !== "text");
-                        const showCitations =
-                          isLastTextPartInMessage &&
-                          hasKnowledgeBaseToolCall(allParts);
+                        // Show citations on the last text part of the last
+                        // assistant message, scoped to the current assistant turn
+                        // (stop at the next user message to avoid stale citations).
+                        let citationParts: typeof message.parts | undefined;
+                        if (isLastTextPartInMessage) {
+                          if (hasKnowledgeBaseToolCall(message.parts ?? [])) {
+                            citationParts = message.parts;
+                          } else {
+                            for (
+                              let prevIdx = idx - 1;
+                              prevIdx >= 0;
+                              prevIdx--
+                            ) {
+                              const prev = messages[prevIdx];
+                              if (prev.role === "user") break;
+                              if (
+                                prev.role === "assistant" &&
+                                hasKnowledgeBaseToolCall(prev.parts ?? [])
+                              ) {
+                                citationParts = prev.parts;
+                                break;
+                              }
+                            }
+                          }
+                        }
 
                         return (
                           <Fragment key={`${message.id}-${i}`}>
@@ -191,8 +212,10 @@ const MessageThread = ({
                                     ? preserveNewlines(part.text)
                                     : part.text}
                                 </Response>
-                                {showCitations && (
-                                  <KnowledgeGraphCitations parts={allParts} />
+                                {citationParts && (
+                                  <KnowledgeGraphCitations
+                                    parts={citationParts}
+                                  />
                                 )}
                               </MessageContent>
                             </Message>

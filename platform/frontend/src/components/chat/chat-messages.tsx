@@ -541,11 +541,38 @@ export function ChatMessages({
                           isLastAssistantInSequence &&
                           isLastTextPart &&
                           status !== "streaming";
-                        const citationParts =
+                        // Show citations on the last text part of the last
+                        // assistant message, only after streaming completes
+                        // to avoid citations jumping between messages.
+                        let citationParts: typeof message.parts | undefined;
+                        if (
+                          isLastAssistantInSequence &&
                           isLastTextPart &&
-                          hasKnowledgeBaseToolCall(message.parts)
-                            ? message.parts
-                            : undefined;
+                          !isResponseInProgress
+                        ) {
+                          if (hasKnowledgeBaseToolCall(message.parts ?? [])) {
+                            citationParts = message.parts;
+                          } else {
+                            // Search backwards for KB tool calls within the same
+                            // assistant turn — stop at the next user message to
+                            // avoid showing stale citations from prior turns.
+                            for (
+                              let prevIdx = idx - 1;
+                              prevIdx >= 0;
+                              prevIdx--
+                            ) {
+                              const prev = messages[prevIdx];
+                              if (prev.role === "user") break;
+                              if (
+                                prev.role === "assistant" &&
+                                hasKnowledgeBaseToolCall(prev.parts ?? [])
+                              ) {
+                                citationParts = prev.parts;
+                                break;
+                              }
+                            }
+                          }
+                        }
 
                         // Check for <think> tags (used by Qwen and similar models)
                         if (hasThinkingTags(part.text)) {
