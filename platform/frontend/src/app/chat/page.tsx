@@ -208,7 +208,7 @@ export default function ChatPage() {
     useModelsByProvider();
   const { data: chatApiKeys = [], isLoading: isLoadingApiKeys } =
     useChatApiKeys();
-  const { data: organization } = useOrganization();
+  const { data: organization, isPending: isOrgLoading } = useOrganization();
 
   // State for initial chat (when no conversation exists yet)
   const [initialAgentId, setInitialAgentId] = useState<string | null>(null);
@@ -228,6 +228,9 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (internalAgents.length === 0) return;
+    // Wait for organization data to avoid race condition where agents load
+    // before org, causing the org default to be skipped
+    if (isOrgLoading) return;
 
     // Only process URL params once (don't re-apply after user clears selection)
     if (!urlParamsConsumedRef.current) {
@@ -243,8 +246,23 @@ export default function ChatPage() {
       }
     }
 
-    // Try to restore from localStorage, then member's default agent, then first internal agent
+    // Priority: org default > localStorage > member default > first available
+    // Org default always wins when set (admin-configured for the whole org).
+    // localStorage only overrides when no org default is configured.
     if (!initialAgentId) {
+      // Try org's default agent first (admin-configured, takes precedence)
+      if (organization?.defaultAgentId) {
+        const orgDefaultAgent = internalAgents.find(
+          (a) => a.id === organization.defaultAgentId,
+        );
+        if (orgDefaultAgent) {
+          setInitialAgentId(organization.defaultAgentId);
+          saveAgent(organization.defaultAgentId);
+          resolvedAgentRef.current = orgDefaultAgent;
+          return;
+        }
+      }
+      // Try localStorage (user's previous selection, only when no org default)
       const savedAgentId = getSavedAgent();
       const savedAgent = internalAgents.find((a) => a.id === savedAgentId);
       if (savedAgent) {
@@ -268,7 +286,14 @@ export default function ChatPage() {
       saveAgent(internalAgents[0].id);
       resolvedAgentRef.current = internalAgents[0];
     }
-  }, [initialAgentId, searchParams, internalAgents, defaultAgentId]);
+  }, [
+    initialAgentId,
+    searchParams,
+    internalAgents,
+    defaultAgentId,
+    organization?.defaultAgentId,
+    isOrgLoading,
+  ]);
 
   // Initialize model and API key once agent is resolved.
   // Priority: localStorage (user's explicit choice) > agent config > org default > first available.
