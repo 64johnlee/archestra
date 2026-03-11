@@ -113,7 +113,12 @@ export function InitialAgentSelector({
   const installer = useMcpInstallOrchestrator();
 
   const filteredAgents = useMemo(() => {
-    let result = allAgents;
+    let result = allAgents.filter((a) => {
+      if (a.scope === "personal") {
+        return a.authorId === userId;
+      }
+      return true;
+    });
     if (search) {
       const lower = search.toLowerCase();
       result = result.filter(
@@ -126,11 +131,9 @@ export function InitialAgentSelector({
     return [...result].sort((a, b) => {
       if (a.id === currentAgentId) return -1;
       if (b.id === currentAgentId) return 1;
-      const sa = (a as unknown as Record<string, unknown>).scope as string;
-      const sb = (b as unknown as Record<string, unknown>).scope as string;
-      return (scopeOrder[sa] ?? 3) - (scopeOrder[sb] ?? 3);
+      return (scopeOrder[a.scope] ?? 3) - (scopeOrder[b.scope] ?? 3);
     });
-  }, [allAgents, search, currentAgentId]);
+  }, [allAgents, search, currentAgentId, userId]);
 
   const currentAgent = useMemo(
     () =>
@@ -1556,9 +1559,7 @@ function AddDelegationView({
     }
     const scopeOrder: Record<string, number> = { personal: 0, team: 1, org: 2 };
     return [...result].sort((a, b) => {
-      const sa = (a as unknown as Record<string, unknown>).scope as string;
-      const sb = (b as unknown as Record<string, unknown>).scope as string;
-      return (scopeOrder[sa] ?? 3) - (scopeOrder[sb] ?? 3);
+      return (scopeOrder[a.scope] ?? 3) - (scopeOrder[b.scope] ?? 3);
     });
   }, [allAgents, agentId, search]);
 
