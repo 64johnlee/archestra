@@ -3,14 +3,12 @@
 import type { ChatStatus, UIMessage } from "ai";
 import {
   Check,
-  CopyIcon,
   Paperclip,
   RefreshCcwIcon,
   ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
 import { Fragment, useMemo } from "react";
-import { Action, Actions } from "@/components/ai-elements/actions";
 import {
   Conversation,
   ConversationContent,
@@ -41,6 +39,7 @@ import {
   hasKnowledgeBaseToolCall,
   KnowledgeGraphCitations,
 } from "@/components/chat/knowledge-graph-citations";
+import { MessageActions } from "@/components/chat/message-actions";
 import { PolicyDeniedTool } from "@/components/chat/policy-denied-tool";
 import Divider from "@/components/divider";
 import { Button } from "@/components/ui/button";
@@ -223,16 +222,10 @@ const MessageThread = ({
                             </Message>
                             {message.role === "assistant" &&
                               i === messages.length - 1 && (
-                                <Actions className="mt-2">
-                                  <Action
-                                    onClick={() =>
-                                      navigator.clipboard.writeText(part.text)
-                                    }
-                                    label="Copy"
-                                  >
-                                    <CopyIcon className="size-3" />
-                                  </Action>
-                                </Actions>
+                                <MessageActions
+                                  textToCopy={part.text}
+                                  className="-mt-1 w-fit"
+                                />
                               )}
                           </Fragment>
                         );

@@ -322,25 +322,31 @@ function ChatSessionHook({
     }
   }, [messages, status, conversationId, generateTitleMutation]);
 
-  // Update session in ref whenever state changes
-  useEffect(() => {
-    const session: ChatSession = {
-      conversationId,
-      messages,
-      sendMessage,
-      stop,
-      status,
-      error,
-      setMessages,
-      addToolResult,
-      addToolApprovalResponse,
-      pendingCustomServerToolCall,
-      setPendingCustomServerToolCall,
-      tokenUsage,
-    };
+  // Always keep the session ref up-to-date with the latest values (including
+  // function references from useChat which change every render). This is a ref
+  // update only — no state changes, no re-renders.
+  const sessionRef = useRef<ChatSession>(null as unknown as ChatSession);
+  sessionRef.current = {
+    conversationId,
+    messages,
+    sendMessage,
+    stop,
+    status,
+    error,
+    setMessages,
+    addToolResult,
+    addToolApprovalResponse,
+    pendingCustomServerToolCall,
+    setPendingCustomServerToolCall,
+    tokenUsage,
+  };
 
-    sessionsRef.current.set(conversationId, session);
-    // Notify that session has been updated so consumers re-render
+  // Sync to the shared sessions map and notify consumers.
+  // All chat state values are listed as deps so the effect fires when any value
+  // changes, even though we read them through the ref for the latest snapshot.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — deps trigger the sync, ref provides the snapshot
+  useEffect(() => {
+    sessionsRef.current.set(conversationId, sessionRef.current);
     notifySessionUpdate();
   }, [
     conversationId,
