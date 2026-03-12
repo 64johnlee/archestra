@@ -6,6 +6,7 @@ import { PostHogProviderWrapper } from "./_parts/posthog-provider";
 import { ArchestraQueryClientProvider } from "./_parts/query-client-provider";
 import { ThemeProvider } from "./_parts/theme-provider";
 import "./globals.css";
+import { DynamicHead } from "@/components/dynamic-head";
 import { OrgThemeLoader } from "@/components/org-theme-loader";
 import { ChatProvider } from "@/lib/global-chat.context";
 import { WebsocketInitializer } from "./_parts/websocket-initializer";
@@ -137,7 +138,6 @@ const libreBaskervilleFont = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Archestra.AI",
   description: "Enterprise MCP Platform for AI Agents",
 };
 
@@ -165,6 +165,7 @@ export default function RootLayout({
               >
                 <PostHogProviderWrapper>
                   <OrgThemeLoader />
+                  <DynamicHead />
                   <WithAuthCheck>
                     <WebsocketInitializer />
                     <AppShell>
