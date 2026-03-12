@@ -2095,7 +2095,7 @@ function ToolServerAvatarGroup({
         <TooltipTrigger asChild>
           <button
             type="button"
-            className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted ml-1 hover:bg-muted/80 transition-colors"
+            className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted ml-1 hover:bg-muted/80 transition-colors cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
               onAdd?.();
@@ -2149,7 +2149,7 @@ function ToolServerAvatarGroup({
           <TooltipTrigger asChild>
             <button
               type="button"
-              className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted ring-1 ring-background ml-0.5 hover:bg-muted/80 transition-colors"
+              className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted ring-1 ring-background ml-0.5 hover:bg-muted/80 transition-colors cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 onAdd?.();
