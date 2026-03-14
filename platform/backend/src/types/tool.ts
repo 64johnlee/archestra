@@ -21,7 +21,6 @@ export const SelectToolSchema = createSelectSchema(schema.toolsTable, {
 
 export const ExtendedSelectToolSchema = SelectToolSchema.omit({
   agentId: true,
-  mcpServerId: true,
 }).extend({
   // Nullable for MCP tools
   agent: z
@@ -65,7 +64,6 @@ export const ToolAssignmentSchema = z.object({
   executionSourceMcpServerId: z.string().nullable(),
   executionOwnerEmail: z.string().nullable(),
   useDynamicTeamCredential: z.boolean(),
-  responseModifierTemplate: z.string().nullable(),
 });
 
 // Tool with embedded assignments schema

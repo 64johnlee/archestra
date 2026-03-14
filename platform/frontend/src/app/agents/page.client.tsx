@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type AgentType,
   archestraApiSdk,
   type archestraApiTypes,
   DocsPage,
@@ -22,7 +23,6 @@ import {
   ActiveFilterBadges,
   AgentScopeFilter,
 } from "@/components/agent-scope-filter";
-import { PromptVersionHistoryDialog } from "@/components/chat/prompt-version-history-dialog";
 import { ConnectDialog } from "@/components/connect-dialog";
 import { LabelTags } from "@/components/label-tags";
 import { LoadingSpinner, LoadingWrapper } from "@/components/loading";
@@ -59,7 +59,6 @@ import {
   DEFAULT_AGENTS_PAGE_SIZE,
   DEFAULT_SORT_BY,
   DEFAULT_SORT_DIRECTION,
-  formatDate,
 } from "@/lib/utils";
 import { AgentActions } from "./agent-actions";
 
@@ -268,12 +267,10 @@ function Agents({ initialData }: { initialData?: AgentsInitialData }) {
   const [connectingAgent, setConnectingAgent] = useState<{
     id: string;
     name: string;
-    agentType: "profile" | "mcp_gateway" | "llm_proxy" | "agent";
+    agentType: AgentType;
   } | null>(null);
   const [editingAgent, setEditingAgent] = useState<AgentData | null>(null);
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
-  const [versionHistoryAgent, setVersionHistoryAgent] =
-    useState<AgentData | null>(null);
 
   // Handle 'create' URL parameter to open the Create Agent dialog
   useEffect(() => {
@@ -356,7 +353,7 @@ function Agents({ initialData }: { initialData?: AgentsInitialData }) {
     {
       id: "name",
       accessorKey: "name",
-      size: 300,
+      size: 270,
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -389,25 +386,6 @@ function Agents({ initialData }: { initialData?: AgentsInitialData }) {
       },
     },
     {
-      id: "createdAt",
-      accessorKey: "createdAt",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          className="h-auto !p-0 font-medium hover:bg-transparent"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Created
-          <SortIcon isSorted={column.getIsSorted()} />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <div className="font-mono text-xs">
-          {formatDate({ date: row.original.createdAt })}
-        </div>
-      ),
-    },
-    {
       id: "toolsCount",
       accessorKey: "toolsCount",
       size: 80,
@@ -426,6 +404,18 @@ function Agents({ initialData }: { initialData?: AgentsInitialData }) {
           (t) => !t.delegateToAgentId,
         ).length;
         return <div>{toolsCount}</div>;
+      },
+    },
+    {
+      id: "knowledgeSources",
+      size: 140,
+      enableSorting: false,
+      header: "Knowledge Sources",
+      cell: ({ row }) => {
+        const count =
+          (row.original.knowledgeBaseIds?.length ?? 0) +
+          (row.original.connectorIds?.length ?? 0);
+        return <div>{count}</div>;
       },
     },
     {
@@ -453,28 +443,15 @@ function Agents({ initialData }: { initialData?: AgentsInitialData }) {
       ? [
           {
             id: "team",
+            size: 120,
             header: "Accessible to",
             enableSorting: false,
             cell: ({ row }: { row: { original: AgentData } }) => (
               <VisibilityBadge
-                scope={
-                  (row.original as unknown as Record<string, unknown>)
-                    .scope as string
-                }
-                teams={
-                  row.original.teams as unknown as Array<{
-                    id: string;
-                    name: string;
-                  }>
-                }
-                authorId={
-                  (row.original as unknown as Record<string, unknown>)
-                    .authorId as string | null
-                }
-                authorName={
-                  (row.original as unknown as Record<string, unknown>)
-                    .authorName as string | null
-                }
+                scope={row.original.scope}
+                teams={row.original.teams}
+                authorId={row.original.authorId}
+                authorName={row.original.authorName}
                 currentUserId={currentUserId}
               />
             ),
@@ -488,14 +465,9 @@ function Agents({ initialData }: { initialData?: AgentsInitialData }) {
       enableHiding: false,
       cell: ({ row }) => {
         const agent = row.original;
-        const scope = (agent as unknown as Record<string, unknown>).scope as
-          | string
-          | undefined;
-        const authorId = (agent as unknown as Record<string, unknown>)
-          .authorId as string | null | undefined;
-        const agentTeams = (
-          agent as unknown as { teams?: Array<{ id: string }> }
-        ).teams;
+        const scope = agent.scope;
+        const authorId = agent.authorId;
+        const agentTeams = agent.teams;
         const isPersonal = scope === "personal";
         const isTeamScoped = scope === "team";
         const isOwner = !!currentUserId && authorId === currentUserId;
@@ -599,7 +571,6 @@ function Agents({ initialData }: { initialData?: AgentsInitialData }) {
               onCreated={() => {
                 setIsCreateDialogOpen(false);
               }}
-              onViewVersionHistory={setVersionHistoryAgent}
             />
 
             {connectingAgent && (
@@ -615,17 +586,6 @@ function Agents({ initialData }: { initialData?: AgentsInitialData }) {
               onOpenChange={(open) => !open && setEditingAgent(null)}
               agent={editingAgent}
               agentType="agent"
-              onViewVersionHistory={setVersionHistoryAgent}
-            />
-
-            <PromptVersionHistoryDialog
-              open={!!versionHistoryAgent}
-              onOpenChange={(open) => {
-                if (!open) {
-                  setVersionHistoryAgent(null);
-                }
-              }}
-              agent={versionHistoryAgent}
             />
 
             {deletingAgentId && (
@@ -670,7 +630,7 @@ function ConnectAgentDialog({
   agent: {
     id: string;
     name: string;
-    agentType: "profile" | "mcp_gateway" | "llm_proxy" | "agent";
+    agentType: AgentType;
   };
   open: boolean;
   onOpenChange: (open: boolean) => void;

@@ -1,11 +1,16 @@
 "use client";
 
 import {
+  type AgentScope,
+  type AgentType,
   archestraApiSdk,
   type archestraApiTypes,
   DocsPage,
   getDocsUrl,
   getResourceForAgentType,
+  MAX_SUGGESTED_PROMPT_TEXT_LENGTH,
+  MAX_SUGGESTED_PROMPT_TITLE_LENGTH,
+  MAX_SUGGESTED_PROMPTS,
   providerDisplayNames,
   type SupportedProvider,
 } from "@shared";
@@ -21,6 +26,7 @@ import {
   Key,
   Loader2,
   Lock,
+  Plus,
   User,
   Users,
   X,
@@ -112,6 +118,7 @@ import config from "@/lib/config";
 import { useFeature } from "@/lib/config.query";
 import { useConnectors } from "@/lib/connector.query";
 import { useKnowledgeBases } from "@/lib/knowledge-base.query";
+import { useAppName } from "@/lib/use-app-name";
 import { cn } from "@/lib/utils";
 
 const { useIdentityProviders } = config.enterpriseFeatures.core
@@ -291,10 +298,7 @@ function SubagentsEditor({
 }
 
 // Helper functions for type-specific UI text
-function getDialogTitle(
-  agentType: "profile" | "mcp_gateway" | "llm_proxy" | "agent",
-  isEdit: boolean,
-): string {
+function getDialogTitle(agentType: AgentType, isEdit: boolean): string {
   const titles: Record<string, { create: string; edit: string }> = {
     agent: { create: "Create Agent", edit: "Edit Agent" },
     mcp_gateway: { create: "Create MCP Gateway", edit: "Edit MCP Gateway" },
@@ -304,10 +308,7 @@ function getDialogTitle(
   return isEdit ? titles[agentType].edit : titles[agentType].create;
 }
 
-function getSuccessMessage(
-  agentType: "profile" | "mcp_gateway" | "llm_proxy" | "agent",
-  isUpdate: boolean,
-): string {
+function getSuccessMessage(agentType: AgentType, isUpdate: boolean): string {
   const messages: Record<string, { create: string; update: string }> = {
     mcp_gateway: {
       create: "MCP Gateway created successfully",
@@ -329,9 +330,7 @@ function getSuccessMessage(
   return isUpdate ? messages[agentType].update : messages[agentType].create;
 }
 
-function getNamePlaceholder(
-  agentType: "profile" | "mcp_gateway" | "llm_proxy" | "agent",
-): string {
+function getNamePlaceholder(agentType: AgentType): string {
   const placeholders: Record<string, string> = {
     mcp_gateway: "Enter MCP Gateway name",
     llm_proxy: "Enter LLM Proxy name",
@@ -385,12 +384,12 @@ function AccessLevelSelector({
   hasNoAvailableTeams,
   showTeamRequired,
 }: {
-  scope: "personal" | "team" | "org";
-  onScopeChange: (scope: "personal" | "team" | "org") => void;
+  scope: AgentScope;
+  onScopeChange: (scope: AgentScope) => void;
   isAdmin: boolean;
   isTeamAdmin: boolean;
-  initialScope?: "personal" | "team" | "org";
-  agentType: "profile" | "mcp_gateway" | "llm_proxy" | "agent";
+  initialScope?: AgentScope;
+  agentType: AgentType;
   teams: Array<{ id: string; name: string }> | undefined;
   assignedTeamIds: string[];
   onTeamIdsChange: (ids: string[]) => void;
@@ -434,9 +433,9 @@ function AccessLevelSelector({
     <div className="space-y-4">
       {/* ACCESS LEVEL */}
       <div className="space-y-2">
-        <Label>
+        <h3 className="text-sm font-semibold">
           Who can use this {agentTypeDisplayName[agentType] || "agent"}
-        </Label>
+        </h3>
 
         {expanded ? (
           <div className="space-y-1.5">
@@ -558,9 +557,7 @@ interface AgentDialogProps {
   /** Agent to edit. If null/undefined, creates a new agent */
   agent?: Agent | null;
   /** Agent type: 'agent' for internal agents with prompts, 'profile' for external profiles */
-  agentType?: "profile" | "mcp_gateway" | "llm_proxy" | "agent";
-  /** Callback when viewing version history (internal agents only) */
-  onViewVersionHistory?: (agent: Agent) => void;
+  agentType?: AgentType;
   /** Callback when a new agent/profile is created (not called for updates) */
   onCreated?: (created: { id: string; name: string }) => void;
 }
@@ -572,6 +569,7 @@ export function AgentDialog({
   agentType = "profile",
   onCreated,
 }: AgentDialogProps) {
+  const appName = useAppName();
   const { data: allInternalAgents = [] } = useInternalAgents();
   const createAgent = useCreateProfile();
   const updateAgent = useUpdateProfile();
@@ -614,8 +612,11 @@ export function AgentDialog({
   const [name, setName] = useState("");
   const [icon, setIcon] = useState<string | null>(null);
   const [description, setDescription] = useState("");
-  const [userPrompt, setUserPrompt] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
+  const [suggestedPrompts, setSuggestedPrompts] = useState<
+    Array<{ summaryTitle: string; prompt: string }>
+  >([]);
+  const [suggestedPromptsOpen, setSuggestedPromptsOpen] = useState(false);
   const [selectedDelegationTargetIds, setSelectedDelegationTargetIds] =
     useState<string[]>([]);
   const [assignedTeamIds, setAssignedTeamIds] = useState<string[]>([]);
@@ -635,7 +636,7 @@ export function AgentDialog({
   const [identityProviderId, setIdentityProviderId] = useState<string | null>(
     null,
   );
-  const [scope, setScope] = useState<"personal" | "team" | "org">("personal");
+  const [scope, setScope] = useState<AgentScope>("personal");
   const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<string[]>([]);
   const [connectorIds, setConnectorIds] = useState<string[]>([]);
   const [autoConfigureOnToolAssignment, setAutoConfigureOnToolAssignment] =
@@ -664,58 +665,28 @@ export function AgentDialog({
       const agentData = freshAgent || agent;
 
       if (agentData) {
-        // Edit mode
         setName(agentData.name);
-        setIcon(
-          (agentData as unknown as Record<string, unknown>).icon as
-            | string
-            | null,
-        );
+        setIcon(agentData.icon);
         setDescription(agentData.description || "");
-        setUserPrompt(agentData.userPrompt || "");
         setSystemPrompt(agentData.systemPrompt || "");
-        setLlmApiKeyId(agentData.llmApiKeyId ?? null);
-        setLlmModel(agentData.llmModel ?? null);
+        setSuggestedPrompts(agentData.suggestedPrompts);
+        setSuggestedPromptsOpen(false);
+        setLlmApiKeyId(agentData.llmApiKeyId);
+        setLlmModel(agentData.llmModel);
         // Reset delegation targets - will be populated by the next useEffect when data loads
         setSelectedDelegationTargetIds([]);
-        // Teams and labels
-        const agentTeams = agentData.teams as unknown as
-          | Array<{ id: string; name: string }>
-          | undefined;
-        setAssignedTeamIds(agentTeams?.map((t) => t.id) || []);
-        setLabels(agentData.labels || []);
-        setConsiderContextUntrusted(
-          agentData.considerContextUntrusted || false,
-        );
-        // Identity provider ID (for MCP Gateway JWKS auth)
-        setIdentityProviderId(agentData.identityProviderId ?? null);
-        // Knowledge graph
-        setKnowledgeBaseIds(
-          ((agentData as Record<string, unknown>).knowledgeBaseIds as
-            | string[]
-            | undefined) ?? [],
-        );
-        setConnectorIds(
-          ((agentData as Record<string, unknown>).connectorIds as
-            | string[]
-            | undefined) ?? [],
-        );
-        // Scope
-        setScope(
-          ((agentData as Record<string, unknown>).scope as
-            | "personal"
-            | "team"
-            | "org") ?? "personal",
-        );
-        // Email invocation settings
-        setIncomingEmailEnabled(agentData.incomingEmailEnabled || false);
-        setIncomingEmailSecurityMode(
-          agentData.incomingEmailSecurityMode || "private",
-        );
+        setAssignedTeamIds(agentData.teams.map((t) => t.id));
+        setLabels(agentData.labels);
+        setConsiderContextUntrusted(agentData.considerContextUntrusted);
+        setIdentityProviderId(agentData.identityProviderId);
+        setKnowledgeBaseIds(agentData.knowledgeBaseIds);
+        setConnectorIds(agentData.connectorIds);
+        setScope(agentData.scope);
+        setIncomingEmailEnabled(agentData.incomingEmailEnabled);
+        setIncomingEmailSecurityMode(agentData.incomingEmailSecurityMode);
         setIncomingEmailAllowedDomain(
           agentData.incomingEmailAllowedDomain || "",
         );
-        // Built-in agent config
         setAutoConfigureOnToolAssignment(
           agentData.builtInAgentConfig?.autoConfigureOnToolAssignment ?? false,
         );
@@ -724,8 +695,9 @@ export function AgentDialog({
         setName("");
         setIcon(null);
         setDescription("");
-        setUserPrompt("");
         setSystemPrompt("");
+        setSuggestedPrompts([]);
+        setSuggestedPromptsOpen(false);
         setLlmApiKeyId(null);
         setLlmModel(null);
         setSelectedDelegationTargetIds([]);
@@ -841,9 +813,7 @@ export function AgentDialog({
       if (!key) return;
 
       // Auto-select model: always prefer bestModelId, fall back to first model when switching providers
-      const bestModelId = (key as Record<string, unknown>).bestModelId as
-        | string
-        | null;
+      const bestModelId = key.bestModelId;
       if (bestModelId) {
         setLlmModel(bestModelId);
       } else if (currentLlmProvider !== key.provider) {
@@ -864,7 +834,6 @@ export function AgentDialog({
 
   const handleSave = useCallback(async () => {
     const trimmedName = name.trim();
-    const trimmedUserPrompt = userPrompt.trim();
     const trimmedSystemPrompt = systemPrompt.trim();
 
     if (!trimmedName) {
@@ -900,6 +869,11 @@ export function AgentDialog({
 
     // Save any unsaved label before submitting
     const updatedLabels = agentLabelsRef.current?.saveUnsavedLabel() || labels;
+
+    // Filter out incomplete suggested prompts (empty title or prompt)
+    const validSuggestedPrompts = suggestedPrompts.filter(
+      (sp) => sp.summaryTitle.trim() && sp.prompt.trim(),
+    );
 
     try {
       let savedAgentId: string;
@@ -950,10 +924,10 @@ export function AgentDialog({
             agentType: agentType,
             ...(isInternalAgent && {
               description: description.trim() || null,
-              userPrompt: trimmedUserPrompt || null,
               systemPrompt: trimmedSystemPrompt || null,
               llmApiKeyId: llmApiKeyId || null,
               llmModel: llmModel || null,
+              suggestedPrompts: validSuggestedPrompts,
             }),
             ...(agentType === "mcp_gateway" && {
               identityProviderId: identityProviderId || null,
@@ -981,10 +955,10 @@ export function AgentDialog({
           agentType: agentType,
           ...(isInternalAgent && {
             description: description.trim() || null,
-            userPrompt: trimmedUserPrompt || null,
             systemPrompt: trimmedSystemPrompt || null,
             llmApiKeyId: llmApiKeyId || null,
             llmModel: llmModel || null,
+            suggestedPrompts: validSuggestedPrompts,
           }),
           ...(agentType === "mcp_gateway" && {
             identityProviderId: identityProviderId || null,
@@ -1043,8 +1017,8 @@ export function AgentDialog({
     name,
     icon,
     description,
-    userPrompt,
     systemPrompt,
+    suggestedPrompts,
     assignedTeamIds,
     labels,
     considerContextUntrusted,
@@ -1084,12 +1058,31 @@ export function AgentDialog({
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {isBuiltIn
-              ? `Edit ${agent?.name ?? "Built-In Agent"}`
-              : getDialogTitle(agentType, !!agent)}
-            {!isBuiltIn && <AgentBadge type={scope} className="font-normal" />}
-          </DialogTitle>
+          <div className="flex items-center justify-between pr-6">
+            <DialogTitle className="flex items-center gap-2">
+              {isBuiltIn
+                ? `Edit ${agent?.name ?? "Built-In Agent"}`
+                : getDialogTitle(agentType, !!agent)}
+              {!isBuiltIn && (
+                <AgentBadge type={scope} className="font-normal" />
+              )}
+            </DialogTitle>
+            {agent?.createdAt &&
+              (() => {
+                const createdBy = agent.authorName ?? appName;
+                return (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground font-normal whitespace-nowrap">
+                    <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center text-[10px] font-medium text-white shrink-0">
+                      {createdBy.charAt(0).toUpperCase()}
+                    </div>
+                    <span>
+                      Created by {createdBy} on{" "}
+                      {new Date(agent.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                );
+              })()}
+          </div>
           {isBuiltIn && agent?.description && (
             <p className="text-sm text-muted-foreground">
               {agent.description}.{" "}
@@ -1179,14 +1172,177 @@ export function AgentDialog({
 
             {/* Section 2: Instruction (Agent only) */}
             {isInternalAgent && (
-              <div className="rounded-lg border bg-card p-4 space-y-4">
-                <h3 className="text-sm font-semibold">Instruction</h3>
+              <div className="rounded-lg border bg-card p-4">
                 <SystemPromptEditor
                   value={systemPrompt}
                   onChange={setSystemPrompt}
                   readOnly={isBuiltIn}
+                  variant="section"
                 />
               </div>
+            )}
+
+            {/* Suggested Prompts (Agent only, not built-in, collapsible) */}
+            {isInternalAgent && !isBuiltIn && (
+              <Collapsible
+                open={suggestedPromptsOpen}
+                onOpenChange={setSuggestedPromptsOpen}
+                className="group"
+              >
+                <div className="rounded-lg border bg-card">
+                  {suggestedPrompts.length > 0 ? (
+                    <CollapsibleTrigger className="flex w-full items-center justify-between p-4 transition-colors [&:hover:not(:has(button:hover))]:bg-muted/50 [&[data-state=open]>div>svg]:rotate-90">
+                      <div className="text-left">
+                        <h3 className="text-sm font-semibold">
+                          Suggested Prompts
+                          <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                            ({suggestedPrompts.length})
+                          </span>
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Shown to users when starting a new chat. Max{" "}
+                          {MAX_SUGGESTED_PROMPTS} prompts, title max{" "}
+                          {MAX_SUGGESTED_PROMPT_TITLE_LENGTH} chars, prompt max{" "}
+                          {MAX_SUGGESTED_PROMPT_TEXT_LENGTH} chars.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {suggestedPromptsOpen && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={
+                                      suggestedPrompts.length >=
+                                      MAX_SUGGESTED_PROMPTS
+                                    }
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSuggestedPrompts((prev) => [
+                                        ...prev,
+                                        { summaryTitle: "", prompt: "" },
+                                      ]);
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    Add
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {suggestedPrompts.length >=
+                                MAX_SUGGESTED_PROMPTS && (
+                                <TooltipContent>
+                                  Maximum of {MAX_SUGGESTED_PROMPTS} suggested
+                                  prompts reached
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform" />
+                      </div>
+                    </CollapsibleTrigger>
+                  ) : (
+                    <div className="flex items-center justify-between p-4">
+                      <div>
+                        <h3 className="text-sm font-semibold">
+                          Suggested Prompts
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Shown to users when starting a new chat. Max{" "}
+                          {MAX_SUGGESTED_PROMPTS} prompts, title max{" "}
+                          {MAX_SUGGESTED_PROMPT_TITLE_LENGTH} chars, prompt max{" "}
+                          {MAX_SUGGESTED_PROMPT_TEXT_LENGTH} chars.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSuggestedPrompts([
+                            { summaryTitle: "", prompt: "" },
+                          ]);
+                          setSuggestedPromptsOpen(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                  )}
+                  <CollapsibleContent>
+                    <div className="border-t p-4 space-y-4">
+                      {suggestedPrompts.map((sp, index) => (
+                        <div
+                          // biome-ignore lint/suspicious/noArrayIndexKey: items have no stable ID
+                          key={`sp-${index}`}
+                          className="space-y-2 rounded-md border p-3 relative"
+                        >
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 h-6 w-6"
+                            onClick={() => {
+                              setSuggestedPrompts((prev) => {
+                                const next = prev.filter((_, i) => i !== index);
+                                if (next.length === 0)
+                                  setSuggestedPromptsOpen(false);
+                                return next;
+                              });
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                          <div className="space-y-1 pr-8">
+                            <Label className="text-xs">Button Label</Label>
+                            <Input
+                              value={sp.summaryTitle}
+                              onChange={(e) =>
+                                setSuggestedPrompts((prev) =>
+                                  prev.map((p, i) =>
+                                    i === index
+                                      ? {
+                                          ...p,
+                                          summaryTitle: e.target.value,
+                                        }
+                                      : p,
+                                  ),
+                                )
+                              }
+                              placeholder="e.g. Summarize recent changes"
+                              maxLength={MAX_SUGGESTED_PROMPT_TITLE_LENGTH}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Prompt</Label>
+                            <Textarea
+                              value={sp.prompt}
+                              onChange={(e) =>
+                                setSuggestedPrompts((prev) =>
+                                  prev.map((p, i) =>
+                                    i === index
+                                      ? { ...p, prompt: e.target.value }
+                                      : p,
+                                  ),
+                                )
+                              }
+                              placeholder="The full prompt sent when clicked"
+                              className="min-h-[60px]"
+                              maxLength={MAX_SUGGESTED_PROMPT_TEXT_LENGTH}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
             )}
 
             {/* Section 3: Capabilities (Tools, Subagents, Knowledge Sources) */}
@@ -1403,14 +1559,7 @@ export function AgentDialog({
                     }}
                     isAdmin={!!isAdmin}
                     isTeamAdmin={!!isTeamAdmin}
-                    initialScope={
-                      agent
-                        ? (((agent as Record<string, unknown>).scope as
-                            | "personal"
-                            | "team"
-                            | "org") ?? undefined)
-                        : undefined
-                    }
+                    initialScope={agent?.scope}
                     agentType={agentType}
                     teams={teams}
                     assignedTeamIds={assignedTeamIds}
@@ -1423,7 +1572,7 @@ export function AgentDialog({
                 {/* LLM Configuration (Agent and Built-in) */}
                 {(isInternalAgent || isBuiltIn) && (
                   <div className="space-y-2">
-                    <Label>LLM Configuration</Label>
+                    <h3 className="text-sm font-semibold">LLM Configuration</h3>
                     <p className="text-sm text-muted-foreground">
                       {selectedApiKey && selectedApiKey.scope !== "org_wide"
                         ? "Selected key will be available to everyone who has access to this agent."

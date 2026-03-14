@@ -8,8 +8,6 @@ export const RouteId = {
   GetDefaultLlmProxy: "getDefaultLlmProxy",
   UpdateAgent: "updateAgent",
   DeleteAgent: "deleteAgent",
-  GetAgentVersions: "getAgentVersions",
-  RollbackAgent: "rollbackAgent",
   GetLabelKeys: "getLabelKeys",
   GetLabelValues: "getLabelValues",
 
@@ -284,9 +282,9 @@ export const RouteId = {
   DeletePendingSignupMember: "deletePendingSignupMember",
   CompleteOnboarding: "completeOnboarding",
 
-  // Appearance Routes
-  GetPublicAppearance: "getPublicAppearance",
-  UpdateAppearance: "updateAppearance",
+  // Appearance Settings Routes
+  GetAppearanceSettings: "getAppearanceSettings",
+  UpdateAppearanceSettings: "updateAppearanceSettings",
 
   // Security Settings Routes
   UpdateSecuritySettings: "updateSecuritySettings",

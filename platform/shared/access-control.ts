@@ -362,12 +362,6 @@ export const requiredEndpointPermissionsMap: Partial<
   [RouteId.CreateAgent]: {},
   [RouteId.UpdateAgent]: {},
   [RouteId.DeleteAgent]: {},
-  [RouteId.GetAgentVersions]: {
-    agent: ["read"],
-  },
-  [RouteId.RollbackAgent]: {
-    agent: ["update"],
-  },
   [RouteId.GetDefaultMcpGateway]: {
     mcpGateway: ["read"],
   },
@@ -784,7 +778,7 @@ export const requiredEndpointPermissionsMap: Partial<
   [RouteId.DeleteLimit]: {
     llmLimit: ["delete"],
   },
-  [RouteId.UpdateAppearance]: {
+  [RouteId.UpdateAppearanceSettings]: {
     organizationSettings: ["update"],
   },
   [RouteId.UpdateSecuritySettings]: {
@@ -817,7 +811,7 @@ export const requiredEndpointPermissionsMap: Partial<
    * Available to unauthenticated users
    * Note: Auth is skipped in middleware for this route
    */
-  [RouteId.GetPublicAppearance]: {},
+  [RouteId.GetAppearanceSettings]: {},
   /**
    * Get all identity providers with full config (admin only)
    * Returns sensitive data including client secrets

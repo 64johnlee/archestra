@@ -172,7 +172,9 @@ export function useGetDeploymentYamlPreview(catalogId: string | null) {
  */
 export function useValidateDeploymentYaml() {
   return useMutation({
-    mutationFn: async (params: { yaml: string }) => {
+    mutationFn: async (
+      params: NonNullable<archestraApiTypes.ValidateDeploymentYamlData["body"]>,
+    ) => {
       const response = await validateDeploymentYaml({ body: params });
       return response.data;
     },
