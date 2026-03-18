@@ -46,7 +46,11 @@ describe("ModelSyncService", () => {
       },
     ]);
 
-    await modelSyncService.syncModelsForApiKey(apiKey.id, "openai", "test-key");
+    await modelSyncService.syncModelsForApiKey({
+      apiKeyId: apiKey.id,
+      provider: "openai",
+      apiKeyValue: "test-key",
+    });
 
     // All models should be stored with provider="openai" (the API key's provider)
     const gpt = await ModelModel.findByProviderAndModelId("openai", "gpt-4o");
@@ -86,5 +90,79 @@ describe("ModelSyncService", () => {
     ]);
     expect(linkedModels).toHaveLength(3);
     expect(linkedModels.every((m) => m.model.provider === "openai")).toBe(true);
+  });
+
+  test("forceRefresh resets custom pricing, normal sync preserves it", async ({
+    makeOrganization,
+    makeSecret,
+    makeChatApiKey,
+  }) => {
+    const org = await makeOrganization();
+    const secret = await makeSecret({ secret: { apiKey: "test-key" } });
+    const apiKey = await makeChatApiKey(org.id, secret.id, {
+      provider: "openai",
+    });
+
+    modelSyncService.registerFetcher("openai", async () => [
+      {
+        id: "gpt-4o",
+        displayName: "GPT-4o",
+        provider: "openai" as SupportedProvider,
+      },
+    ]);
+
+    // Initial sync creates the model
+    await modelSyncService.syncModelsForApiKey({
+      apiKeyId: apiKey.id,
+      provider: "openai",
+      apiKeyValue: "test-key",
+    });
+
+    // Set custom pricing and user-edited capabilities
+    const model = await ModelModel.findByProviderAndModelId("openai", "gpt-4o");
+    expect(model).not.toBeNull();
+    // biome-ignore lint/style/noNonNullAssertion: asserted above
+    await ModelModel.updatePricing(model!.id, {
+      customPricePerMillionInput: "1.00",
+      customPricePerMillionOutput: "2.00",
+    });
+    // biome-ignore lint/style/noNonNullAssertion: asserted above
+    await ModelModel.update(model!.id, {
+      inputModalities: ["text", "image"],
+      outputModalities: ["text"],
+    });
+
+    // Normal sync should preserve custom pricing and capabilities
+    await modelSyncService.syncModelsForApiKey({
+      apiKeyId: apiKey.id,
+      provider: "openai",
+      apiKeyValue: "test-key",
+    });
+
+    const afterNormalSync = await ModelModel.findByProviderAndModelId(
+      "openai",
+      "gpt-4o",
+    );
+    expect(afterNormalSync?.customPricePerMillionInput).toBe("1.00");
+    expect(afterNormalSync?.customPricePerMillionOutput).toBe("2.00");
+    expect(afterNormalSync?.inputModalities).toEqual(["text", "image"]);
+    expect(afterNormalSync?.outputModalities).toEqual(["text"]);
+
+    // Force refresh should reset custom pricing and capabilities
+    await modelSyncService.syncModelsForApiKey({
+      apiKeyId: apiKey.id,
+      provider: "openai",
+      apiKeyValue: "test-key",
+      forceRefresh: true,
+    });
+
+    const afterForceRefresh = await ModelModel.findByProviderAndModelId(
+      "openai",
+      "gpt-4o",
+    );
+    expect(afterForceRefresh?.customPricePerMillionInput).toBeNull();
+    expect(afterForceRefresh?.customPricePerMillionOutput).toBeNull();
+    expect(afterForceRefresh?.inputModalities).toBeNull();
+    expect(afterForceRefresh?.outputModalities).toBeNull();
   });
 });
