@@ -22,6 +22,7 @@ import type {
   UsageView,
   Zhipuai,
 } from "@/types";
+import { extractCommonMessageText } from "@/types";
 import { unwrapToolContent } from "../utils/unwrap-tool-content";
 
 // =============================================================================
@@ -383,6 +384,7 @@ class ZhipuaiRequestAdapter
     for (const message of messages) {
       const commonMessage: CommonMessage = {
         role: message.role as CommonMessage["role"],
+        content: extractCommonMessageText(message),
       };
 
       if (message.role === "tool") {

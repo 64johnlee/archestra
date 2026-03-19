@@ -23,6 +23,7 @@ import type {
   ToolCompressionStats,
   UsageView,
 } from "@/types";
+import { extractCommonMessageText } from "@/types";
 
 // ToolCompressionStats imported from @/types
 
@@ -377,6 +378,7 @@ class BedrockRequestAdapter
     for (const message of messages) {
       const commonMessage: CommonMessage = {
         role: message.role as CommonMessage["role"],
+        content: extractCommonMessageText(message),
       };
 
       // Handle user messages that may contain tool results

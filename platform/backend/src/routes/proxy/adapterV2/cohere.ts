@@ -22,6 +22,7 @@ import type {
   ToolCompressionStats,
   UsageView,
 } from "@/types";
+import { extractCommonMessageText } from "@/types";
 import type { ToolCompressionStats as CompressionStats } from "../utils/toon-conversion";
 import { unwrapToolContent } from "../utils/unwrap-tool-content";
 
@@ -216,6 +217,7 @@ class CohereRequestAdapter
     for (const message of messages) {
       const commonMessage: CommonMessage = {
         role: message.role as CommonMessage["role"],
+        content: extractCommonMessageText(message),
       };
 
       // Handle tool messages

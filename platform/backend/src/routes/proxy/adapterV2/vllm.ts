@@ -32,6 +32,7 @@ import type {
   UsageView,
   Vllm,
 } from "@/types";
+import { extractCommonMessageText } from "@/types";
 import { estimateMessagesSize } from "@/utils/message-size";
 import {
   estimateToolResultContentLength,
@@ -430,6 +431,7 @@ class VllmRequestAdapter
     for (const message of messages) {
       const commonMessage: CommonMessage = {
         role: message.role as CommonMessage["role"],
+        content: extractCommonMessageText(message),
       };
 
       // Handle tool messages (tool results)

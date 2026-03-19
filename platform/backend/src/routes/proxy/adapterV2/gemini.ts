@@ -33,6 +33,7 @@ import type {
   ToolCompressionStats,
   UsageView,
 } from "@/types";
+import { extractCommonMessageText } from "@/types";
 import {
   hasImageContent,
   isImageTooLarge,
@@ -100,6 +101,7 @@ class GeminiRequestAdapter
     for (const content of contents) {
       const commonMessage: CommonMessage = {
         role: content.role as CommonMessage["role"],
+        content: extractCommonMessageText(content),
       };
 
       // Process parts looking for function responses
