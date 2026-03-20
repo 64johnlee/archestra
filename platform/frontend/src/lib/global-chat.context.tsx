@@ -8,6 +8,7 @@ import {
   SWAP_AGENT_FAILED_POKE_TEXT,
   SWAP_TO_DEFAULT_AGENT_POKE_TEXT,
   TOOL_ARTIFACT_WRITE_FULL_NAME,
+  TOOL_CREATE_AGENT_FULL_NAME,
   TOOL_CREATE_MCP_SERVER_INSTALLATION_REQUEST_FULL_NAME,
   TOOL_SWAP_AGENT_FULL_NAME,
   TOOL_SWAP_TO_DEFAULT_AGENT_FULL_NAME,
@@ -34,7 +35,6 @@ import { useGenerateConversationTitle } from "@/lib/chat.query";
 const SESSION_CLEANUP_TIMEOUT = 10 * 60 * 1000; // 10 min
 const MAX_AUTO_RETRIES = 2;
 const AUTO_RETRY_DELAY_MS = 1500;
-
 /** Network-level errors that never reach the backend */
 const RETRYABLE_CLIENT_ERRORS = [
   "Failed to fetch",
@@ -383,9 +383,7 @@ function ChatSessionHook({
       // after swap_agent executes, so the old agent won't continue.
       // onFinish then sends a poke to trigger the new agent.
       if (toolCall.toolName === TOOL_SWAP_AGENT_FULL_NAME) {
-        const agentName = (
-          toolCall as unknown as { args?: Record<string, unknown> }
-        ).args?.agent_name;
+        const agentName = getSwapAgentName(toolCall);
         swapAgentPendingRef.current = makeSwapAgentPokeText(
           typeof agentName === "string" ? agentName : "another agent",
         );
@@ -399,6 +397,14 @@ function ChatSessionHook({
         queryClient.invalidateQueries({
           queryKey: ["conversation", conversationId],
         });
+      }
+
+      // Agents created through chat tool calls bypass the normal frontend
+      // create-agent mutations, so the cached useInternalAgents() list can stay
+      // stale unless we invalidate it here. Without this, the prompt input's
+      // agent selector may not reflect a newly created/swapped-to agent yet.
+      if (toolCall.toolName === TOOL_CREATE_AGENT_FULL_NAME) {
+        queryClient.invalidateQueries({ queryKey: ["agents"] });
       }
 
       // Detect artifact_write tool and invalidate conversation to fetch updated artifact
@@ -533,6 +539,23 @@ const SWAP_TOOL_TYPES = new Set([
   TOOL_SWAP_TO_DEFAULT_AGENT_FULL_NAME,
   `tool-${TOOL_SWAP_TO_DEFAULT_AGENT_FULL_NAME}`,
 ]);
+
+function getSwapAgentName(toolCall: unknown): string | null {
+  if (
+    typeof toolCall !== "object" ||
+    toolCall === null ||
+    !("args" in toolCall) ||
+    typeof toolCall.args !== "object" ||
+    toolCall.args === null ||
+    !("agent_name" in toolCall.args)
+  ) {
+    return null;
+  }
+
+  return typeof toolCall.args.agent_name === "string"
+    ? toolCall.args.agent_name
+    : null;
+}
 
 function hasSwapToolError(message: UIMessage): boolean {
   return (message.parts ?? []).some((part) => {

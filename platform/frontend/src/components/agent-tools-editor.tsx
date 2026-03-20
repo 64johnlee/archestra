@@ -49,6 +49,7 @@ import {
   getDefaultArchestraToolIds,
   sortAndFilterTools,
 } from "./agent-tools-editor.utils";
+import { CatalogDocsLink } from "./catalog-docs-link";
 import { DYNAMIC_CREDENTIAL_VALUE, TokenSelect } from "./token-select";
 
 type InternalMcpCatalogItem =
@@ -745,7 +746,6 @@ function McpServerPill({
     catalogItem.serverType !== "builtin" &&
     !isPlaywright &&
     mcpServers.length > 0;
-
   return (
     <Popover
       open={open}
@@ -806,6 +806,15 @@ function McpServerPill({
             {catalogItem.description && (
               <p className="text-sm text-muted-foreground mt-1">
                 {catalogItem.description}
+                {catalogItem.docsUrl ? (
+                  <>
+                    {" "}
+                    <CatalogDocsLink
+                      url={catalogItem.docsUrl}
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    />
+                  </>
+                ) : null}
               </p>
             )}
           </div>

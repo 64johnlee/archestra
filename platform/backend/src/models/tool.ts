@@ -1,6 +1,6 @@
 import {
   AGENT_TOOL_PREFIX,
-  ARCHESTRA_MCP_SERVER_NAME,
+  ARCHESTRA_TOOL_PREFIX,
   DEFAULT_ARCHESTRA_TOOL_NAMES,
   MCP_SERVER_TOOL_NAME_SEPARATOR,
   parseFullToolName,
@@ -25,6 +25,7 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 
 import { getArchestraMcpTools } from "@/archestra-mcp-server";
+import { ARCHESTRA_MCP_CATALOG_METADATA } from "@/archestra-mcp-server/metadata";
 import db, { schema } from "@/database";
 import {
   createPaginatedResult,
@@ -589,13 +590,14 @@ class ToolModel {
       .insert(schema.internalMcpCatalogTable)
       .values({
         id: catalogId,
-        name: "Archestra",
-        description:
-          "Built-in Archestra tools for managing profiles, limits, policies, and MCP servers.",
-        serverType: "builtin",
-        requiresAuth: false,
+        ...ARCHESTRA_MCP_CATALOG_METADATA,
       })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: schema.internalMcpCatalogTable.id,
+        set: {
+          ...ARCHESTRA_MCP_CATALOG_METADATA,
+        },
+      });
 
     const archestraTools = getArchestraMcpTools();
     const archestraToolNames = archestraTools.map((t) => t.name);
@@ -1582,10 +1584,7 @@ class ToolModel {
     // Exclude Archestra built-in tools
     if (filters?.excludeArchestraTools) {
       toolWhereConditions.push(
-        notIlike(
-          schema.toolsTable.name,
-          `${ARCHESTRA_MCP_SERVER_NAME}${MCP_SERVER_TOOL_NAME_SEPARATOR}%`,
-        ),
+        notIlike(schema.toolsTable.name, `${ARCHESTRA_TOOL_PREFIX}%`),
       );
     }
 

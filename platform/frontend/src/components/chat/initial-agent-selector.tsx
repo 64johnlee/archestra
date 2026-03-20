@@ -29,6 +29,7 @@ import { AgentIcon } from "@/components/agent-icon";
 import { AgentIconPicker } from "@/components/agent-icon-picker";
 import { McpCatalogIcon, ToolChecklist } from "@/components/agent-tools-editor";
 import { PromptInputButton } from "@/components/ai-elements/prompt-input";
+import { CatalogDocsLink } from "@/components/catalog-docs-link";
 import { OAuthConfirmationDialog } from "@/components/oauth-confirmation-dialog";
 import { SystemPromptEditor } from "@/components/system-prompt-editor";
 import { TokenSelect } from "@/components/token-select";
@@ -97,11 +98,13 @@ type CatalogItem =
 
 interface InitialAgentSelectorProps {
   currentAgentId: string | null;
+  currentAgentName?: string;
   onAgentChange: (agentId: string) => void;
 }
 
 export function InitialAgentSelector({
   currentAgentId,
+  currentAgentName,
   onAgentChange,
 }: InitialAgentSelectorProps) {
   const { data: allAgents = [] } = useInternalAgents();
@@ -141,6 +144,8 @@ export function InitialAgentSelector({
       allAgents.find((a) => a.id === currentAgentId) ?? allAgents[0] ?? null,
     [allAgents, currentAgentId],
   );
+  const displayAgentName =
+    currentAgent?.name ?? currentAgentName ?? "Select agent";
 
   const canEditCurrentAgent = useMemo(() => {
     if (!currentAgent) return false;
@@ -262,7 +267,7 @@ export function InitialAgentSelector({
           >
             <AgentIcon icon={currentAgent.icon} size={16} />
             <span className="truncate flex-1 text-left">
-              {currentAgent?.name ?? "Select agent"}
+              {displayAgentName}
             </span>
             <ToolServerAvatarGroup
               catalogs={assignedCatalogs}
@@ -509,52 +514,69 @@ function DialogHeader({
   breadcrumbs,
   onBack,
   extra,
+  description,
 }: {
   title: string;
   breadcrumbs?: string[];
   onBack: () => void;
   extra?: React.ReactNode;
+  description?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 border-b px-4 py-3 shrink-0">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-8 px-2 gap-1.5"
-        onClick={onBack}
-      >
-        <ArrowLeft className="size-4" />
-        Back
-      </Button>
-      {breadcrumbs?.length ? (
-        <div className="flex items-center gap-1.5 text-sm min-w-0">
-          {breadcrumbs.map((crumb, i) => (
-            <span key={crumb} className="flex items-center gap-1.5 min-w-0">
-              {i === 0 ? (
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="text-muted-foreground hover:text-foreground transition-colors truncate"
-                >
-                  {crumb}
-                </button>
-              ) : (
-                <span className="text-muted-foreground truncate">{crumb}</span>
-              )}
-              <span className="text-muted-foreground">/</span>
-            </span>
-          ))}
-          <span className="font-medium truncate">{title}</span>
+    <div className="border-b px-4 py-3 shrink-0">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 gap-1.5 shrink-0 self-center"
+            onClick={onBack}
+          >
+            <ArrowLeft className="size-4" />
+            Back
+          </Button>
+          <div className="min-w-0 flex-1 space-y-1">
+            {breadcrumbs?.length ? (
+              <div className="flex items-center gap-1.5 text-sm min-w-0">
+                {breadcrumbs.map((crumb, i) => (
+                  <span
+                    key={crumb}
+                    className="flex items-center gap-1.5 min-w-0"
+                  >
+                    {i === 0 ? (
+                      <button
+                        type="button"
+                        onClick={onBack}
+                        className="text-muted-foreground hover:text-foreground transition-colors truncate"
+                      >
+                        {crumb}
+                      </button>
+                    ) : (
+                      <span className="text-muted-foreground truncate">
+                        {crumb}
+                      </span>
+                    )}
+                    <span className="text-muted-foreground">/</span>
+                  </span>
+                ))}
+                <span className="font-medium truncate">{title}</span>
+              </div>
+            ) : (
+              <span className="text-sm font-medium">{title}</span>
+            )}
+            {description ? (
+              <div className="text-xs text-muted-foreground leading-relaxed">
+                {description}
+              </div>
+            ) : null}
+          </div>
         </div>
-      ) : (
-        <span className="text-sm font-medium">{title}</span>
-      )}
-      <div className="flex-1" />
-      {extra}
-      <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-        <XIcon className="size-4" />
-        <span className="sr-only">Close</span>
-      </DialogClose>
+        {extra}
+        <DialogClose className="ml-auto rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 shrink-0">
+          <XIcon className="size-4" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
+      </div>
     </div>
   );
 }
@@ -1485,13 +1507,26 @@ function ConfigureToolView({
   const newToolCount = useMemo(() => {
     return [...selectedToolIds].filter((id) => !assignedToolIds.has(id)).length;
   }, [selectedToolIds, assignedToolIds]);
-
   return (
     <div className="flex flex-col h-full">
       <DialogHeader
         title={catalog.name}
         breadcrumbs={[agentName, "Add Tools"]}
         onBack={onBack}
+        description={
+          <>
+            {catalog.description}
+            {catalog.docsUrl ? (
+              <>
+                {" "}
+                <CatalogDocsLink
+                  url={catalog.docsUrl}
+                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                />
+              </>
+            ) : null}
+          </>
+        }
       />
 
       <div className="flex flex-col flex-1 min-h-0">

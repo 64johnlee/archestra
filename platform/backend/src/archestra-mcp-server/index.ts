@@ -1,21 +1,9 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import {
-  AGENT_TOOL_PREFIX,
-  type ARCHESTRA_MCP_SERVER_NAME,
-  type MCP_SERVER_TOOL_NAME_SEPARATOR,
-} from "@shared";
+import { type ArchestraToolFullName, isAgentTool } from "@shared";
 import { ZodError, type ZodType } from "zod";
 // Import all groups
-import {
-  toolEntries as agentToolEntries,
-  toolShortNames as agentToolNames,
-  tools as agentTools,
-} from "./agents";
-import {
-  toolEntries as chatToolEntries,
-  toolShortNames as chatToolNames,
-  tools as chatTools,
-} from "./chat";
+import { toolEntries as agentToolEntries, tools as agentTools } from "./agents";
+import { toolEntries as chatToolEntries, tools as chatTools } from "./chat";
 import { delegationToolArgsSchema, handleDelegation } from "./delegation";
 import {
   type ArchestraRuntimeToolEntry,
@@ -24,43 +12,32 @@ import {
 } from "./helpers";
 import {
   toolEntries as identityToolEntries,
-  toolShortNames as identityToolNames,
   tools as identityTools,
 } from "./identity";
 import {
   toolEntries as knowledgeManagementToolEntries,
-  toolShortNames as knowledgeManagementToolNames,
   tools as knowledgeManagementTools,
 } from "./knowledge-management";
-import {
-  toolEntries as limitToolEntries,
-  toolShortNames as limitToolNames,
-  tools as limitTools,
-} from "./limits";
+import { toolEntries as limitToolEntries, tools as limitTools } from "./limits";
 import {
   toolEntries as llmProxyToolEntries,
-  toolShortNames as llmProxyToolNames,
   tools as llmProxyTools,
 } from "./llm-proxies";
 import {
   toolEntries as mcpGatewayToolEntries,
-  toolShortNames as mcpGatewayToolNames,
   tools as mcpGatewayTools,
 } from "./mcp-gateways";
 import {
   toolEntries as mcpServerToolEntries,
-  toolShortNames as mcpServerToolNames,
   tools as mcpServerTools,
 } from "./mcp-servers";
 import {
   toolEntries as policyToolEntries,
-  toolShortNames as policyToolNames,
   tools as policyTools,
 } from "./policies";
 import { checkToolPermission } from "./rbac";
 import {
   toolEntries as toolAssignmentToolEntries,
-  toolShortNames as toolAssignmentToolNames,
   tools as toolAssignmentTools,
 } from "./tool-assignment";
 import type { ArchestraContext } from "./types";
@@ -68,23 +45,6 @@ import type { ArchestraContext } from "./types";
 export { getAgentTools } from "./delegation";
 export { filterToolNamesByPermission, TOOL_PERMISSIONS } from "./rbac";
 export type { ArchestraContext } from "./types";
-
-export const ALL_TOOL_SHORT_NAMES = [
-  ...identityToolNames,
-  ...agentToolNames,
-  ...llmProxyToolNames,
-  ...mcpGatewayToolNames,
-  ...mcpServerToolNames,
-  ...limitToolNames,
-  ...policyToolNames,
-  ...toolAssignmentToolNames,
-  ...knowledgeManagementToolNames,
-  ...chatToolNames,
-] as const;
-
-export type ArchestraToolShortName = (typeof ALL_TOOL_SHORT_NAMES)[number];
-export type ArchestraToolFullName =
-  `${typeof ARCHESTRA_MCP_SERVER_NAME}${typeof MCP_SERVER_TOOL_NAME_SEPARATOR}${ArchestraToolShortName}`;
 
 const toolEntries: Partial<
   Record<ArchestraToolFullName, ArchestraRuntimeToolEntry>
@@ -123,7 +83,7 @@ export async function executeArchestraTool(
 ): Promise<CallToolResult> {
   // Agent delegation tools are dynamic (one per agent) and not in TOOL_PERMISSIONS,
   // so they bypass centralized RBAC. They enforce team-based access checks internally.
-  if (toolName.startsWith(AGENT_TOOL_PREFIX)) {
+  if (isAgentTool(toolName)) {
     const parsedArgs = validateToolArgs(
       delegationToolArgsSchema,
       args,
