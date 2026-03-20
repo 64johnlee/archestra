@@ -588,13 +588,18 @@ const config = {
     bedrock: {
       enabled: Boolean(process.env.ARCHESTRA_BEDROCK_BASE_URL),
       baseUrl: process.env.ARCHESTRA_BEDROCK_BASE_URL || "",
-      /** Prefix for cross-region inference profile models (e.g., "us." or "eu.") */
-      inferenceProfilePrefix:
-        process.env.ARCHESTRA_BEDROCK_INFERENCE_PROFILE_PREFIX || "",
       /** Enable AWS IAM authentication (IRSA, env vars, instance profile) instead of API key */
       iamAuthEnabled: process.env.ARCHESTRA_BEDROCK_IAM_AUTH_ENABLED === "true",
       /** Explicit AWS region override; falls back to extracting from base URL */
       region: process.env.ARCHESTRA_BEDROCK_REGION || "",
+      /** Comma-separated list of provider prefixes to include (e.g., "anthropic,amazon"). Empty = allow all. */
+      allowedProviders: parseCommaSeparatedList(
+        process.env.ARCHESTRA_BEDROCK_ALLOWED_PROVIDERS || "",
+      ),
+      /** Comma-separated list of inference region prefixes to include (e.g., "us,global"). Empty = allow all. */
+      allowedInferenceRegions: parseCommaSeparatedList(
+        process.env.ARCHESTRA_BEDROCK_ALLOWED_INFERENCE_REGIONS || "",
+      ),
     },
     minimax: {
       baseUrl:
@@ -821,4 +826,11 @@ export function parseProcessType(value: string | undefined): ProcessType {
   const normalized = value?.toLowerCase();
   if (normalized === "web" || normalized === "worker") return normalized;
   return "all";
+}
+
+export function parseCommaSeparatedList(value: string): string[] {
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
