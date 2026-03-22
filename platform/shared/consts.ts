@@ -1,5 +1,8 @@
 /** Default app name used as fallback when organization.appName is not configured */
 export const DEFAULT_APP_NAME = "Archestra";
+export const DEFAULT_APP_FULL_NAME = "Archestra.AI";
+export const DEFAULT_APP_DESCRIPTION =
+  "Enterprise MCP-native Secure AI Platform";
 
 /** Prefix for all Archestra-generated tokens (team tokens, user tokens, virtual API keys, API keys) */
 export const ARCHESTRA_TOKEN_PREFIX = "archestra_";
@@ -25,9 +28,14 @@ export const DEFAULT_TEAM_NAME = "Default Team";
  */
 export const MCP_SERVER_TOOL_NAME_SEPARATOR = "__";
 
+export const WEBSITE_URL = "https://archestra.ai";
+export const GITHUB_REPO_URL = "https://github.com/archestra-ai/archestra";
+export const GITHUB_REPO_NEW_ISSUE_URL = `${GITHUB_REPO_URL}/issues/new`;
+export const COMMUNITY_SLACK_URL = `${WEBSITE_URL}/join-slack`;
+
 export const MCP_CATALOG_API_BASE_URL =
   process.env.ARCHESTRA_MCP_CATALOG_API_BASE_URL ||
-  "https://archestra.ai/mcp-catalog/api";
+  `${WEBSITE_URL}/mcp-catalog/api`;
 
 /**
  * Header name for external agent ID.

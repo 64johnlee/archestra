@@ -27,9 +27,11 @@ import { RemoteServerInstallDialog } from "@/app/mcp/registry/_parts/remote-serv
 import { AgentBadge } from "@/components/agent-badge";
 import { AgentIcon } from "@/components/agent-icon";
 import { AgentIconPicker } from "@/components/agent-icon-picker";
-import { McpCatalogIcon, ToolChecklist } from "@/components/agent-tools-editor";
+import { ToolChecklist } from "@/components/agent-tools-editor";
+import { sortCatalogItems } from "@/components/agent-tools-editor.utils";
 import { PromptInputButton } from "@/components/ai-elements/prompt-input";
 import { CatalogDocsLink } from "@/components/catalog-docs-link";
+import { McpCatalogIcon } from "@/components/mcp-catalog-icon";
 import { OAuthConfirmationDialog } from "@/components/oauth-confirmation-dialog";
 import { SystemPromptEditor } from "@/components/system-prompt-editor";
 import { TokenSelect } from "@/components/token-select";
@@ -69,6 +71,7 @@ import {
   useSyncAgentDelegations,
   useUnassignTool,
 } from "@/lib/agent-tools.query";
+import { useArchestraMcpIdentity } from "@/lib/archestra-mcp-server";
 import { useHasPermissions } from "@/lib/auth.query";
 import { authClient } from "@/lib/clients/auth/auth-client";
 import { useConnectors } from "@/lib/connector.query";
@@ -1125,6 +1128,7 @@ function AddToolView({
     }
     return ids;
   }, [assignedToolsData]);
+  const { catalogName } = useArchestraMcpIdentity();
 
   // Detect servers that are still being installed (local servers with pending status)
   const hasInstallingServers = useMemo(() => {
@@ -1214,11 +1218,11 @@ function AddToolView({
           c.description?.toLowerCase().includes(lower),
       );
     }
-    return [...items].sort((a, b) => {
-      const aAssigned = assignedCatalogIds.has(a.id) ? 1 : 0;
-      const bAssigned = assignedCatalogIds.has(b.id) ? 1 : 0;
-      return aAssigned - bAssigned;
-    });
+    return sortCatalogItems(
+      items,
+      (catalog) => (assignedCatalogIds.has(catalog.id) ? 1 : 0),
+      () => 1,
+    );
   }, [catalogItems, search, assignedCatalogIds]);
 
   return (
@@ -1318,7 +1322,9 @@ function AddToolView({
                       size={28}
                     />
                     <span className="text-sm font-medium truncate w-full">
-                      {catalog.name}
+                      {isBuiltInCatalogId(catalog.id)
+                        ? catalogName
+                        : catalog.name}
                     </span>
                     {catalog.description && !hasNoTools && (
                       <p className="text-xs text-muted-foreground line-clamp-2 w-full">

@@ -1,3 +1,6 @@
+import { DEFAULT_APP_NAME, MCP_SERVER_TOOL_NAME_SEPARATOR } from "./consts";
+import { slugify } from "./utils";
+
 export const ARCHESTRA_MCP_SERVER_NAME = "archestra";
 
 /**
@@ -174,6 +177,11 @@ export type ArchestraToolFullName<
   ShortName extends ArchestraToolShortName = ArchestraToolShortName,
 > = `${typeof ARCHESTRA_TOOL_PREFIX}${ShortName}`;
 
+export type ArchestraMcpIdentityOptions = {
+  appName?: string | null;
+  fullWhiteLabeling?: boolean;
+};
+
 export const TOOL_WHOAMI_FULL_NAME =
   `${ARCHESTRA_TOOL_PREFIX}${TOOL_WHOAMI_SHORT_NAME}` as const;
 export const TOOL_CREATE_AGENT_FULL_NAME =
@@ -303,31 +311,110 @@ export const DEFAULT_ARCHESTRA_TOOL_NAMES: readonly string[] = [
   TOOL_QUERY_KNOWLEDGE_SOURCES_FULL_NAME,
 ];
 
+export const DEFAULT_ARCHESTRA_TOOL_SHORT_NAMES = [
+  TOOL_ARTIFACT_WRITE_SHORT_NAME,
+  TOOL_TODO_WRITE_SHORT_NAME,
+  TOOL_QUERY_KNOWLEDGE_SOURCES_SHORT_NAME,
+] as const satisfies readonly ArchestraToolShortName[];
+
 export function isArchestraMcpServerTool(
   toolName: string,
+  options?: ArchestraMcpIdentityOptions & { includeDefaultPrefix?: boolean },
 ): toolName is ArchestraToolFullName {
-  return toolName.startsWith(ARCHESTRA_TOOL_PREFIX);
+  return getArchestraToolShortName(toolName, options) !== null;
 }
 
 export function getArchestraToolShortName(
   toolName: string,
+  options?: ArchestraMcpIdentityOptions & { includeDefaultPrefix?: boolean },
 ): ArchestraToolShortName | null {
-  if (!isArchestraMcpServerTool(toolName)) {
+  const { serverName, toolName: rawToolName } = parseArchestraToolName({
+    toolName,
+    options,
+  });
+
+  if (!serverName || !isArchestraToolShortName(rawToolName)) {
     return null;
   }
 
-  const shortName = toolName.slice(ARCHESTRA_TOOL_PREFIX.length);
-  return isArchestraToolShortName(shortName) ? shortName : null;
+  return rawToolName;
 }
 
 export function getArchestraToolFullName<
   ShortName extends ArchestraToolShortName,
->(shortName: ShortName): ArchestraToolFullName<ShortName> {
-  return `${ARCHESTRA_TOOL_PREFIX}${shortName}`;
+>(shortName: ShortName): ArchestraToolFullName<ShortName>;
+export function getArchestraToolFullName<
+  ShortName extends ArchestraToolShortName,
+>(shortName: ShortName, options: ArchestraMcpIdentityOptions): string;
+export function getArchestraToolFullName<
+  ShortName extends ArchestraToolShortName,
+>(
+  shortName: ShortName,
+  options?: ArchestraMcpIdentityOptions,
+): ArchestraToolFullName<ShortName> | string {
+  return `${getArchestraToolPrefix(options)}${shortName}`;
 }
 
 function isArchestraToolShortName(
   shortName: string,
 ): shortName is ArchestraToolShortName {
   return (ARCHESTRA_TOOL_SHORT_NAMES as readonly string[]).includes(shortName);
+}
+
+export function getArchestraMcpCatalogName(
+  options?: ArchestraMcpIdentityOptions,
+): string {
+  if (!options?.fullWhiteLabeling) {
+    return DEFAULT_APP_NAME;
+  }
+
+  const trimmedAppName = options.appName?.trim();
+  return trimmedAppName || DEFAULT_APP_NAME;
+}
+
+export function getArchestraMcpServerName(
+  options?: ArchestraMcpIdentityOptions,
+): string {
+  if (!options?.fullWhiteLabeling) {
+    return ARCHESTRA_MCP_SERVER_NAME;
+  }
+
+  const catalogName = getArchestraMcpCatalogName(options);
+  const brandedServerName = slugify(catalogName);
+  return brandedServerName || ARCHESTRA_MCP_SERVER_NAME;
+}
+
+export function getArchestraToolPrefix(
+  options?: ArchestraMcpIdentityOptions,
+): string {
+  return `${getArchestraMcpServerName(options)}${MCP_SERVER_TOOL_NAME_SEPARATOR}`;
+}
+
+function parseArchestraToolName(params: {
+  toolName: string;
+  options?: ArchestraMcpIdentityOptions & { includeDefaultPrefix?: boolean };
+}): { serverName: string | null; toolName: string } {
+  const { toolName, options } = params;
+  const separatorIndex = toolName.lastIndexOf(MCP_SERVER_TOOL_NAME_SEPARATOR);
+  if (separatorIndex <= 0) {
+    return { serverName: null, toolName };
+  }
+
+  const serverName = toolName.slice(0, separatorIndex);
+  const rawToolName = toolName.slice(
+    separatorIndex + MCP_SERVER_TOOL_NAME_SEPARATOR.length,
+  );
+  const allowedServerNames = new Set<string>([
+    getArchestraMcpServerName(options),
+  ]);
+
+  if (options?.includeDefaultPrefix !== false) {
+    allowedServerNames.add(ARCHESTRA_MCP_SERVER_NAME);
+  }
+
+  if (!allowedServerNames.has(serverName)) {
+    return { serverName: null, toolName: rawToolName };
+  }
+
+  return { serverName, toolName: rawToolName };
 }

@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  type archestraApiTypes,
-  TOOL_SWAP_AGENT_FULL_NAME,
-  TOOL_SWAP_TO_DEFAULT_AGENT_FULL_NAME,
-} from "@shared";
+import type { archestraApiTypes } from "@shared";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PROVIDER_CONFIG } from "@/components/chat-api-key-form";
@@ -13,6 +9,7 @@ import {
   LlmProviderApiKeyOptionLabel,
   LlmProviderApiKeySelectItems,
 } from "@/components/llm-provider-options";
+import { ProfileFilterOption } from "@/components/log-filter-option";
 import { WithPermissions } from "@/components/roles/with-permissions";
 import {
   SettingsBlock,
@@ -29,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useOrgScopedAgents } from "@/lib/agent.query";
+import { useArchestraMcpIdentity } from "@/lib/archestra-mcp-server";
 import { useChatModels } from "@/lib/chat-models.query";
 import { useAvailableChatApiKeys } from "@/lib/chat-settings.query";
 import {
@@ -36,6 +34,7 @@ import {
   useUpdateAgentSettings,
   useUpdateSecuritySettings,
 } from "@/lib/organization.query";
+import { useAppName } from "@/lib/use-app-name";
 import {
   type AgentSettingsState,
   buildSavePayload,
@@ -51,7 +50,16 @@ type GlobalToolPolicy = NonNullable<
 
 type FileUploadsEnabled = "enabled" | "disabled";
 
+type AgentSelectItem = {
+  value: string;
+  label: string;
+  content?: React.ReactNode;
+  selectedContent?: React.ReactNode;
+};
+
 export default function AgentSettingsPage() {
+  const { getToolName } = useArchestraMcpIdentity();
+  const appName = useAppName();
   const { data: organization } = useOrganization();
   const { data: apiKeys } = useAvailableChatApiKeys();
   const { data: orgAgents } = useOrgScopedAgents();
@@ -167,11 +175,31 @@ export default function AgentSettingsPage() {
   );
 
   const agentItems = useMemo(() => {
-    const items = [{ value: "__personal__", label: "User's personal agent" }];
+    const items: AgentSelectItem[] = [
+      { value: "__personal__", label: "User's personal agent" },
+    ];
     for (const agent of orgAgents ?? []) {
       items.push({
         value: agent.id,
-        label: agent.icon ? `${agent.icon} ${agent.name}` : agent.name,
+        label: agent.name,
+        content: (
+          <ProfileFilterOption
+            profile={{
+              name: agent.name,
+              icon: agent.icon ?? null,
+              agentType: "agent",
+            }}
+          />
+        ),
+        selectedContent: (
+          <ProfileFilterOption
+            profile={{
+              name: agent.name,
+              icon: agent.icon ?? null,
+              agentType: "agent",
+            }}
+          />
+        ),
       });
     }
     return items;
@@ -278,7 +306,7 @@ export default function AgentSettingsPage() {
       />
       <SettingsBlock
         title="Default agent"
-        description={`The default agent is preselected for all new chat conversations. To enable agent routing, assign ${TOOL_SWAP_AGENT_FULL_NAME} to the default agent so it can swap to other agents, and ${TOOL_SWAP_TO_DEFAULT_AGENT_FULL_NAME} to other agents so they can swap back automatically. Only organization-scoped agents are shown.`}
+        description={`The default agent is preselected for all new chat conversations. To enable agent routing, assign ${getToolName("swap_agent")} to the default agent so it can swap to other agents, and ${getToolName("swap_to_default_agent")} to other agents so they can swap back automatically.`}
         control={
           <WithPermissions
             permissions={{ agentSettings: ["update"] }}
@@ -347,7 +375,7 @@ export default function AgentSettingsPage() {
       />
       <SettingsBlock
         title="Chat File Uploads"
-        description="Allow users to upload files in the Archestra chat UI."
+        description={`Allow users to upload files in the ${appName} chat UI.`}
         control={
           <WithPermissions
             permissions={{ agentSettings: ["update"] }}
