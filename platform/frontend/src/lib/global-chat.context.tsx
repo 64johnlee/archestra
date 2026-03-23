@@ -32,6 +32,7 @@ import {
 } from "react";
 import { filterOptimisticToolCalls } from "@/components/chat/chat-messages.utils";
 import { useGenerateConversationTitle } from "@/lib/chat.query";
+import { getChatExternalAgentId } from "@/lib/chat-utils";
 import appConfig from "./config";
 import { useAppName } from "./use-app-name";
 
@@ -45,10 +46,6 @@ const RETRYABLE_CLIENT_ERRORS = [
   "No output generated",
   "network",
 ];
-
-function getChatExternalAgentId(appName: string): string {
-  return `${appName} Chat`;
-}
 
 function isRetryableError(error: Error): boolean {
   const msg = error.message;
