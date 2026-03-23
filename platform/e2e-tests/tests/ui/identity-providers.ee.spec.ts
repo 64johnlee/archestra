@@ -3,6 +3,7 @@ import {
   ADMIN_EMAIL,
   ADMIN_PASSWORD,
   E2eTestId,
+  getIdpRoleMappingRuleRowTestId,
   KEYCLOAK_OIDC,
   KEYCLOAK_SAML,
   SSO_DOMAIN,
@@ -130,6 +131,10 @@ async function fillOidcProviderForm(
     .fill(KEYCLOAK_OIDC.authorizationEndpoint);
   await page.getByLabel("Token Endpoint").fill(KEYCLOAK_OIDC.tokenEndpoint);
   await page.getByLabel("JWKS Endpoint").fill(KEYCLOAK_OIDC.jwksEndpoint);
+}
+
+function getRoleMappingRuleRow(page: Page, index: number) {
+  return page.getByTestId(getIdpRoleMappingRuleRowTestId(index));
 }
 
 /**
@@ -669,20 +674,22 @@ test.describe("Identity Provider Role Mapping E2E", () => {
 
     // Add FIRST rule - will NOT match (non-existent group -> editor role)
     await addRuleButton.click();
-    await page
+    await getRoleMappingRuleRow(page, 0)
       .getByTestId(E2eTestId.IdpRoleMappingRuleTemplate)
-      .first()
       .fill('{{#includes groups "non-existent-group"}}true{{/includes}}');
-    await page.getByTestId(E2eTestId.IdpRoleMappingRuleRole).first().click();
+    await getRoleMappingRuleRow(page, 0)
+      .getByTestId(E2eTestId.IdpRoleMappingRuleRole)
+      .click();
     await page.getByRole("option", { name: "Editor" }).click();
 
     // Add SECOND rule - WILL match (archestra-admins group -> admin role)
     await addRuleButton.click();
-    await page
+    await getRoleMappingRuleRow(page, 1)
       .getByTestId(E2eTestId.IdpRoleMappingRuleTemplate)
-      .last()
       .fill('{{#includes groups "archestra-admins"}}true{{/includes}}');
-    await page.getByTestId(E2eTestId.IdpRoleMappingRuleRole).last().click();
+    await getRoleMappingRuleRow(page, 1)
+      .getByTestId(E2eTestId.IdpRoleMappingRuleRole)
+      .click();
     await page.getByRole("option", { name: "Admin" }).click();
 
     // Set default role to member (so we can verify role mapping works, not just fallback)
@@ -728,12 +735,13 @@ test.describe("Identity Provider Role Mapping E2E", () => {
       // The Roles settings page is only accessible to admins
       await ssoPage.goto(`${UI_BASE_URL}/settings/roles`);
       await ssoPage.waitForLoadState("domcontentloaded");
+      await expect(ssoPage).toHaveURL(/\/settings\/roles/, { timeout: 10000 });
 
       // If user has admin role, they should see the Roles page
       // If they got editor role (from rule 1) or member role (default), they would not see this
-      await expect(
-        ssoPage.getByText("Roles", { exact: true }).first(),
-      ).toBeVisible({ timeout: 10000 });
+      await expect(ssoPage.getByRole("heading", { name: "Roles" })).toBeVisible(
+        { timeout: 10000 },
+      );
 
       // Success! The second rule matched and assigned admin role
     } finally {
