@@ -38048,6 +38048,7 @@ export type GetIdentityProvidersResponses = {
         oidcConfig?: {
             issuer: string;
             pkce: boolean;
+            enableRpInitiatedLogout?: boolean;
             clientId: string;
             clientSecret: string;
             authorizationEndpoint?: string;
@@ -38163,6 +38164,7 @@ export type CreateIdentityProviderData = {
         oidcConfig?: {
             issuer: string;
             pkce: boolean;
+            enableRpInitiatedLogout?: boolean;
             clientId: string;
             clientSecret: string;
             authorizationEndpoint?: string;
@@ -38341,6 +38343,7 @@ export type CreateIdentityProviderResponses = {
         oidcConfig?: {
             issuer: string;
             pkce: boolean;
+            enableRpInitiatedLogout?: boolean;
             clientId: string;
             clientSecret: string;
             authorizationEndpoint?: string;
@@ -38684,6 +38687,7 @@ export type GetIdentityProviderResponses = {
         oidcConfig?: {
             issuer: string;
             pkce: boolean;
+            enableRpInitiatedLogout?: boolean;
             clientId: string;
             clientSecret: string;
             authorizationEndpoint?: string;
@@ -38799,6 +38803,7 @@ export type UpdateIdentityProviderData = {
         oidcConfig?: {
             issuer: string;
             pkce: boolean;
+            enableRpInitiatedLogout?: boolean;
             clientId: string;
             clientSecret: string;
             authorizationEndpoint?: string;
@@ -38978,6 +38983,7 @@ export type UpdateIdentityProviderResponses = {
         oidcConfig?: {
             issuer: string;
             pkce: boolean;
+            enableRpInitiatedLogout?: boolean;
             clientId: string;
             clientSecret: string;
             authorizationEndpoint?: string;
