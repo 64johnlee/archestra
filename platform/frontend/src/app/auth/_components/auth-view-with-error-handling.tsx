@@ -20,8 +20,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import config from "@/lib/config";
-import { useAppName } from "@/lib/use-app-name";
+import config from "@/lib/config/config";
+import { useAppName } from "@/lib/hooks/use-app-name";
 import { SignOutWithIdpLogout } from "./sign-out-with-idp-logout";
 
 const { IdentityProviderSelector } = config.enterpriseFeatures.core
@@ -33,7 +33,7 @@ const { IdentityProviderSelector } = config.enterpriseFeatures.core
 
 const { usePublicIdentityProviders } = config.enterpriseFeatures.core
   ? // biome-ignore lint/style/noRestrictedImports: Conditional EE query import
-    await import("@/lib/identity-provider.query.ee")
+    await import("@/lib/auth/identity-provider.query.ee")
   : {
       usePublicIdentityProviders: () => ({
         data: [],

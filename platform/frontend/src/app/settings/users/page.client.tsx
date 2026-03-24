@@ -29,8 +29,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useHasPermissions } from "@/lib/auth.query";
-import config from "@/lib/config";
+import { DEFAULT_TABLE_LIMIT } from "@/consts";
+import { useHasPermissions } from "@/lib/auth/auth.query";
+import config from "@/lib/config/config";
 import {
   type Invitation,
   type Member,
@@ -47,7 +48,7 @@ import {
   useMemberSignupStatus,
 } from "@/lib/organization.query";
 import { useRoles } from "@/lib/role.query";
-import { cn, DEFAULT_TABLE_LIMIT } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useSetSettingsAction } from "../layout";
 
 export default function UsersPageClient() {

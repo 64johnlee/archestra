@@ -13,13 +13,13 @@ vi.mock("@/lib/clients/auth/auth-client", () => ({
   },
 }));
 
-vi.mock("@/lib/auth.query", () => ({
+vi.mock("@/lib/auth/auth.query", () => ({
   useDefaultCredentialsEnabled: (...args: unknown[]) =>
     mockUseDefaultCredentialsEnabled(...args),
   useHasPermissions: (...args: unknown[]) => mockUseHasPermissions(...args),
 }));
 
-vi.mock("@/lib/config.query", () => ({
+vi.mock("@/lib/config/config.query", () => ({
   useFeature: (...args: unknown[]) => mockUseFeature(...args),
 }));
 
@@ -27,7 +27,7 @@ const mockConfig = {
   disableBasicAuth: false,
 };
 
-vi.mock("@/lib/config", () => ({
+vi.mock("@/lib/config/config", () => ({
   default: new Proxy(
     {},
     {

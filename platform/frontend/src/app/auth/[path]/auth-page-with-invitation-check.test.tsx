@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useBackendConnectivity } from "@/lib/backend-connectivity";
-import { useInvitationCheck } from "@/lib/invitation.query";
+import { useInvitationCheck } from "@/lib/auth/invitation.query";
+import { useBackendConnectivity } from "@/lib/config/backend-connectivity";
 import { AuthPageWithInvitationCheck } from "./auth-page-with-invitation-check";
 
 // Mock Next.js navigation
@@ -12,16 +12,16 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Mock invitation query
-vi.mock("@/lib/invitation.query", () => ({
+vi.mock("@/lib/auth/invitation.query", () => ({
   useInvitationCheck: vi.fn(),
 }));
 
 // Mock backend connectivity
-vi.mock("@/lib/backend-connectivity", () => ({
+vi.mock("@/lib/config/backend-connectivity", () => ({
   useBackendConnectivity: vi.fn(),
 }));
 
-vi.mock("@/lib/use-app-name", () => ({
+vi.mock("@/lib/hooks/use-app-name", () => ({
   useAppName: () => "Sparky",
 }));
 
@@ -31,7 +31,7 @@ const mockConfig = vi.hoisted(() => ({
   enterpriseFeatures: { core: false },
 }));
 
-vi.mock("@/lib/config", () => ({
+vi.mock("@/lib/config/config", () => ({
   default: new Proxy(
     {},
     {

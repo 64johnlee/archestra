@@ -15,8 +15,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import config from "@/lib/config";
-import { useInvitationCheck } from "@/lib/invitation.query";
+import { useInvitationCheck } from "@/lib/auth/invitation.query";
+import config from "@/lib/config/config";
 import { getValidatedRedirectPath } from "@/lib/utils/redirect-validation";
 
 export function AuthPageWithInvitationCheck({ path }: { path: string }) {
