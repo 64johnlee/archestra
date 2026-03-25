@@ -709,6 +709,25 @@ const config = {
   vault: {
     token: process.env.ARCHESTRA_HASHICORP_VAULT_TOKEN || DEFAULT_VAULT_TOKEN,
   },
+  mcpSandbox: {
+    /**
+     * Optional wildcard domain for per-server sandbox origins.
+     * When set (e.g. "mcp.example.com"), each MCP server gets a hash-based
+     * subdomain (e.g. "a1b2c3d4e5f6.mcp.example.com") with a real origin,
+     * enabling localStorage, CORS, and OAuth for MCP Apps.
+     * Requires wildcard DNS + TLS for *.{domain}.
+     * When null (default), sandbox uses opaque origin (single-port, zero config).
+     */
+    domain: process.env.ARCHESTRA_MCP_SANDBOX_DOMAIN || null,
+    /** Path to the sandbox proxy HTML file (co-located in backend static dir). */
+    filePath: path.resolve(__dirname, "static/mcp-sandbox-proxy.html"),
+    /**
+     * Explicitly configured origins that are allowed to embed the sandbox iframe.
+     * Empty array means no restriction (open / dev deployment).
+     * Mirrors the CORS/trusted-origin configuration so all three stay in sync.
+     */
+    allowedOrigins: addLoopbackEquivalents(getConfiguredOrigins()),
+  },
   observability: {
     otel: {
       captureContent: process.env.ARCHESTRA_OTEL_CAPTURE_CONTENT !== "false",
