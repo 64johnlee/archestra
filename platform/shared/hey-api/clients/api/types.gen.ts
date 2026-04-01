@@ -16915,6 +16915,10 @@ export type GetChatConversationsResponses = {
             agentType: 'profile' | 'mcp_gateway' | 'llm_proxy' | 'agent';
             llmApiKeyId: string | null;
         } | null;
+        share: {
+            id: string;
+            visibility: 'organization' | 'team' | 'user';
+        } | null;
         messages: Array<unknown>;
     }>;
 };
@@ -17020,6 +17024,10 @@ export type CreateChatConversationResponses = {
             systemPrompt: string | null;
             agentType: 'profile' | 'mcp_gateway' | 'llm_proxy' | 'agent';
             llmApiKeyId: string | null;
+        } | null;
+        share: {
+            id: string;
+            visibility: 'organization' | 'team' | 'user';
         } | null;
         messages: Array<unknown>;
     };
@@ -17202,6 +17210,10 @@ export type GetChatConversationResponses = {
             agentType: 'profile' | 'mcp_gateway' | 'llm_proxy' | 'agent';
             llmApiKeyId: string | null;
         } | null;
+        share: {
+            id: string;
+            visibility: 'organization' | 'team' | 'user';
+        } | null;
         messages: Array<unknown>;
     };
 };
@@ -17311,6 +17323,10 @@ export type UpdateChatConversationResponses = {
             systemPrompt: string | null;
             agentType: 'profile' | 'mcp_gateway' | 'llm_proxy' | 'agent';
             llmApiKeyId: string | null;
+        } | null;
+        share: {
+            id: string;
+            visibility: 'organization' | 'team' | 'user';
         } | null;
         messages: Array<unknown>;
     };
@@ -17557,8 +17573,10 @@ export type GetConversationShareResponses = {
         conversationId: string;
         organizationId: string;
         createdByUserId: string;
-        visibility: 'organization';
+        visibility: 'organization' | 'team' | 'user';
         createdAt: string;
+        teamIds: Array<string>;
+        userIds: Array<string>;
     } | null;
 };
 
@@ -17566,7 +17584,9 @@ export type GetConversationShareResponse = GetConversationShareResponses[keyof G
 
 export type ShareConversationData = {
     body: {
-        visibility: 'organization';
+        visibility: 'organization' | 'team' | 'user';
+        teamIds?: Array<string>;
+        userIds?: Array<string>;
     };
     path: {
         id: string;
@@ -17643,8 +17663,10 @@ export type ShareConversationResponses = {
         conversationId: string;
         organizationId: string;
         createdByUserId: string;
-        visibility: 'organization';
+        visibility: 'organization' | 'team' | 'user';
         createdAt: string;
+        teamIds: Array<string>;
+        userIds: Array<string>;
     };
 };
 
@@ -17745,6 +17767,10 @@ export type GetSharedConversationResponses = {
             systemPrompt: string | null;
             agentType: 'profile' | 'mcp_gateway' | 'llm_proxy' | 'agent';
             llmApiKeyId: string | null;
+        } | null;
+        share: {
+            id: string;
+            visibility: 'organization' | 'team' | 'user';
         } | null;
         messages: Array<unknown>;
         sharedByUserId: string;
@@ -17850,6 +17876,10 @@ export type ForkSharedConversationResponses = {
             systemPrompt: string | null;
             agentType: 'profile' | 'mcp_gateway' | 'llm_proxy' | 'agent';
             llmApiKeyId: string | null;
+        } | null;
+        share: {
+            id: string;
+            visibility: 'organization' | 'team' | 'user';
         } | null;
         messages: Array<unknown>;
     };
@@ -17958,6 +17988,10 @@ export type GenerateChatConversationTitleResponses = {
             agentType: 'profile' | 'mcp_gateway' | 'llm_proxy' | 'agent';
             llmApiKeyId: string | null;
         } | null;
+        share: {
+            id: string;
+            visibility: 'organization' | 'team' | 'user';
+        } | null;
         messages: Array<unknown>;
     };
 };
@@ -18063,6 +18097,10 @@ export type UpdateChatMessageResponses = {
             systemPrompt: string | null;
             agentType: 'profile' | 'mcp_gateway' | 'llm_proxy' | 'agent';
             llmApiKeyId: string | null;
+        } | null;
+        share: {
+            id: string;
+            visibility: 'organization' | 'team' | 'user';
         } | null;
         messages: Array<unknown>;
     };
