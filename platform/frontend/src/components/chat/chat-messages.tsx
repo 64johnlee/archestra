@@ -1,6 +1,7 @@
 import type { UIMessage } from "@ai-sdk/react";
 import {
   type ArchestraToolShortName,
+  type archestraApiTypes,
   extractMcpToolError,
   parseFullToolName,
   SWAP_AGENT_FAILED_POKE_TEXT,
@@ -92,7 +93,18 @@ import { InlineChatError } from "./inline-chat-error";
 import { hasKnowledgeBaseToolCall } from "./knowledge-graph-citations";
 import { McpAppSection, type McpToolOutput } from "./mcp-app-container";
 import { McpInstallDialogs } from "./mcp-install-dialogs";
+import {
+  findScrollContainer,
+  PreexistingUnsafeContextDivider,
+  SensitiveContextStickyIndicator,
+  shouldShowStickyBoundaryIndicator,
+  UnsafeContextStartsHereDivider,
+} from "./message-boundary-divider";
 import { PolicyDeniedTool } from "./policy-denied-tool";
+import {
+  getSwapToolShortName,
+  SwapAgentBoundaryDivider,
+} from "./swap-agent-boundary";
 import { TodoWriteTool } from "./todo-write-tool";
 import { ToolErrorLogsButton } from "./tool-error-logs-button";
 import { ToolStatusRow } from "./tool-status-row";
@@ -124,6 +136,7 @@ interface ChatMessagesProps {
   agentName?: string;
   selectedModel?: string;
   modelSource?: ModelSource | null;
+  unsafeContextBoundary?: archestraApiTypes.GetInteractionResponses["200"]["unsafeContextBoundary"];
 }
 
 // Type guards for tool parts
@@ -162,6 +175,7 @@ export function ChatMessages({
   agentName,
   selectedModel,
   modelSource,
+  unsafeContextBoundary,
 }: ChatMessagesProps) {
   const isStreamingStalled = useStreamingStallDetection(messages, status);
   const { data: authSession } = useSession();
@@ -172,6 +186,9 @@ export function ChatMessages({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const { data: canExpandToolCalls } = useHasPermissions({
     chatExpandToolCalls: ["enable"],
+  });
+  const { data: canReadToolPolicy } = useHasPermissions({
+    toolPolicy: ["read"],
   });
   const { data: canReadMcpRegistry } = useHasPermissions({
     mcpRegistry: ["read"],
@@ -310,8 +327,57 @@ export function ChatMessages({
     () => filterOptimisticToolCalls(messages, optimisticToolCalls),
     [messages, optimisticToolCalls],
   );
+  const unsafeBoundaryRef = useRef<HTMLDivElement>(null);
+  const [showStickyUnsafeIndicator, setShowStickyUnsafeIndicator] =
+    useState(false);
 
   const isResponseInProgress = status === "streaming" || status === "submitted";
+  const inferredUnsafeTextBoundary = useMemo(
+    () =>
+      inferUnsafeTextBoundary({
+        messages,
+        canReadToolPolicy: !!canReadToolPolicy,
+        unsafeContextBoundary,
+      }),
+    [messages, canReadToolPolicy, unsafeContextBoundary],
+  );
+
+  useEffect(() => {
+    const boundaryElement = unsafeBoundaryRef.current;
+    if (!boundaryElement) {
+      setShowStickyUnsafeIndicator(false);
+      return;
+    }
+
+    const scrollContainer = findScrollContainer(boundaryElement);
+    if (!scrollContainer) {
+      setShowStickyUnsafeIndicator(false);
+      return;
+    }
+
+    const updateStickyState = () => {
+      const boundaryRect = boundaryElement.getBoundingClientRect();
+      const containerRect = scrollContainer.getBoundingClientRect();
+      setShowStickyUnsafeIndicator(
+        shouldShowStickyBoundaryIndicator({
+          boundaryTop: boundaryRect.top,
+          boundaryBottom: boundaryRect.bottom,
+          containerTop: containerRect.top,
+        }),
+      );
+    };
+
+    updateStickyState();
+    scrollContainer.addEventListener("scroll", updateStickyState, {
+      passive: true,
+    });
+    window.addEventListener("resize", updateStickyState);
+
+    return () => {
+      scrollContainer.removeEventListener("scroll", updateStickyState);
+      window.removeEventListener("resize", updateStickyState);
+    };
+  });
 
   // Only auto-scroll on content resize during streaming.
   // When idle, user interactions like expanding tool calls should not
@@ -362,6 +428,12 @@ export function ChatMessages({
     >
       <ConversationContent>
         <div className="max-w-4xl mx-auto relative pb-8">
+          <SensitiveContextStickyIndicator
+            visible={showStickyUnsafeIndicator}
+          />
+          {unsafeContextBoundary?.kind === "preexisting_untrusted" && (
+            <PreexistingUnsafeContextDivider dividerRef={unsafeBoundaryRef} />
+          )}
           {messages.map((message, idx) => {
             // Hide the auto-poke message sent after agent swap
             if (!isDebugging && isSwapAgentPokeMessage(message)) return null;
@@ -394,21 +466,36 @@ export function ChatMessages({
                     if (groupMap.has(i)) {
                       const group = groupMap.get(i);
                       if (!group) return null;
-                      return (
-                        <CompactToolGroup
-                          key={getCompactGroupKey(message.id, group.startIndex)}
-                          tools={group.entries.map((entry) => ({
-                            key: getToolEntryKey(message.id, entry),
-                            toolName: entry.toolName,
-                            part: entry.part,
-                            toolResultPart: entry.toolResultPart,
-                            errorText: entry.errorText,
-                          }))}
-                          toolIconMap={toolIconMap}
-                          canExpandToolCalls={canExpandToolCalls}
-                          onToolApprovalResponse={onToolApprovalResponse}
-                        />
-                      );
+                      return renderCompactGroupWithUnsafeContextDivider({
+                        partKey: getCompactGroupKey(
+                          message.id,
+                          group.startIndex,
+                        ),
+                        parts: group.entries.map(
+                          (entry) => entry.toolResultPart ?? entry.part,
+                        ),
+                        dividerRef: unsafeBoundaryRef,
+                        unsafeContextBoundary,
+                        canReadToolPolicy: !!canReadToolPolicy,
+                        renderedPart: (
+                          <CompactToolGroup
+                            key={getCompactGroupKey(
+                              message.id,
+                              group.startIndex,
+                            )}
+                            tools={group.entries.map((entry) => ({
+                              key: getToolEntryKey(message.id, entry),
+                              toolName: entry.toolName,
+                              part: entry.part,
+                              toolResultPart: entry.toolResultPart,
+                              errorText: entry.errorText,
+                            }))}
+                            toolIconMap={toolIconMap}
+                            canExpandToolCalls={canExpandToolCalls}
+                            onToolApprovalResponse={onToolApprovalResponse}
+                          />
+                        ),
+                      });
                     }
 
                     // Skip parts consumed by compact groups
@@ -444,19 +531,39 @@ export function ChatMessages({
                         // Anthropic sends policy denials as text blocks (see MessageTool for OpenAI path)
                         const policyDenied = parsePolicyDenied(part.text);
                         if (policyDenied) {
+                          const shouldRenderPolicyDeniedUnsafeBoundary =
+                            !!canReadToolPolicy &&
+                            policyDenied.unsafeContextActiveAtRequestStart &&
+                            !hasUnsafeBoundaryBefore({
+                              messages,
+                              beforeMessageIndex: idx,
+                              beforePartIndex: i,
+                              unsafeContextBoundary,
+                              inferredUnsafeTextBoundary,
+                            });
                           return (
-                            <PolicyDeniedTool
-                              key={partKey}
-                              policyDenied={policyDenied}
-                              {...(agentId
-                                ? { editable: true, profileId: agentId }
-                                : { editable: false })}
-                            />
+                            <Fragment key={partKey}>
+                              {shouldRenderPolicyDeniedUnsafeBoundary && (
+                                <PreexistingUnsafeContextDivider
+                                  dividerRef={unsafeBoundaryRef}
+                                />
+                              )}
+                              <PolicyDeniedTool
+                                policyDenied={policyDenied}
+                                {...(agentId
+                                  ? { editable: true, profileId: agentId }
+                                  : { editable: false })}
+                              />
+                            </Fragment>
                           );
                         }
 
                         // Use editable component for assistant messages
                         if (message.role === "assistant") {
+                          const shouldRenderInferredUnsafeBoundary =
+                            inferredUnsafeTextBoundary?.messageId ===
+                              message.id &&
+                            inferredUnsafeTextBoundary.partIndex === i;
                           if (
                             hasMessageAuthToolError(message) &&
                             isAuthInstructionText(part.text)
@@ -605,6 +712,11 @@ export function ChatMessages({
 
                           return (
                             <Fragment key={partKey}>
+                              {shouldRenderInferredUnsafeBoundary && (
+                                <UnsafeContextStartsHereDivider
+                                  dividerRef={unsafeBoundaryRef}
+                                />
+                              )}
                               <EditableAssistantMessage
                                 messageId={message.id}
                                 partIndex={i}
@@ -804,37 +916,44 @@ export function ChatMessages({
                           toolResultPart = nextPart;
                         }
 
-                        return (
-                          <MessageTool
-                            part={part}
-                            key={partKey}
-                            toolResultPart={toolResultPart}
-                            toolName={toolName}
-                            agentId={agentId}
-                            isDebugging={isDebugging}
-                            canExpandToolCalls={canExpandToolCalls}
-                            onToolApprovalResponse={onToolApprovalResponse}
-                            onInstallMcp={
-                              orchestrator.triggerInstallByCatalogId
-                            }
-                            onReauthMcp={
-                              orchestrator.triggerReauthByCatalogIdAndServerId
-                            }
-                            getToolShortName={getToolShortName}
-                            toolIconMap={toolIconMap}
-                            earlyToolUiData={
-                              part.toolCallId
-                                ? earlyToolUiStarts[part.toolCallId]
-                                : undefined
-                            }
-                            onSendMessage={(text) =>
-                              session?.sendMessage({
-                                role: "user",
-                                parts: [{ type: "text", text }],
-                              })
-                            }
-                          />
-                        );
+                        return renderPartWithUnsafeContextDivider({
+                          partKey,
+                          part: toolResultPart ?? part,
+                          dividerRef: unsafeBoundaryRef,
+                          unsafeContextBoundary,
+                          canReadToolPolicy: !!canReadToolPolicy,
+                          renderedPart: (
+                            <MessageTool
+                              part={part}
+                              key={partKey}
+                              toolResultPart={toolResultPart}
+                              toolName={toolName}
+                              agentId={agentId}
+                              isDebugging={isDebugging}
+                              canExpandToolCalls={canExpandToolCalls}
+                              onToolApprovalResponse={onToolApprovalResponse}
+                              onInstallMcp={
+                                orchestrator.triggerInstallByCatalogId
+                              }
+                              onReauthMcp={
+                                orchestrator.triggerReauthByCatalogIdAndServerId
+                              }
+                              getToolShortName={getToolShortName}
+                              toolIconMap={toolIconMap}
+                              earlyToolUiData={
+                                part.toolCallId
+                                  ? earlyToolUiStarts[part.toolCallId]
+                                  : undefined
+                              }
+                              onSendMessage={(text) =>
+                                session?.sendMessage({
+                                  role: "user",
+                                  parts: [{ type: "text", text }],
+                                })
+                              }
+                            />
+                          ),
+                        });
                       }
 
                       default: {
@@ -882,33 +1001,40 @@ export function ChatMessages({
                             output: outputPart?.output,
                           }) as ToolUIPart;
 
-                          return (
-                            <MessageTool
-                              key={`${message.id}-${tcId}`}
-                              part={effectivePart}
-                              toolResultPart={outputPart}
-                              toolName={toolName}
-                              agentId={agentId}
-                              isDebugging={isDebugging}
-                              canExpandToolCalls={canExpandToolCalls}
-                              onToolApprovalResponse={onToolApprovalResponse}
-                              onInstallMcp={
-                                orchestrator.triggerInstallByCatalogId
-                              }
-                              onReauthMcp={
-                                orchestrator.triggerReauthByCatalogIdAndServerId
-                              }
-                              getToolShortName={getToolShortName}
-                              toolIconMap={toolIconMap}
-                              onSendMessage={(text) =>
-                                session?.sendMessage({
-                                  role: "user",
-                                  parts: [{ type: "text", text }],
-                                })
-                              }
-                              earlyToolUiData={earlyToolUiStarts[tcId]}
-                            />
-                          );
+                          return renderPartWithUnsafeContextDivider({
+                            partKey,
+                            part: outputPart ?? effectivePart,
+                            dividerRef: unsafeBoundaryRef,
+                            unsafeContextBoundary,
+                            canReadToolPolicy: !!canReadToolPolicy,
+                            renderedPart: (
+                              <MessageTool
+                                key={`${message.id}-${tcId}`}
+                                part={effectivePart}
+                                toolResultPart={outputPart}
+                                toolName={toolName}
+                                agentId={agentId}
+                                isDebugging={isDebugging}
+                                canExpandToolCalls={canExpandToolCalls}
+                                onToolApprovalResponse={onToolApprovalResponse}
+                                onInstallMcp={
+                                  orchestrator.triggerInstallByCatalogId
+                                }
+                                onReauthMcp={
+                                  orchestrator.triggerReauthByCatalogIdAndServerId
+                                }
+                                getToolShortName={getToolShortName}
+                                toolIconMap={toolIconMap}
+                                onSendMessage={(text) =>
+                                  session?.sendMessage({
+                                    role: "user",
+                                    parts: [{ type: "text", text }],
+                                  })
+                                }
+                                earlyToolUiData={earlyToolUiStarts[tcId]}
+                              />
+                            ),
+                          });
                         }
 
                         // Regular tool-* parts: skip if a data-tool-ui-start already
@@ -944,35 +1070,42 @@ export function ChatMessages({
                             toolResultPart = nextPart;
                           }
 
-                          return (
-                            <MessageTool
-                              part={part}
-                              key={partKey}
-                              toolResultPart={toolResultPart}
-                              toolName={toolName}
-                              agentId={agentId}
-                              isDebugging={isDebugging}
-                              canExpandToolCalls={canExpandToolCalls}
-                              onToolApprovalResponse={onToolApprovalResponse}
-                              onInstallMcp={
-                                orchestrator.triggerInstallByCatalogId
-                              }
-                              onReauthMcp={
-                                orchestrator.triggerReauthByCatalogIdAndServerId
-                              }
-                              getToolShortName={getToolShortName}
-                              toolIconMap={toolIconMap}
-                              earlyToolUiData={
-                                tcId ? earlyToolUiStarts[tcId] : undefined
-                              }
-                              onSendMessage={(text) =>
-                                session?.sendMessage({
-                                  role: "user",
-                                  parts: [{ type: "text", text }],
-                                })
-                              }
-                            />
-                          );
+                          return renderPartWithUnsafeContextDivider({
+                            partKey,
+                            part: toolResultPart ?? part,
+                            dividerRef: unsafeBoundaryRef,
+                            unsafeContextBoundary,
+                            canReadToolPolicy: !!canReadToolPolicy,
+                            renderedPart: (
+                              <MessageTool
+                                part={part}
+                                key={partKey}
+                                toolResultPart={toolResultPart}
+                                toolName={toolName}
+                                agentId={agentId}
+                                isDebugging={isDebugging}
+                                canExpandToolCalls={canExpandToolCalls}
+                                onToolApprovalResponse={onToolApprovalResponse}
+                                onInstallMcp={
+                                  orchestrator.triggerInstallByCatalogId
+                                }
+                                onReauthMcp={
+                                  orchestrator.triggerReauthByCatalogIdAndServerId
+                                }
+                                getToolShortName={getToolShortName}
+                                toolIconMap={toolIconMap}
+                                earlyToolUiData={
+                                  tcId ? earlyToolUiStarts[tcId] : undefined
+                                }
+                                onSendMessage={(text) =>
+                                  session?.sendMessage({
+                                    role: "user",
+                                    parts: [{ type: "text", text }],
+                                  })
+                                }
+                              />
+                            ),
+                          });
                         }
 
                         // Skip step-start and other non-renderable parts
@@ -981,10 +1114,13 @@ export function ChatMessages({
                     }
                   });
                 })()}
-                <SwapAgentDivider
-                  message={message}
-                  getToolShortName={getToolShortName}
-                />
+                {message.role === "assistant" && (
+                  <SwapAgentBoundaryDivider
+                    parts={message.parts ?? []}
+                    getToolShortName={getToolShortName}
+                    hasToolError={hasSwapToolError}
+                  />
+                )}
               </div>
             );
           })}
@@ -1666,86 +1802,395 @@ function isSwapAgentPokeMessage(message: UIMessage): boolean {
   );
 }
 
-function SwapAgentDivider({
-  message,
-  getToolShortName,
+function renderPartWithUnsafeContextDivider({
+  partKey,
+  part,
+  renderedPart,
+  dividerRef,
+  unsafeContextBoundary,
+  canReadToolPolicy,
 }: {
-  message: UIMessage;
-  getToolShortName: (toolName: string) => ArchestraToolShortName | null;
+  partKey: string;
+  part: DynamicToolUIPart | ToolUIPart;
+  renderedPart: React.ReactNode;
+  dividerRef: React.Ref<HTMLDivElement>;
+  unsafeContextBoundary?: archestraApiTypes.GetInteractionResponses["200"]["unsafeContextBoundary"];
+  canReadToolPolicy: boolean;
 }) {
-  if (message.role !== "assistant") return null;
-
-  for (const part of message.parts ?? []) {
-    if (!isToolPart(part)) continue;
-    const toolName = getRenderedToolName(part);
-    if (!toolName) continue;
-    const swapToolShortName = getSwapToolShortName({
-      toolName,
-      getToolShortName,
-    });
-    if (
-      swapToolShortName !== TOOL_SWAP_AGENT_SHORT_NAME &&
-      swapToolShortName !== TOOL_SWAP_TO_DEFAULT_AGENT_SHORT_NAME
-    ) {
-      continue;
-    }
-
-    // Don't show divider if the swap tool errored
-    if (hasSwapToolError(part, message.parts ?? [])) return null;
-
-    // Determine agent name for the divider
-    let agentName = "another agent";
-    const isSwapToDefault =
-      swapToolShortName === TOOL_SWAP_TO_DEFAULT_AGENT_SHORT_NAME;
-
-    if (isSwapToDefault) {
-      agentName = "default agent";
-    } else {
-      // Try tool call input first (always available), then fall back to output
-      const input = (part as Record<string, unknown>).input as
-        | Record<string, unknown>
-        | undefined;
-      if (input?.agent_name && typeof input.agent_name === "string") {
-        agentName = input.agent_name;
-      } else {
-        const output = part.output ?? part.state;
-        if (typeof output === "string") {
-          try {
-            const parsed = JSON.parse(output);
-            if (parsed?.agent_name) agentName = parsed.agent_name;
-          } catch {
-            // ignore
-          }
-        }
-      }
-    }
-
-    return (
-      <div className="flex items-center gap-3 py-2">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted-foreground">
-          Switched to {agentName}
-        </span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-    );
+  if (!canReadToolPolicy) {
+    return renderedPart;
   }
 
-  return null;
+  const resolvedUnsafeContextBoundary =
+    extractUnsafeContextBoundaryFromToolOutput(part.output) ??
+    unsafeContextBoundary;
+
+  if (
+    !resolvedUnsafeContextBoundary ||
+    resolvedUnsafeContextBoundary.kind !== "tool_result"
+  ) {
+    return renderedPart;
+  }
+
+  if (
+    !toolPartMatchesUnsafeContextBoundary(part, resolvedUnsafeContextBoundary)
+  ) {
+    return renderedPart;
+  }
+
+  return (
+    <Fragment key={`${partKey}-unsafe-context-boundary`}>
+      {renderedPart}
+      <UnsafeContextStartsHereDivider dividerRef={dividerRef} />
+    </Fragment>
+  );
 }
 
-function getRenderedToolName(
+function renderCompactGroupWithUnsafeContextDivider({
+  partKey,
+  parts,
+  renderedPart,
+  dividerRef,
+  unsafeContextBoundary,
+  canReadToolPolicy,
+}: {
+  partKey: string;
+  parts: Array<DynamicToolUIPart | ToolUIPart>;
+  renderedPart: React.ReactNode;
+  dividerRef: React.Ref<HTMLDivElement>;
+  unsafeContextBoundary?: archestraApiTypes.GetInteractionResponses["200"]["unsafeContextBoundary"];
+  canReadToolPolicy: boolean;
+}) {
+  if (!canReadToolPolicy) {
+    return renderedPart;
+  }
+
+  const resolvedUnsafeContextBoundary =
+    parts
+      .map((part) => extractUnsafeContextBoundaryFromToolOutput(part.output))
+      .find((boundary) => boundary?.kind === "tool_result") ??
+    unsafeContextBoundary;
+
+  if (
+    !resolvedUnsafeContextBoundary ||
+    resolvedUnsafeContextBoundary.kind !== "tool_result"
+  ) {
+    return renderedPart;
+  }
+
+  if (
+    !parts.some((part) =>
+      toolPartMatchesUnsafeContextBoundary(part, resolvedUnsafeContextBoundary),
+    )
+  ) {
+    return renderedPart;
+  }
+
+  return (
+    <Fragment key={`${partKey}-unsafe-context-boundary`}>
+      {renderedPart}
+      <UnsafeContextStartsHereDivider dividerRef={dividerRef} />
+    </Fragment>
+  );
+}
+
+function extractUnsafeContextBoundaryFromToolOutput(
+  output: unknown,
+): archestraApiTypes.GetInteractionResponses["200"]["unsafeContextBoundary"] {
+  if (
+    typeof output === "object" &&
+    output !== null &&
+    "unsafeContextBoundary" in output
+  ) {
+    const topLevelUnsafeContextBoundary = output.unsafeContextBoundary;
+    if (
+      typeof topLevelUnsafeContextBoundary === "object" &&
+      topLevelUnsafeContextBoundary !== null &&
+      "kind" in topLevelUnsafeContextBoundary &&
+      topLevelUnsafeContextBoundary.kind === "tool_result" &&
+      "toolCallId" in topLevelUnsafeContextBoundary &&
+      typeof topLevelUnsafeContextBoundary.toolCallId === "string" &&
+      "toolName" in topLevelUnsafeContextBoundary &&
+      typeof topLevelUnsafeContextBoundary.toolName === "string" &&
+      "reason" in topLevelUnsafeContextBoundary &&
+      isUnsafeContextBoundaryReason(topLevelUnsafeContextBoundary.reason)
+    ) {
+      return {
+        kind: "tool_result",
+        reason: topLevelUnsafeContextBoundary.reason,
+        toolCallId: topLevelUnsafeContextBoundary.toolCallId,
+        toolName: topLevelUnsafeContextBoundary.toolName,
+      };
+    }
+  }
+
+  if (
+    typeof output !== "object" ||
+    output === null ||
+    !("_meta" in output) ||
+    typeof output._meta !== "object" ||
+    output._meta === null ||
+    !("unsafeContextBoundary" in output._meta)
+  ) {
+    return undefined;
+  }
+
+  const unsafeContextBoundary = output._meta.unsafeContextBoundary;
+  if (
+    typeof unsafeContextBoundary !== "object" ||
+    unsafeContextBoundary === null ||
+    !("kind" in unsafeContextBoundary) ||
+    unsafeContextBoundary.kind !== "tool_result" ||
+    !("toolCallId" in unsafeContextBoundary) ||
+    typeof unsafeContextBoundary.toolCallId !== "string" ||
+    !("toolName" in unsafeContextBoundary) ||
+    typeof unsafeContextBoundary.toolName !== "string" ||
+    !("reason" in unsafeContextBoundary) ||
+    !isUnsafeContextBoundaryReason(unsafeContextBoundary.reason)
+  ) {
+    return undefined;
+  }
+
+  return {
+    kind: "tool_result",
+    reason: unsafeContextBoundary.reason,
+    toolCallId: unsafeContextBoundary.toolCallId,
+    toolName: unsafeContextBoundary.toolName,
+  };
+}
+
+type UnsafeContextBoundaryReason = NonNullable<
+  archestraApiTypes.GetInteractionResponses["200"]["unsafeContextBoundary"]
+>["reason"];
+
+const unsafeContextBoundaryReasonMap = {
+  agent_configured_untrusted: true,
+  inherited_from_parent: true,
+  tool_result_marked_untrusted: true,
+  tool_result_blocked: true,
+} as const satisfies Record<UnsafeContextBoundaryReason, true>;
+
+function isUnsafeContextBoundaryReason(
+  reason: unknown,
+): reason is UnsafeContextBoundaryReason {
+  return typeof reason === "string" && reason in unsafeContextBoundaryReasonMap;
+}
+
+function toolPartMatchesUnsafeContextBoundary(
   part: DynamicToolUIPart | ToolUIPart,
-): string | null {
-  if (part.type === "dynamic-tool" && typeof part.toolName === "string") {
+  boundary: Extract<
+    NonNullable<
+      archestraApiTypes.GetInteractionResponses["200"]["unsafeContextBoundary"]
+    >,
+    { kind: "tool_result" }
+  >,
+): boolean {
+  if (part.toolCallId === boundary.toolCallId) {
+    return true;
+  }
+
+  const partToolName = getToolNameFromPart(part);
+  return partToolName === boundary.toolName;
+}
+
+function getToolNameFromPart(
+  part: DynamicToolUIPart | ToolUIPart,
+): string | undefined {
+  if ("toolName" in part && typeof part.toolName === "string") {
     return part.toolName;
   }
 
-  if (part.type.startsWith("tool-")) {
+  if (typeof part.type === "string" && part.type.startsWith("tool-")) {
     return part.type.replace("tool-", "");
   }
 
-  return null;
+  return undefined;
+}
+
+function inferUnsafeTextBoundary(params: {
+  messages: UIMessage[];
+  canReadToolPolicy: boolean;
+  unsafeContextBoundary?: archestraApiTypes.GetInteractionResponses["200"]["unsafeContextBoundary"];
+}): { messageId: string; partIndex: number } | undefined {
+  if (!params.canReadToolPolicy) {
+    return undefined;
+  }
+
+  if (params.unsafeContextBoundary?.kind === "tool_result") {
+    return undefined;
+  }
+
+  const hasExplicitToolBoundary = params.messages.some((message) =>
+    (message.parts ?? []).some(
+      (part) =>
+        isToolPart(part) &&
+        extractUnsafeContextBoundaryFromToolOutput(part.output)?.kind ===
+          "tool_result",
+    ),
+  );
+  if (hasExplicitToolBoundary) {
+    return undefined;
+  }
+
+  const firstSensitiveDenialIndex = params.messages.findIndex((message) =>
+    (message.parts ?? []).some(
+      (part) =>
+        part.type === "text" &&
+        parsePolicyDenied(part.text)?.unsafeContextActiveAtRequestStart,
+    ),
+  );
+  if (firstSensitiveDenialIndex <= 0) {
+    return undefined;
+  }
+
+  for (
+    let messageIndex = 0;
+    messageIndex < firstSensitiveDenialIndex;
+    messageIndex++
+  ) {
+    const message = params.messages[messageIndex];
+    if (message.role !== "assistant" || !message.id) {
+      continue;
+    }
+
+    let sawToolOutput = false;
+    for (
+      let partIndex = 0;
+      partIndex < (message.parts?.length ?? 0);
+      partIndex++
+    ) {
+      const part = message.parts[partIndex];
+      if (isToolPart(part) && part.state === "output-available") {
+        sawToolOutput = true;
+        continue;
+      }
+
+      if (
+        sawToolOutput &&
+        part.type === "text" &&
+        typeof part.text === "string" &&
+        part.text.trim().length > 0
+      ) {
+        return {
+          messageId: message.id,
+          partIndex,
+        };
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function hasUnsafeBoundaryBefore(params: {
+  messages: UIMessage[];
+  beforeMessageIndex: number;
+  beforePartIndex: number;
+  unsafeContextBoundary?: archestraApiTypes.GetInteractionResponses["200"]["unsafeContextBoundary"];
+  inferredUnsafeTextBoundary?: { messageId: string; partIndex: number };
+}): boolean {
+  if (params.unsafeContextBoundary?.kind === "preexisting_untrusted") {
+    return true;
+  }
+
+  if (
+    params.inferredUnsafeTextBoundary &&
+    isMessagePositionBefore({
+      messages: params.messages,
+      boundaryMessageId: params.inferredUnsafeTextBoundary.messageId,
+      boundaryPartIndex: params.inferredUnsafeTextBoundary.partIndex,
+      beforeMessageIndex: params.beforeMessageIndex,
+      beforePartIndex: params.beforePartIndex,
+    })
+  ) {
+    return true;
+  }
+
+  for (
+    let messageIndex = 0;
+    messageIndex <= params.beforeMessageIndex;
+    messageIndex++
+  ) {
+    const message = params.messages[messageIndex];
+    const lastPartIndex =
+      messageIndex === params.beforeMessageIndex
+        ? params.beforePartIndex - 1
+        : (message.parts?.length ?? 0) - 1;
+
+    for (let partIndex = 0; partIndex <= lastPartIndex; partIndex++) {
+      const part = message.parts?.[partIndex];
+      if (!part) {
+        continue;
+      }
+
+      if (
+        part.type === "text" &&
+        parsePolicyDenied(part.text)?.unsafeContextActiveAtRequestStart
+      ) {
+        return true;
+      }
+
+      if (
+        isToolPart(part) &&
+        part.state === "output-available" &&
+        matchesThreadUnsafeBoundary({
+          part,
+          unsafeContextBoundary: params.unsafeContextBoundary,
+        })
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function matchesThreadUnsafeBoundary(params: {
+  part: DynamicToolUIPart | ToolUIPart;
+  unsafeContextBoundary?: archestraApiTypes.GetInteractionResponses["200"]["unsafeContextBoundary"];
+}): boolean {
+  const boundaryFromOutput = extractUnsafeContextBoundaryFromToolOutput(
+    params.part.output,
+  );
+  if (boundaryFromOutput?.kind === "tool_result") {
+    return true;
+  }
+
+  if (params.unsafeContextBoundary?.kind !== "tool_result") {
+    return false;
+  }
+
+  return toolPartMatchesUnsafeContextBoundary(
+    params.part,
+    params.unsafeContextBoundary,
+  );
+}
+
+function isMessagePositionBefore(params: {
+  messages: UIMessage[];
+  boundaryMessageId: string;
+  boundaryPartIndex: number;
+  beforeMessageIndex: number;
+  beforePartIndex: number;
+}): boolean {
+  const boundaryMessageIndex = params.messages.findIndex(
+    (message) => message.id === params.boundaryMessageId,
+  );
+
+  if (boundaryMessageIndex === -1) {
+    return false;
+  }
+
+  if (boundaryMessageIndex < params.beforeMessageIndex) {
+    return true;
+  }
+
+  if (boundaryMessageIndex > params.beforeMessageIndex) {
+    return false;
+  }
+
+  return params.boundaryPartIndex < params.beforePartIndex;
 }
 
 function renderAssistantAuthPart(params: {
@@ -1820,21 +2265,6 @@ function isAuthInstructionText(text: string): boolean {
       text,
     )
   );
-}
-
-function getSwapToolShortName(params: {
-  toolName: string;
-  getToolShortName: (toolName: string) => ArchestraToolShortName | null;
-}) {
-  const shortName = params.getToolShortName(params.toolName);
-  if (
-    shortName === TOOL_SWAP_AGENT_SHORT_NAME ||
-    shortName === TOOL_SWAP_TO_DEFAULT_AGENT_SHORT_NAME
-  ) {
-    return shortName;
-  }
-
-  return null;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: Tool parts have dynamic structure

@@ -33,7 +33,6 @@ import {
   createLLMModelForAgent,
   detectProviderFromModel,
   isApiKeyRequired,
-  resolveProviderApiKey,
 } from "@/clients/llm-client";
 import config from "@/config";
 import { browserStreamFeature } from "@/features/browser-stream/services/browser-stream.feature";
@@ -50,7 +49,6 @@ import {
   TeamModel,
 } from "@/models";
 import { startActiveChatSpan } from "@/observability/tracing";
-import { resolveConversationLlmSelectionForAgent } from "@/services/conversation-llm-selection";
 import {
   promptNeedsRendering,
   renderSystemPrompt,
@@ -70,7 +68,9 @@ import {
   UpdateConversationSchema,
   UuidIdSchema,
 } from "@/types";
+import { resolveProviderApiKey } from "@/utils/llm-api-key-resolution";
 import {
+  resolveConversationLlmSelectionForAgent,
   resolveFastModelName,
   resolveSmartDefaultLlmForChat,
 } from "@/utils/llm-resolution";
