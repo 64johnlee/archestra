@@ -1264,12 +1264,17 @@ class McpClient {
         if (enterpriseTransportCredential) {
           localHeaders[enterpriseTransportCredential.headerName] =
             enterpriseTransportCredential.headerValue;
-        } else if (tokenAuth?.isExternalIdp && tokenAuth.rawToken) {
-          localHeaders.Authorization = `Bearer ${tokenAuth.rawToken}`;
         } else if (secrets.access_token) {
+          // Prefer upstream server credentials when available (e.g. GitHub PAT, OAuth token).
+          // This enables JWKS-authenticated users to access servers with their own credentials
+          // rather than propagating the IdP JWT which the upstream server wouldn't understand.
           localHeaders.Authorization = `Bearer ${secrets.access_token}`;
         } else if (secrets.raw_access_token) {
           localHeaders.Authorization = String(secrets.raw_access_token);
+        } else if (tokenAuth?.isExternalIdp && tokenAuth.rawToken) {
+          // Fallback: propagate external IdP JWT for end-to-end JWKS pattern
+          // (upstream server validates the same JWT against the IdP's JWKS)
+          localHeaders.Authorization = `Bearer ${tokenAuth.rawToken}`;
         }
 
         return new StreamableHTTPClientTransport(new URL(endpointUrl), {
@@ -1287,13 +1292,17 @@ class McpClient {
         if (enterpriseTransportCredential) {
           headers[enterpriseTransportCredential.headerName] =
             enterpriseTransportCredential.headerValue;
-        } else if (tokenAuth?.isExternalIdp && tokenAuth.rawToken) {
-          // Propagate external IdP JWT to the underlying MCP server
-          headers.Authorization = `Bearer ${tokenAuth.rawToken}`;
         } else if (secrets.access_token) {
+          // Prefer upstream server credentials when available (e.g. GitHub PAT, OAuth token).
+          // This enables JWKS-authenticated users to access servers with their own credentials
+          // rather than propagating the IdP JWT which the upstream server wouldn't understand.
           headers.Authorization = `Bearer ${secrets.access_token}`;
         } else if (secrets.raw_access_token) {
           headers.Authorization = String(secrets.raw_access_token);
+        } else if (tokenAuth?.isExternalIdp && tokenAuth.rawToken) {
+          // Fallback: propagate external IdP JWT for end-to-end JWKS pattern
+          // (upstream server validates the same JWT against the IdP's JWKS)
+          headers.Authorization = `Bearer ${tokenAuth.rawToken}`;
         }
 
         return new StreamableHTTPClientTransport(
