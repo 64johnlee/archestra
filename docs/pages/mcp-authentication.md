@@ -35,6 +35,12 @@ Endpoint discovery is automatic. The gateway exposes standard well-known endpoin
 - `/.well-known/oauth-protected-resource` (RFC 9728)
 - `/.well-known/oauth-authorization-server` (RFC 8414)
 
+#### Token lifetime
+
+Archestra returns the lifetime of its MCP OAuth access tokens through the standard `expires_in` field. The default lifetime is 1 year, which reduces unnecessary reconnects for MCP-native clients like desktop apps.
+
+Admins can change this in **Settings > MCP**. The setting is organization-wide and applies to newly issued Archestra MCP OAuth 2.1 access tokens.
+
 ### Bearer Token
 
 For direct API integrations, clients can authenticate using a static Bearer token with the header `Authorization: Bearer archestra_<token>`. Tokens can be scoped to a specific user, team, or organization. You can create and manage tokens in **Settings > Tokens**.
