@@ -1,5 +1,4 @@
-import type { SupportedProvider } from "@shared";
-import type { PartialUIMessage } from "@/components/message-thread";
+import type { SupportedProvider } from "../index";
 import AnthropicMessagesInteraction from "./llmProviders/anthropic";
 import AzureChatCompletionInteraction from "./llmProviders/azure";
 import AzureResponsesInteraction from "./llmProviders/azure-responses";
@@ -24,6 +23,7 @@ import PerplexityChatCompletionInteraction from "./llmProviders/perplexity";
 import VllmChatCompletionInteraction from "./llmProviders/vllm";
 import XaiChatCompletionInteraction from "./llmProviders/xai";
 import ZhipuaiChatCompletionInteraction from "./llmProviders/zhipuai";
+import type { PartialUIMessage } from "./types";
 
 type InteractionFactory = (interaction: Interaction) => InteractionUtils;
 
