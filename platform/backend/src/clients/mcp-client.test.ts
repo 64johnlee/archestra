@@ -3267,6 +3267,280 @@ describe("McpClient", () => {
         );
       });
 
+      test("uses a custom header name for static bearer credentials", async () => {
+        const customHeaderCatalog = await InternalMcpCatalogModel.create({
+          name: "custom-header-server",
+          serverType: "remote",
+          serverUrl: "https://custom-header.example.com/mcp",
+          userConfig: {
+            access_token: {
+              type: "string",
+              title: "Access Token",
+              description: "Bearer token",
+              required: true,
+              sensitive: true,
+              headerName: "x-api-key",
+            },
+          },
+        });
+
+        const customHeaderSecret = await secretManager().createSecret(
+          { access_token: "header-secret-token" },
+          "custom-header-secret",
+        );
+
+        const customHeaderServer = await McpServerModel.create({
+          name: "custom-header-server",
+          secretId: customHeaderSecret.id,
+          catalogId: customHeaderCatalog.id,
+          serverType: "remote",
+        });
+
+        const tool = await ToolModel.createToolIfNotExists({
+          name: "custom-header-server__list_items",
+          description: "List items with custom header auth",
+          parameters: {},
+          catalogId: customHeaderCatalog.id,
+        });
+
+        await AgentToolModel.create(agentId, tool.id, {
+          mcpServerId: customHeaderServer.id,
+        });
+
+        mockCallTool.mockResolvedValueOnce({
+          content: [{ type: "text", text: "Custom header response" }],
+          isError: false,
+        });
+
+        await mcpClient.executeToolCall(
+          {
+            id: "call_custom_header_auth",
+            name: "custom-header-server__list_items",
+            arguments: {},
+          },
+          agentId,
+        );
+
+        const { StreamableHTTPClientTransport } = await import(
+          "@modelcontextprotocol/sdk/client/streamableHttp.js"
+        );
+        const transportCalls = vi.mocked(StreamableHTTPClientTransport).mock
+          .calls;
+        const lastCall = transportCalls[transportCalls.length - 1];
+        const headers = lastCall[1]?.requestInit?.headers as Headers;
+        expect(headers.get("x-api-key")).toBe("header-secret-token");
+        expect(headers.get("authorization")).toBeNull();
+      });
+
+      test("treats lowercase authorization header names as satisfying the auth fallback", async () => {
+        const lowercaseAuthorizationCatalog =
+          await InternalMcpCatalogModel.create({
+            name: "lowercase-authorization-server",
+            serverType: "remote",
+            serverUrl: "https://lowercase-authorization.example.com/mcp",
+            userConfig: {
+              access_token: {
+                type: "string",
+                title: "Access Token",
+                description: "Bearer token",
+                required: true,
+                sensitive: true,
+                headerName: "authorization",
+              },
+            },
+          });
+
+        const lowercaseAuthorizationSecret = await secretManager().createSecret(
+          { access_token: "lowercase-auth-token" },
+          "lowercase-authorization-secret",
+        );
+
+        const lowercaseAuthorizationServer = await McpServerModel.create({
+          name: "lowercase-authorization-server",
+          secretId: lowercaseAuthorizationSecret.id,
+          catalogId: lowercaseAuthorizationCatalog.id,
+          serverType: "remote",
+        });
+
+        const tool = await ToolModel.createToolIfNotExists({
+          name: "lowercase-authorization-server__list_items",
+          description: "List items with lowercase authorization header",
+          parameters: {},
+          catalogId: lowercaseAuthorizationCatalog.id,
+        });
+
+        await AgentToolModel.create(agentId, tool.id, {
+          mcpServerId: lowercaseAuthorizationServer.id,
+        });
+
+        mockCallTool.mockResolvedValueOnce({
+          content: [{ type: "text", text: "Lowercase authorization response" }],
+          isError: false,
+        });
+
+        await mcpClient.executeToolCall(
+          {
+            id: "call_lowercase_authorization",
+            name: "lowercase-authorization-server__list_items",
+            arguments: {},
+          },
+          agentId,
+        );
+
+        const { StreamableHTTPClientTransport } = await import(
+          "@modelcontextprotocol/sdk/client/streamableHttp.js"
+        );
+        const transportCalls = vi.mocked(StreamableHTTPClientTransport).mock
+          .calls;
+        const lastCall = transportCalls[transportCalls.length - 1];
+        const headers = lastCall[1]?.requestInit?.headers as Headers;
+        expect(headers.get("authorization")).toBe(
+          "Bearer lowercase-auth-token",
+        );
+        expect(Array.from(headers.entries())).toEqual([
+          ["authorization", "Bearer lowercase-auth-token"],
+        ]);
+      });
+
+      test("falls back to Authorization header for legacy bearer credentials without headerName", async () => {
+        const legacyBearerCatalog = await InternalMcpCatalogModel.create({
+          name: "legacy-bearer-server",
+          serverType: "remote",
+          serverUrl: "https://legacy-bearer.example.com/mcp",
+          userConfig: {
+            access_token: {
+              type: "string",
+              title: "Access Token",
+              description: "Bearer token",
+              required: true,
+              sensitive: true,
+            },
+          },
+        });
+
+        const legacyBearerSecret = await secretManager().createSecret(
+          { access_token: "legacy-bearer-token" },
+          "legacy-bearer-secret",
+        );
+
+        const legacyBearerServer = await McpServerModel.create({
+          name: "legacy-bearer-server",
+          secretId: legacyBearerSecret.id,
+          catalogId: legacyBearerCatalog.id,
+          serverType: "remote",
+        });
+
+        const tool = await ToolModel.createToolIfNotExists({
+          name: "legacy-bearer-server__list_items",
+          description: "List items with legacy bearer auth",
+          parameters: {},
+          catalogId: legacyBearerCatalog.id,
+        });
+
+        await AgentToolModel.create(agentId, tool.id, {
+          mcpServerId: legacyBearerServer.id,
+        });
+
+        mockCallTool.mockResolvedValueOnce({
+          content: [{ type: "text", text: "Legacy bearer response" }],
+          isError: false,
+        });
+
+        await mcpClient.executeToolCall(
+          {
+            id: "call_legacy_bearer_auth",
+            name: "legacy-bearer-server__list_items",
+            arguments: {},
+          },
+          agentId,
+        );
+
+        const { StreamableHTTPClientTransport } = await import(
+          "@modelcontextprotocol/sdk/client/streamableHttp.js"
+        );
+        const transportCalls = vi.mocked(StreamableHTTPClientTransport).mock
+          .calls;
+        const lastCall = transportCalls[transportCalls.length - 1];
+        const headers = lastCall[1]?.requestInit?.headers as Headers;
+        expect(headers.get("authorization")).toBe("Bearer legacy-bearer-token");
+      });
+
+      test("sends additional static headers alongside the auth header", async () => {
+        const multiHeaderCatalog = await InternalMcpCatalogModel.create({
+          name: "multi-header-server",
+          serverType: "remote",
+          serverUrl: "https://multi-header.example.com/mcp",
+          userConfig: {
+            access_token: {
+              type: "string",
+              title: "Access Token",
+              description: "Bearer token",
+              required: true,
+              sensitive: true,
+              headerName: "x-api-key",
+            },
+            header_x_tenant_id: {
+              type: "string",
+              title: "x-tenant-id",
+              description: "Tenant ID",
+              required: true,
+              sensitive: true,
+              headerName: "x-tenant-id",
+            },
+          },
+        });
+
+        const multiHeaderSecret = await secretManager().createSecret(
+          {
+            access_token: "header-secret-token",
+            header_x_tenant_id: "tenant-42",
+          },
+          "multi-header-secret",
+        );
+
+        const multiHeaderServer = await McpServerModel.create({
+          name: "multi-header-server",
+          secretId: multiHeaderSecret.id,
+          catalogId: multiHeaderCatalog.id,
+          serverType: "remote",
+        });
+
+        const tool = await ToolModel.createToolIfNotExists({
+          name: "multi-header-server__get_info",
+          description: "Get info with multiple headers",
+          parameters: {},
+          catalogId: multiHeaderCatalog.id,
+        });
+
+        await AgentToolModel.create(agentId, tool.id, {
+          mcpServerId: multiHeaderServer.id,
+        });
+
+        mockCallTool.mockResolvedValueOnce({
+          content: [{ type: "text", text: "Multi header response" }],
+          isError: false,
+        });
+
+        await mcpClient.executeToolCall(
+          {
+            id: "call_multi_header_auth",
+            name: "multi-header-server__get_info",
+            arguments: {},
+          },
+          agentId,
+        );
+
+        const { StreamableHTTPClientTransport } = await import(
+          "@modelcontextprotocol/sdk/client/streamableHttp.js"
+        );
+        const transportCalls = vi.mocked(StreamableHTTPClientTransport).mock
+          .calls;
+        const lastCall = transportCalls[transportCalls.length - 1];
+        const headers = lastCall[1]?.requestInit?.headers as Headers;
+        expect(headers.get("x-api-key")).toBe("header-secret-token");
+        expect(headers.get("x-tenant-id")).toBe("tenant-42");
+      });
+
       test("non-JWKS auth (OAuth/Bearer) still uses upstream credentials", async () => {
         const tool = await ToolModel.createToolIfNotExists({
           name: "github-mcp-server__oauth_cred_test",
