@@ -1,7 +1,7 @@
 "use client";
 
 import type { UIMessage } from "@ai-sdk/react";
-import { type archestraApiTypes, E2eTestId } from "@shared";
+import { E2eTestId } from "@shared";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -841,16 +841,24 @@ export function ChatPageContent({
   // While a conversation tab is open, useChat owns the thread.
   // We only fall back to persisted messages before the session initializes or
   // for read-only shared conversations that do not create a live chat session.
-  const messages = chatSession?.messages ?? persistedConversationMessages;
+  const messages = useMemo(
+    () =>
+      chatSession?.messages
+        ? mergePersistedMessageMetadata({
+            liveMessages: chatSession.messages,
+            persistedMessages: persistedConversationMessages,
+          })
+        : persistedConversationMessages,
+    [chatSession?.messages, persistedConversationMessages],
+  );
   const sendMessage = chatSession?.sendMessage;
   const status = chatSession?.status ?? "ready";
   const setMessages = chatSession?.setMessages;
   const stop = chatSession?.stop;
-  const persistedChatError = useMemo(
-    () => toPersistedChatError(conversation?.lastChatError),
-    [conversation?.lastChatError],
-  );
-  const error = chatSession?.error ?? persistedChatError;
+  const error =
+    status === "submitted" || status === "streaming"
+      ? undefined
+      : chatSession?.error;
   const addToolResult = chatSession?.addToolResult;
   const addToolApprovalResponse = chatSession?.addToolApprovalResponse;
   const pendingCustomServerToolCall = chatSession?.pendingCustomServerToolCall;
@@ -1030,6 +1038,7 @@ export function ChatPageContent({
     sendMessage({
       role: "user",
       parts,
+      metadata: { createdAt: new Date().toISOString() },
     });
   }, [
     conversation,
@@ -1161,6 +1170,7 @@ export function ChatPageContent({
     sendMessage?.({
       role: "user",
       parts,
+      metadata: { createdAt: new Date().toISOString() },
     });
   };
 
@@ -1407,6 +1417,7 @@ export function ChatPageContent({
     sendMessage({
       role: "user",
       parts: [{ type: "text", text: pendingReauthResume.message }],
+      metadata: { createdAt: new Date().toISOString() },
     });
   }, [conversationId, sendMessage, status]);
 
@@ -1747,6 +1758,7 @@ export function ChatPageContent({
                     }
                     selectedModel={conversation?.selectedModel ?? initialModel}
                     modelSource={conversationModelSource ?? initialModelSource}
+                    chatErrors={conversation?.chatErrors ?? []}
                     onUserMessageEdit={(
                       editedMessage,
                       updatedMessages,
@@ -1765,6 +1777,7 @@ export function ChatPageContent({
                           sendMessage({
                             role: "user",
                             parts: [{ type: "text", text: editedText }],
+                            metadata: { createdAt: new Date().toISOString() },
                           });
                         }
                       }
@@ -2100,20 +2113,75 @@ export function ChatPageContent({
   );
 }
 
-function toPersistedChatError(
-  lastChatError:
-    | archestraApiTypes.GetChatConversationResponses["200"]["lastChatError"]
-    | undefined,
-): Error | undefined {
-  if (!lastChatError) {
-    return undefined;
-  }
-
-  return new Error(JSON.stringify(lastChatError));
-}
-
 export default function ChatPage() {
   return <ChatPageContent key="new-chat" />;
+}
+
+function mergePersistedMessageMetadata(params: {
+  liveMessages: UIMessage[];
+  persistedMessages: UIMessage[];
+}): UIMessage[] {
+  const remainingPersistedMessages = [...params.persistedMessages];
+
+  return params.liveMessages.map((liveMessage) => {
+    if (hasCreatedAtMetadata(liveMessage)) {
+      return liveMessage;
+    }
+
+    const persistedIndex = remainingPersistedMessages.findIndex(
+      (persistedMessage) =>
+        messagesHaveSameRenderableContent({
+          liveMessage,
+          persistedMessage,
+        }),
+    );
+
+    if (persistedIndex === -1) {
+      return liveMessage;
+    }
+
+    const [persistedMessage] = remainingPersistedMessages.splice(
+      persistedIndex,
+      1,
+    );
+
+    return {
+      ...liveMessage,
+      metadata: {
+        ...getObjectMetadata(persistedMessage),
+        ...getObjectMetadata(liveMessage),
+      },
+    };
+  });
+}
+
+function messagesHaveSameRenderableContent(params: {
+  liveMessage: UIMessage;
+  persistedMessage: UIMessage;
+}) {
+  return (
+    params.liveMessage.role === params.persistedMessage.role &&
+    getMessageText(params.liveMessage) ===
+      getMessageText(params.persistedMessage)
+  );
+}
+
+function getMessageText(message: UIMessage) {
+  return message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n");
+}
+
+function hasCreatedAtMetadata(message: UIMessage) {
+  const metadata = getObjectMetadata(message);
+  return typeof metadata.createdAt === "string";
+}
+
+function getObjectMetadata(message: UIMessage): Record<string, unknown> {
+  return typeof message.metadata === "object" && message.metadata !== null
+    ? { ...message.metadata }
+    : {};
 }
 
 // =========================================================================
