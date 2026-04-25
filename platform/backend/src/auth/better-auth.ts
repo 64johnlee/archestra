@@ -1,0 +1,1003 @@
+import { apiKey } from "@better-auth/api-key";
+import type { HookEndpointContext } from "@better-auth/core";
+import { oauthProvider } from "@better-auth/oauth-provider";
+import { sso } from "@better-auth/sso";
+import {
+  ARCHESTRA_TOKEN_PREFIX,
+  AUTO_PROVISIONED_INVITATION_STATUS,
+  DEFAULT_APP_NAME,
+  emailMatchesAllowedIdentityProviderDomains,
+  getEmailDomain,
+  IDENTITY_TRUSTED_PROVIDER_IDS,
+  OAUTH_PAGES,
+  OAUTH_SCOPES,
+} from "@shared";
+import {
+  allAvailableActions,
+  editorPermissions,
+  memberPermissions,
+} from "@shared/access-control";
+import { APIError, betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
+import { admin, jwt, organization, twoFactor } from "better-auth/plugins";
+import { createAccessControl } from "better-auth/plugins/access";
+import { and, eq, ne } from "drizzle-orm";
+import { z } from "zod";
+import config from "@/config";
+import db, { schema } from "@/database";
+import logger from "@/logging";
+import { LOG_LEVEL } from "@/logging/log-level";
+// Import directly from files to avoid circular dependency through barrel export
+import AccountModel from "@/models/account";
+import AgentModel from "@/models/agent";
+import InvitationModel from "@/models/invitation";
+import MemberModel from "@/models/member";
+import SessionModel from "@/models/session";
+import UserModel from "@/models/user";
+
+const { ssoConfig, syncSsoRole, syncSsoTeams } = config.enterpriseFeatures.core
+  ? // biome-ignore lint/style/noRestrictedImports: EE-only SSO config
+    await import("./idp.ee")
+  : {
+      ssoConfig: undefined,
+      syncSsoRole: () => {},
+      syncSsoTeams: () => {},
+    };
+
+const APP_NAME = DEFAULT_APP_NAME;
+const {
+  api: { apiKeyAuthorizationHeaderName },
+  frontendBaseUrl,
+  auth: { secret, cookieDomain, trustedOrigins: staticTrustedOrigins },
+} = config;
+
+const ac = createAccessControl(allAvailableActions);
+
+const adminRole = ac.newRole(allAvailableActions);
+const editorRole = ac.newRole(editorPermissions);
+const memberRole = ac.newRole(memberPermissions);
+
+export const auth = betterAuth({
+  appName: APP_NAME,
+  baseURL: frontendBaseUrl,
+  secret,
+  logger: {
+    disabled: LOG_LEVEL === "silent",
+    level: getBetterAuthLogLevel(LOG_LEVEL),
+    log(level, message, ...args) {
+      const formattedMessage = `[Better Auth] ${message}`;
+      const payload = args.length > 0 ? { args } : {};
+
+      if (level === "error") {
+        logger.error(payload, formattedMessage);
+        return;
+      }
+
+      if (level === "warn") {
+        logger.warn(payload, formattedMessage);
+        return;
+      }
+
+      logger.info(payload, formattedMessage);
+    },
+  },
+  // Prevent JWT plugin's /token endpoint from conflicting with OAuth provider's /oauth2/token
+  disabledPaths: ["/token"],
+  ...(config.authRateLimitDisabled ? { rateLimit: { enabled: false } } : {}),
+  plugins: [
+    organization({
+      requireEmailVerificationOnInvitation: false,
+      allowUserToCreateOrganization: false, // Disable organization creation by users
+      ac,
+      dynamicAccessControl: {
+        enabled: true,
+        /**
+         * By default, the maximum number of roles that can be created for an organization is infinite
+         * You can also pass a function that returns a number.
+         * https://better-auth.com/docs/plugins/organization#maximumrolesperorganization
+         */
+        // maximumRolesPerOrganization: 50,
+        validateRoleName: async (roleName: string) => {
+          // Role names must be lowercase alphanumeric with underscores
+          if (!/^[a-z0-9_]+$/.test(roleName)) {
+            throw new Error(
+              "Role name must be lowercase letters, numbers, and underscores only",
+            );
+          }
+          if (roleName.length < 2) {
+            throw new Error("Role name must be at least 2 characters");
+          }
+          if (roleName.length > 50) {
+            throw new Error("Role name must be less than 50 characters");
+          }
+        },
+      },
+      roles: {
+        admin: adminRole,
+        editor: editorRole,
+        member: memberRole,
+      },
+      schema: {
+        organizationRole: {
+          additionalFields: {
+            name: {
+              type: "string",
+              required: true,
+            },
+            description: {
+              type: "string",
+              required: false,
+            },
+          },
+        },
+      },
+      features: {
+        team: {
+          enabled: true,
+          ac,
+          roles: {
+            admin: adminRole,
+            editor: editorRole,
+            member: memberRole,
+          },
+        },
+      },
+    }),
+    admin(),
+    apiKey({
+      enableSessionForAPIKeys: true,
+      apiKeyHeaders: [apiKeyAuthorizationHeaderName],
+      defaultPrefix: ARCHESTRA_TOKEN_PREFIX,
+      startingCharactersConfig: {
+        shouldStore: true,
+        // Store enough characters to show `archestra_8594...` style previews.
+        charactersLength: 14,
+      },
+      rateLimit: {
+        enabled: false,
+      },
+      permissions: {
+        /**
+         * NOTE: for now we will just grant all permissions to all API keys
+         *
+         * If we'd like to allow granting "scopes" to API keys, we will need to implement a more complex API-key
+         * permissions system/UI
+         */
+        defaultPermissions: allAvailableActions,
+      },
+    }),
+    twoFactor({
+      issuer: APP_NAME,
+    }),
+    ...(ssoConfig ? [sso(ssoConfig)] : []),
+    jwt({
+      jwt: {
+        // Pydantic's AnyHttpUrl (used by MCP/Open WebUI OAuthMetadata model)
+        // normalizes URLs by appending a trailing slash when the path is empty.
+        // The JWT iss claim must match the normalized issuer from the well-known
+        // metadata to pass authlib's claim validation.
+        issuer: `${frontendBaseUrl}/`,
+      },
+      jwks: {
+        keyPairConfig: { alg: "RS256", modulusLength: 2048 },
+      },
+    }),
+    oauthProvider({
+      loginPage: OAUTH_PAGES.login,
+      consentPage: OAUTH_PAGES.consent,
+      allowDynamicClientRegistration: true,
+      allowUnauthenticatedClientRegistration: true,
+      scopes: [...OAUTH_SCOPES],
+      silenceWarnings: {
+        oauthAuthServerConfig: true,
+        openidConfig: true,
+      },
+    }),
+  ],
+
+  user: {
+    deleteUser: {
+      enabled: true,
+    },
+  },
+
+  trustedOrigins: getTrustedOriginsForAuthRequest,
+
+  database: drizzleAdapter(db, {
+    provider: "pg", // or "mysql", "sqlite"
+    schema: {
+      apikey: schema.apikeysTable,
+      user: schema.usersTable,
+      session: schema.sessionsTable,
+      organization: schema.organizationsTable,
+      organizationRole: schema.organizationRolesTable,
+      member: schema.membersTable,
+      invitation: schema.invitationsTable,
+      account: schema.accountsTable,
+      team: schema.teamsTable,
+      teamMember: schema.teamMembersTable,
+      twoFactor: schema.twoFactorsTable,
+      verification: schema.verificationsTable,
+      ssoProvider: schema.identityProvidersTable,
+      jwks: schema.jwksTable,
+      oauthClient: schema.oauthClientsTable,
+      oauthAccessToken: schema.oauthAccessTokensTable,
+      oauthRefreshToken: schema.oauthRefreshTokensTable,
+      oauthConsent: schema.oauthConsentsTable,
+    },
+  }),
+
+  emailAndPassword: {
+    enabled: true,
+  },
+
+  account: {
+    /**
+     * See better-auth docs here for more information on this:
+     * https://www.better-auth.com/docs/reference/options#accountlinking
+     */
+    accountLinking: {
+      enabled: true,
+      /**
+       * Trust built-in SSO providers plus any identity providers configured by users.
+       * This allows existing users to sign in with built-in providers and custom
+       * generic OIDC/SAML providers without an env var override.
+       */
+      trustedProviders: getTrustedAccountLinkingProviderIds,
+      /**
+       * Don't allow linking accounts with different emails. From the better-auth typescript
+       * annotations they mention for this attribute:
+       *
+       * ⚠️ Warning: enabling allowDifferentEmails might lead to account takeovers
+       */
+      allowDifferentEmails: false,
+      allowUnlinkingAll: true,
+    },
+  },
+
+  advanced: {
+    cookiePrefix: "archestra",
+    defaultCookieAttributes: {
+      ...(cookieDomain ? { domain: cookieDomain } : {}),
+      // "lax" is required for OAuth/SSO flows because the callback is a cross-site top-level navigation
+      // "strict" would prevent the state cookie from being sent with the callback request
+      sameSite: "lax",
+    },
+  },
+
+  databaseHooks: {
+    session: {
+      create: {
+        before: async (session) => {
+          // If activeOrganizationId is not set, find the user's first organization
+          if (!session.activeOrganizationId) {
+            const membership = await MemberModel.getFirstMembershipForUser(
+              session.userId,
+            );
+
+            if (membership) {
+              logger.info(
+                {
+                  userId: session.userId,
+                  organizationId: membership.organizationId,
+                },
+                "Auto-setting active organization for new session",
+              );
+              return {
+                data: {
+                  ...session,
+                  activeOrganizationId: membership.organizationId,
+                },
+              };
+            }
+          }
+          return { data: session };
+        },
+      },
+    },
+    member: {
+      create: {
+        before: async (member: {
+          id: string;
+          userId: string;
+          organizationId: string;
+          role: string;
+          createdAt: Date;
+        }) => {
+          // When a member is created via invitation acceptance, ensure the role
+          // matches the invitation's custom role (not better-auth's default)
+          try {
+            // Use a single JOIN query to find pending invitation for this user
+            // This combines user email lookup and invitation lookup into one query
+            const [result] = await db
+              .select({ invitationRole: schema.invitationsTable.role })
+              .from(schema.usersTable)
+              .innerJoin(
+                schema.invitationsTable,
+                and(
+                  eq(
+                    schema.invitationsTable.email,
+                    schema.usersTable.email, // Emails are stored lowercase in both tables
+                  ),
+                  eq(
+                    schema.invitationsTable.organizationId,
+                    member.organizationId,
+                  ),
+                  eq(schema.invitationsTable.status, "pending"),
+                ),
+              )
+              .where(eq(schema.usersTable.id, member.userId))
+              .limit(1);
+
+            // No pending invitation found - skip role override
+            if (!result) {
+              return { data: member };
+            }
+
+            if (
+              result.invitationRole &&
+              result.invitationRole !== member.role
+            ) {
+              logger.info(
+                {
+                  userId: member.userId,
+                  organizationId: member.organizationId,
+                  originalRole: member.role,
+                  invitationRole: result.invitationRole,
+                },
+                "[databaseHooks:member] Overriding role with invitation's custom role",
+              );
+              return {
+                data: {
+                  ...member,
+                  role: result.invitationRole,
+                },
+              };
+            }
+          } catch (error) {
+            logger.error(
+              { err: error, userId: member.userId },
+              "[databaseHooks:member] Error checking invitation role",
+            );
+          }
+
+          return { data: member };
+        },
+      },
+    },
+  },
+
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => handleBeforeHook(ctx)),
+    after: createAuthMiddleware(async (ctx) => handleAfterHook(ctx)),
+  },
+});
+
+function getBetterAuthLogLevel(
+  logLevel: string,
+): "debug" | "info" | "warn" | "error" | undefined {
+  if (logLevel === "trace") {
+    return "debug";
+  }
+
+  if (logLevel === "fatal") {
+    return "error";
+  }
+
+  if (
+    logLevel === "debug" ||
+    logLevel === "info" ||
+    logLevel === "warn" ||
+    logLevel === "error"
+  ) {
+    return logLevel;
+  }
+
+  return undefined;
+}
+
+export type BetterAuth = typeof auth;
+
+/**
+ * Better Auth applies `trustedOrigins` to OIDC discovery during SSO provider
+ * registration, which means custom IdP setup can fail before the provider is
+ * saved unless the discovery origin is already trusted:
+ * https://better-auth.com/docs/plugins/sso#trusted-origins
+ *
+ * Archestra admins are explicitly configuring their own IdPs, so we widen
+ * origin trust only for provider registration instead of requiring per-IdP
+ * allowlisting. Better Auth also invokes this callback with `request`
+ * undefined during internal `auth.api` calls, which is one registration path
+ * used by `IdentityProviderModel.create()`. In practice, the same flow can
+ * also inherit the outer `/api/identity-providers` request, so that route
+ * needs the same treatment during provider creation.
+ */
+async function getTrustedOriginsForAuthRequest(request?: Request) {
+  const trustedOrigins = [...staticTrustedOrigins];
+
+  if (!shouldTrustAllOriginsForIdentityProviderRegistration(request)) {
+    return trustedOrigins;
+  }
+
+  return [
+    ...new Set([
+      ...trustedOrigins,
+      "http://*:*",
+      "https://*:*",
+      "http://*",
+      "https://*",
+    ]),
+  ];
+}
+
+async function getTrustedAccountLinkingProviderIds(): Promise<string[]> {
+  if (!config.enterpriseFeatures.core) {
+    return [...IDENTITY_TRUSTED_PROVIDER_IDS];
+  }
+
+  const { default: IdentityProviderModel } = await import(
+    // biome-ignore lint/style/noRestrictedImports: runtime-gated EE model import
+    "@/models/identity-provider.ee"
+  );
+
+  return IdentityProviderModel.getTrustedAccountLinkingProviderIds();
+}
+
+/**
+ * Keep the wildcard expansion scoped to identity-provider registration so
+ * every other auth request still uses the configured trusted origins
+ * unchanged.
+ */
+function shouldTrustAllOriginsForIdentityProviderRegistration(
+  request?: Request,
+) {
+  if (!request) {
+    return true;
+  }
+
+  try {
+    const { pathname } = new URL(request.url);
+    return (
+      pathname.endsWith("/sso/register") ||
+      pathname === "/api/identity-providers"
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validates requests before they are processed by better-auth.
+ *
+ * Handles:
+ * - Blocking invitations when disabled via environment variable
+ * - Email validation for invitation requests
+ * - Invitation-only sign-up enforcement
+ */
+export async function handleBeforeHook(ctx: HookEndpointContext) {
+  const { path, method, body } = ctx;
+
+  if (!path) {
+    return ctx;
+  }
+
+  logger.trace({ path, method }, "[auth:beforeHook] Processing auth request");
+
+  // Block invitation creation when invitations are disabled
+  if (path === "/organization/invite-member" && method === "POST") {
+    logger.debug(
+      { email: body.email, disableInvitations: config.auth.disableInvitations },
+      "[auth:beforeHook] Processing invitation request",
+    );
+    if (config.auth.disableInvitations) {
+      logger.debug(
+        "[auth:beforeHook] Invitations are disabled, blocking request",
+      );
+      throw new APIError("FORBIDDEN", {
+        message: "User invitations are disabled",
+      });
+    }
+
+    if (!z.email().safeParse(body.email).success) {
+      logger.debug(
+        { email: body.email },
+        "[auth:beforeHook] Invalid email format",
+      );
+      throw new APIError("BAD_REQUEST", {
+        message: "Invalid email format",
+      });
+    }
+
+    return ctx;
+  }
+
+  // Block invitation cancellation when invitations are disabled
+  if (path === "/organization/cancel-invitation" && method === "POST") {
+    logger.debug(
+      {
+        invitationId: body.invitationId,
+        disableInvitations: config.auth.disableInvitations,
+      },
+      "[auth:beforeHook] Processing invitation cancellation",
+    );
+    if (config.auth.disableInvitations) {
+      logger.debug(
+        "[auth:beforeHook] Invitations are disabled, blocking cancellation",
+      );
+      throw new APIError("FORBIDDEN", {
+        message: "User invitations are disabled",
+      });
+    }
+  }
+
+  // Block direct sign-up without invitation (invitation-only registration)
+  if (path.startsWith("/sign-up/email") && method === "POST") {
+    const callbackURL = body.callbackURL as string | undefined;
+    const invitationId = callbackURL?.split("invitationId=")[1]?.split("&")[0];
+
+    logger.debug(
+      { email: body.email, hasInvitationId: !!invitationId },
+      "[auth:beforeHook] Processing sign-up request",
+    );
+
+    if (!invitationId) {
+      logger.debug("[auth:beforeHook] Sign-up without invitation ID blocked");
+      throw new APIError("FORBIDDEN", {
+        message:
+          "Direct sign-up is disabled. You need an invitation to create an account.",
+      });
+    }
+
+    // Validate the invitation exists and is pending
+    const invitation = await InvitationModel.getById(invitationId);
+
+    if (!invitation) {
+      logger.debug({ invitationId }, "[auth:beforeHook] Invitation not found");
+      throw new APIError("BAD_REQUEST", {
+        message: "Invalid invitation ID",
+      });
+    }
+
+    const { status, expiresAt } = invitation;
+    logger.debug(
+      { invitationId, status, expiresAt },
+      "[auth:beforeHook] Invitation found, validating",
+    );
+
+    if (
+      status !== "pending" &&
+      !status?.startsWith(AUTO_PROVISIONED_INVITATION_STATUS)
+    ) {
+      logger.debug(
+        { invitationId, status },
+        "[auth:beforeHook] Invitation not pending",
+      );
+      throw new APIError("BAD_REQUEST", {
+        message: `This invitation has already been ${status}`,
+      });
+    }
+
+    // Check if invitation is expired
+    if (expiresAt && expiresAt < new Date()) {
+      logger.debug(
+        { invitationId, expiresAt },
+        "[auth:beforeHook] Invitation expired",
+      );
+      throw new APIError("BAD_REQUEST", {
+        message:
+          "The invitation link has expired, please contact your admin for a new invitation",
+      });
+    }
+
+    // Validate email matches invitation
+    if (body.email && invitation.email !== body.email) {
+      logger.debug(
+        { invitationEmail: invitation.email, bodyEmail: body.email },
+        "[auth:beforeHook] Email mismatch",
+      );
+      throw new APIError("BAD_REQUEST", {
+        message:
+          "Email address does not match the invitation. You must use the invited email address.",
+      });
+    }
+
+    // Handle auto-provisioned users: they already have a user record but no account.
+    // Delete the placeholder user and re-create the invitation as "pending" so
+    // better-auth can proceed with normal sign-up (creates fresh user + account).
+    if (status?.startsWith(AUTO_PROVISIONED_INVITATION_STATUS)) {
+      const [existingUser] = await db
+        .select({ id: schema.usersTable.id })
+        .from(schema.usersTable)
+        .where(eq(schema.usersTable.email, invitation.email))
+        .limit(1);
+
+      if (existingUser) {
+        // Find another user for inviterId FK (the original will be cascade-deleted)
+        const [inviterUser] = await db
+          .select({ id: schema.usersTable.id })
+          .from(schema.usersTable)
+          .where(ne(schema.usersTable.id, existingUser.id))
+          .limit(1);
+
+        if (!inviterUser) {
+          throw new APIError("BAD_REQUEST", {
+            message: "Cannot complete signup",
+          });
+        }
+
+        logger.info(
+          { userId: existingUser.id, email: invitation.email },
+          "[auth:beforeHook] Removing auto-provisioned placeholder for sign-up",
+        );
+
+        // Save invitation data before cascade delete removes it
+        const savedInvitation = {
+          id: invitation.id,
+          organizationId: invitation.organizationId,
+          email: invitation.email,
+          role: invitation.role,
+          expiresAt: invitation.expiresAt,
+        };
+
+        // Delete placeholder user (cascades to member, invitation, user tokens)
+        await db
+          .delete(schema.usersTable)
+          .where(eq(schema.usersTable.id, existingUser.id));
+
+        // Re-create invitation as "pending" for better-auth's normal sign-up flow
+        await db.insert(schema.invitationsTable).values({
+          id: savedInvitation.id,
+          organizationId: savedInvitation.organizationId,
+          email: savedInvitation.email,
+          role: savedInvitation.role,
+          status: "pending",
+          expiresAt: savedInvitation.expiresAt,
+          inviterId: inviterUser.id,
+        });
+
+        logger.debug(
+          { invitationId: savedInvitation.id },
+          "[auth:beforeHook] Re-created invitation as pending for sign-up",
+        );
+      }
+    }
+
+    logger.debug(
+      { invitationId },
+      "[auth:beforeHook] Invitation validated successfully",
+    );
+    return ctx;
+  }
+
+  return ctx;
+}
+
+/**
+ * Handles post-processing after better-auth operations.
+ *
+ * Handles:
+ * - Deleting canceled invitations
+ * - Invalidating sessions when users are deleted
+ * - Accepting invitations after sign-up
+ * - Auto-accepting pending invitations on sign-in
+ * - Setting active organization for new sessions
+ */
+export async function handleAfterHook(ctx: HookEndpointContext) {
+  const { path, method, body, context, request } = ctx;
+
+  if (!path) {
+    return ctx;
+  }
+
+  logger.trace({ path, method }, "[auth:afterHook] Processing post-auth hook");
+
+  // Delete invitation from DB when canceled (instead of marking as canceled)
+  if (path === "/organization/cancel-invitation" && method === "POST") {
+    const invitationId = body.invitationId as string | undefined;
+
+    if (invitationId) {
+      logger.debug(
+        { invitationId },
+        "[auth:afterHook] Deleting canceled invitation",
+      );
+      try {
+        await InvitationModel.delete(invitationId);
+        logger.info(`✅ Invitation ${invitationId} deleted from database`);
+      } catch (error) {
+        logger.error({ err: error }, "❌ Failed to delete invitation:");
+      }
+    }
+  }
+
+  // Invalidate all sessions when user is deleted
+  if (path === "/admin/remove-user" && method === "POST") {
+    const userId = body.userId as string | undefined;
+
+    if (userId) {
+      // Delete all sessions for this user
+      logger.debug(
+        { userId },
+        "[auth:afterHook] Invalidating all sessions for removed user",
+      );
+      try {
+        await SessionModel.deleteAllByUserId(userId);
+        logger.info(`✅ All sessions for user ${userId} invalidated`);
+      } catch (error) {
+        logger.error({ err: error }, "❌ Failed to invalidate user sessions:");
+      }
+    }
+  }
+
+  // NOTE: User deletion on member removal is handled in routes/auth.ts
+  // Better-auth handles member deletion, we just clean up orphaned users
+
+  if (path.startsWith("/sign-up")) {
+    const newSession = context?.newSession;
+
+    if (newSession) {
+      const { user, session } = newSession;
+
+      logger.debug(
+        { userId: user.id, email: user.email },
+        "[auth:afterHook] Processing sign-up completion",
+      );
+
+      // Check if this is an invitation sign-up
+      const callbackURL = body.callbackURL as string | undefined;
+      const invitationId = callbackURL
+        ?.split("invitationId=")[1]
+        ?.split("&")[0];
+
+      // If there is no invitation ID, it means this is a direct sign-up which is not allowed
+      if (!invitationId) {
+        logger.debug(
+          "[auth:afterHook] Sign-up without invitation ID, skipping",
+        );
+        return;
+      }
+
+      logger.debug(
+        { invitationId, userId: user.id },
+        "[auth:afterHook] Accepting invitation after sign-up",
+      );
+      return await InvitationModel.accept(session, user, invitationId);
+    }
+  }
+
+  // Handle both regular sign-in and SSO callback
+  if (path.startsWith("/sign-in") || path.startsWith("/sso/callback")) {
+    const newSession = context?.newSession;
+
+    if (newSession?.user && newSession?.session) {
+      const sessionId = newSession.session.id;
+      const userId = newSession.user.id;
+      const { user, session } = newSession;
+
+      logger.debug(
+        { userId, email: user.email, path },
+        "[auth:afterHook] Processing sign-in/SSO callback",
+      );
+
+      const providerIdHint = path.startsWith("/sso/callback")
+        ? getSsoCallbackProviderId({
+            path,
+            requestUrl: request?.url,
+          })
+        : undefined;
+
+      if (providerIdHint) {
+        await assertSsoEmailDomainAllowed({
+          providerId: providerIdHint,
+          userEmail: user.email,
+          userId,
+          sessionId,
+        });
+      }
+
+      // Auto-accept any pending invitations for this user's email
+      try {
+        const pendingInvitation = await InvitationModel.findPendingByEmail(
+          user.email,
+        );
+
+        if (pendingInvitation) {
+          logger.info(
+            `🔗 Auto-accepting pending invitation ${pendingInvitation.id} for user ${user.email}`,
+          );
+          await InvitationModel.accept(session, user, pendingInvitation.id);
+          return;
+        }
+        logger.debug(
+          { email: user.email },
+          "[auth:afterHook] No pending invitation found for user",
+        );
+      } catch (error) {
+        logger.error({ err: error }, "❌ Failed to auto-accept invitation:");
+      }
+
+      try {
+        if (!newSession.session.activeOrganizationId) {
+          logger.debug(
+            { userId },
+            "[auth:afterHook] No active organization, looking up first membership",
+          );
+          const userMembership =
+            await MemberModel.getFirstMembershipForUser(userId);
+
+          if (userMembership) {
+            logger.debug(
+              { userId, organizationId: userMembership.organizationId },
+              "[auth:afterHook] Setting active organization from membership",
+            );
+            await SessionModel.patch(sessionId, {
+              activeOrganizationId: userMembership.organizationId,
+            });
+
+            logger.info(
+              `✅ Active organization set for user ${newSession.user.email}`,
+            );
+          } else {
+            logger.debug(
+              { userId },
+              "[auth:afterHook] No membership found for user",
+            );
+          }
+        }
+      } catch (error) {
+        logger.error({ err: error }, "❌ Failed to set active organization:");
+      }
+
+      // Ensure user has a personal default chat agent (idempotent)
+      const orgId =
+        newSession.session.activeOrganizationId ||
+        (await MemberModel.getFirstMembershipForUser(userId))?.organizationId;
+      if (orgId) {
+        try {
+          await AgentModel.ensurePersonalChatAgent({
+            userId,
+            organizationId: orgId,
+          });
+        } catch (error) {
+          logger.error(
+            { err: error },
+            "Failed to ensure personal chat agent on sign-in",
+          );
+        }
+      }
+
+      // SSO Role & Team Sync: Synchronize role and team memberships based on SSO claims
+      // Only applies to SSO logins (not regular email/password logins)
+      if (path.startsWith("/sso/callback")) {
+        logger.debug(
+          { userId, email: user.email, providerIdHint },
+          "[auth:afterHook] Processing SSO role and team sync",
+        );
+
+        // Sync role first (based on role mapping rules)
+        await syncSsoRole(userId, user.email, providerIdHint);
+
+        // Then sync teams (based on SSO groups)
+        await syncSsoTeams(userId, user.email, providerIdHint);
+      }
+    }
+  }
+}
+
+function getSsoCallbackProviderId(params: {
+  path: string;
+  requestUrl?: string;
+}): string | undefined {
+  const callbackPrefix = "/sso/callback/";
+
+  if (params.requestUrl) {
+    try {
+      const callbackPath = new URL(params.requestUrl).pathname;
+      const callbackIndex = callbackPath.indexOf(callbackPrefix);
+      if (callbackIndex >= 0) {
+        const providerId = callbackPath
+          .slice(callbackIndex + callbackPrefix.length)
+          .split("/")[0];
+        if (providerId) {
+          return providerId;
+        }
+      }
+    } catch {
+      // Fall back to the normalized route path below.
+    }
+  }
+
+  if (!params.path.startsWith(callbackPrefix)) {
+    return undefined;
+  }
+
+  const providerId = params.path.slice(callbackPrefix.length).split("/")[0];
+  if (providerId.startsWith(":")) {
+    return undefined;
+  }
+
+  return providerId || undefined;
+}
+
+async function assertSsoEmailDomainAllowed(params: {
+  providerId: string;
+  userEmail: string;
+  userId: string;
+  sessionId: string;
+}) {
+  if (!config.enterpriseFeatures.core) {
+    return;
+  }
+
+  const { default: IdentityProviderModel } = await import(
+    // biome-ignore lint/style/noRestrictedImports: runtime-gated EE model import
+    "@/models/identity-provider.ee"
+  );
+  const provider = await IdentityProviderModel.findByProviderId(
+    params.providerId,
+  );
+
+  if (!provider?.domain) {
+    return;
+  }
+
+  if (
+    emailMatchesAllowedIdentityProviderDomains(
+      params.userEmail,
+      provider.domain,
+    )
+  ) {
+    return;
+  }
+
+  await cleanupRejectedSsoLogin({
+    providerId: params.providerId,
+    organizationId: provider.organizationId,
+    userId: params.userId,
+    sessionId: params.sessionId,
+  });
+  logger.warn(
+    {
+      providerId: params.providerId,
+      emailDomain: getEmailDomain(params.userEmail),
+      providerDomain: provider.domain,
+    },
+    "[auth:afterHook] SSO login denied because user email domain does not match identity provider domain",
+  );
+
+  throw new APIError("FORBIDDEN", {
+    message: "Your email domain is not allowed for this identity provider.",
+  });
+}
+
+async function cleanupRejectedSsoLogin(params: {
+  providerId: string;
+  organizationId: string | null;
+  userId: string;
+  sessionId: string;
+}) {
+  await db.transaction(async (tx) => {
+    await SessionModel.deleteById(params.sessionId, tx);
+    await AccountModel.deleteByUserIdAndProviderId({
+      userId: params.userId,
+      providerId: params.providerId,
+      tx,
+    });
+
+    const accounts = await AccountModel.getAllByUserId(params.userId, tx);
+
+    if (accounts.length === 0 && params.organizationId) {
+      await MemberModel.deleteByMemberOrUserId(
+        params.userId,
+        params.organizationId,
+        tx,
+      );
+    }
+
+    const hasMembership = await MemberModel.hasAnyMembership(params.userId, tx);
+
+    if (accounts.length === 0 && !hasMembership) {
+      await UserModel.delete(params.userId, tx);
+    }
+  });
+}

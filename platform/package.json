@@ -1,0 +1,83 @@
+{
+  "name": "archestra-platform",
+  "version": "1.2.24",
+  "description": "Enterprise MCP platform",
+  "author": "Archestra",
+  "engines": {
+    "node": ">=18.0.0 <25.0.0"
+  },
+  "scripts": {
+    "prepare": "cd .. && husky platform/.husky || true",
+    "ci:check": "turbo check:ci",
+    "commit:check": "turbo check:commit",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "start": "turbo start",
+    "lint": "turbo lint",
+    "lint:fix": "turbo lint:fix",
+    "lint:fix:unsafe": "turbo lint:fix:unsafe",
+    "type-check": "turbo type-check",
+    "test": "turbo test",
+    "knip": "turbo knip",
+    "test:e2e": "turbo test:e2e",
+    "test:e2e:ui": "turbo test:e2e:ui",
+    "check:ci": "turbo check:ci",
+    "license-check": "tsx standalone-scripts/license-check.ts",
+    "codegen": "CODEGEN=true turbo codegen && python3 dev/grafana/generate-pg-dashboard-variants.py",
+    "db:generate": "turbo db:generate --ui=tui",
+    "db:migrate": "turbo db:migrate",
+    "db:push": "turbo db:push",
+    "db:studio": "turbo db:studio",
+    "db:seed:mock-data": "turbo db:seed:mock-data",
+    "cleanup:dev:k8s": "kubectl delete namespace archestra-dev"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.6",
+    "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "tsx": "^4.21.0",
+    "turbo": "^2.8.13"
+  },
+  "pnpm": {
+    "overrides": {
+      "@fastify/reply-from": ">=12.6.2",
+      "@fastify/http-proxy": ">=11.4.4",
+      "protobufjs": ">=7.5.5",
+      "vite": "7.3.2",
+      "@hono/node-server": "1.19.11",
+      "body-parser": "2.2.1",
+      "dompurify": "3.4.0",
+      "glob": "11.1.0",
+      "esbuild": "0.27.0",
+      "mdast-util-to-hast": "13.2.1",
+      "express": "5.2.0",
+      "express-rate-limit": "8.3.1",
+      "jws": "4.0.1",
+      "qs": "6.14.2",
+      "d3-path": "3.1.0",
+      "hono": "4.12.9",
+      "kysely": "0.28.14",
+      "lodash": ">=4.18.0",
+      "lodash-es": "4.18.1",
+      "fast-xml-parser": "5.5.7",
+      "ajv": "8.18.0",
+      "axios": ">=1.13.5",
+      "minimatch": ">=10.2.3",
+      "rollup": ">=4.59.0",
+      "undici": "7.24.5",
+      "@xmldom/xmldom": ">=0.8.12",
+      "path-to-regexp": ">=8.4.0",
+      "picomatch@>=4": ">=4.0.4",
+      "picomatch@<4": ">=2.3.2",
+      "fastify": ">=5.8.5",
+      "defu": ">=6.1.5"
+    },
+    "patchedDependencies": {
+      "ai@6.0.90": "patches/ai@6.0.90.patch"
+    }
+  },
+  "packageManager": "pnpm@10.33.0",
+  "dependencies": {
+    "croner": "^10.0.1"
+  }
+}

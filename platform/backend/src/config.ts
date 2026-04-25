@@ -1,0 +1,891 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import type { OTLPExporterNodeConfigBase } from "@opentelemetry/otlp-exporter-base";
+import {
+  DEFAULT_ADMIN_EMAIL,
+  DEFAULT_ADMIN_EMAIL_ENV_VAR_NAME,
+  DEFAULT_ADMIN_PASSWORD,
+  DEFAULT_ADMIN_PASSWORD_ENV_VAR_NAME,
+  DEFAULT_APP_NAME,
+  DEFAULT_VAULT_TOKEN,
+  type SupportedProvider,
+  SupportedProviders,
+} from "@shared";
+import dotenv from "dotenv";
+import logger from "@/logging";
+import {
+  type EmailProviderType,
+  EmailProviderTypeSchema,
+} from "@/types/email-provider-type";
+import packageJson from "../../package.json";
+
+type ProcessType = "web" | "worker" | "all";
+
+/**
+ * Load .env from platform root
+ *
+ * This is a bit of a hack for now to avoid having to have a duplicate .env file in the backend subdirectory
+ */
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../../.env"), quiet: true });
+
+const sentryDsn = process.env.ARCHESTRA_SENTRY_BACKEND_DSN || "";
+const environment = process.env.NODE_ENV?.toLowerCase() ?? "";
+const isProduction = ["production", "prod"].includes(environment);
+const isDevelopment = !isProduction;
+
+const appVersion = process.env.ARCHESTRA_VERSION || packageJson.version;
+
+const frontendBaseUrl =
+  process.env.ARCHESTRA_FRONTEND_URL?.trim() || "http://localhost:3000";
+const DEFAULT_POSTHOG_KEY = "phc_FFZO7LacnsvX2exKFWehLDAVaXLBfoBaJypdOuYoTk7";
+const DEFAULT_POSTHOG_HOST = "https://eu.i.posthog.com";
+
+/**
+ * Determines OTLP authentication headers based on environment variables
+ * Returns undefined if authentication is not properly configured
+ */
+export const getOtlpAuthHeaders = (): Record<string, string> | undefined => {
+  const username =
+    process.env.ARCHESTRA_OTEL_EXPORTER_OTLP_AUTH_USERNAME?.trim();
+  const password =
+    process.env.ARCHESTRA_OTEL_EXPORTER_OTLP_AUTH_PASSWORD?.trim();
+  const bearer = process.env.ARCHESTRA_OTEL_EXPORTER_OTLP_AUTH_BEARER?.trim();
+
+  // Bearer token takes precedence
+  if (bearer) {
+    return {
+      Authorization: `Bearer ${bearer}`,
+    };
+  }
+
+  // Basic auth requires both username and password
+  if (username || password) {
+    if (!username || !password) {
+      logger.warn(
+        "OTEL authentication misconfigured: both ARCHESTRA_OTEL_EXPORTER_OTLP_AUTH_USERNAME and ARCHESTRA_OTEL_EXPORTER_OTLP_AUTH_PASSWORD must be provided for basic auth",
+      );
+      return undefined;
+    }
+
+    const credentials = Buffer.from(`${username}:${password}`).toString(
+      "base64",
+    );
+    return {
+      Authorization: `Basic ${credentials}`,
+    };
+  }
+
+  // No authentication configured
+  return undefined;
+};
+
+/**
+ * Get database URL (prefer ARCHESTRA_DATABASE_URL, fallback to DATABASE_URL)
+ */
+export const getDatabaseUrl = (): string => {
+  const databaseUrl =
+    process.env.ARCHESTRA_DATABASE_URL || process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error(
+      "Database URL is not set. Please set ARCHESTRA_DATABASE_URL or DATABASE_URL",
+    );
+  }
+  return databaseUrl;
+};
+
+/**
+ * Parse port from ARCHESTRA_INTERNAL_API_BASE_URL if provided
+ */
+const getPortFromUrl = (): number => {
+  const url = process.env.ARCHESTRA_INTERNAL_API_BASE_URL;
+  const defaultPort = 9000;
+
+  if (!url) {
+    return defaultPort;
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.port ? Number.parseInt(parsedUrl.port, 10) : defaultPort;
+  } catch {
+    return defaultPort;
+  }
+};
+
+/**
+ * Networking & Origin Validation Strategy
+ * ========================================
+ *
+ * Development mode:
+ *   - Backend and frontend bind to 127.0.0.1 (loopback only).
+ *   - Only local processes can reach the server, so CORS and origin
+ *     checks are unnecessary. All origins are accepted.
+ *
+ * Quickstart mode (Docker):
+ *   - Inside the container the app binds to 0.0.0.0.
+ *   - On the host, Docker's `-p 3000:3000` maps to 0.0.0.0 by default,
+ *     making the app accessible from LAN IPs.
+ *   - Quickstart is designed for quick evaluation, so all origins are
+ *     accepted without checks. It's ok if someone will decide to
+ *     access Archestra from the mobile phone.
+ *
+ * Production mode:
+ *   - Origin validation is OFF by default. All origins are accepted.
+ *   - Origin checks are only enforced when explicitly configured via:
+ *       ARCHESTRA_FRONTEND_URL              — primary frontend origin
+ *       ARCHESTRA_AUTH_ADDITIONAL_TRUSTED_ORIGINS — comma-separated extra origins
+ *   - Setting either variable signals that origin validation should be
+ *     performed. Only the configured origins will be allowed.
+ */
+
+/**
+ * Collect all explicitly configured origins from environment variables.
+ */
+const getConfiguredOrigins = (): string[] => {
+  const origins: string[] = [];
+
+  const frontendUrl = process.env.ARCHESTRA_FRONTEND_URL?.trim();
+  if (frontendUrl) {
+    origins.push(frontendUrl);
+  }
+
+  const additional =
+    process.env.ARCHESTRA_AUTH_ADDITIONAL_TRUSTED_ORIGINS?.trim();
+  if (additional) {
+    origins.push(
+      ...additional
+        .split(",")
+        .map((o) => o.trim())
+        .filter((o) => o.length > 0),
+    );
+  }
+
+  return origins;
+};
+
+/**
+ * For each origin containing "localhost", add the equivalent "127.0.0.1" origin (and vice versa).
+ */
+const addLoopbackEquivalents = (origins: string[]): string[] => {
+  const result = new Set(origins);
+  for (const origin of origins) {
+    if (origin.includes("localhost")) {
+      result.add(origin.replace("localhost", "127.0.0.1"));
+    } else if (origin.includes("127.0.0.1")) {
+      result.add(origin.replace("127.0.0.1", "localhost"));
+    }
+  }
+  return [...result];
+};
+
+/**
+ * Get CORS origin configuration for Fastify.
+ * When no origin env vars are set, accepts all origins.
+ * When configured, only allows the specified origins.
+ */
+export const getCorsOrigins = (): (string | RegExp)[] => {
+  const origins = getConfiguredOrigins();
+
+  if (origins.length === 0) {
+    return [/.*/];
+  }
+
+  return addLoopbackEquivalents(origins);
+};
+
+/**
+ * Get trusted origins for better-auth.
+ * When no origin env vars are set, accepts all origins.
+ * When configured, only allows the specified origins.
+ */
+export const getTrustedOrigins = (): string[] => {
+  const origins = getConfiguredOrigins();
+
+  if (origins.length === 0) {
+    return ["http://*:*", "https://*:*", "http://*", "https://*"];
+  }
+
+  return addLoopbackEquivalents(origins);
+};
+
+/**
+ * Parse incoming email provider from environment variable
+ */
+const parseIncomingEmailProvider = (): EmailProviderType | undefined => {
+  const provider =
+    process.env.ARCHESTRA_AGENTS_INCOMING_EMAIL_PROVIDER?.toLowerCase();
+  const result = EmailProviderTypeSchema.safeParse(provider);
+  return result.success ? result.data : undefined;
+};
+
+/**
+ * Parse body limit from environment variable.
+ * Supports numeric bytes (e.g., "52428800") or human-readable format (e.g., "50MB", "100KB").
+ */
+export const parseBodyLimit = (
+  envValue: string | undefined,
+  defaultValue: number,
+): number => {
+  if (!envValue) {
+    return defaultValue;
+  }
+
+  const trimmed = envValue.trim();
+
+  // Try parsing human-readable format first (e.g., "50MB", "100KB")
+  // This must come first because parseInt("50MB") would return 50
+  const match = trimmed.match(/^(\d+)(KB|MB|GB)$/i);
+  if (match) {
+    const value = Number.parseInt(match[1], 10);
+    const unit = match[2].toUpperCase();
+    switch (unit) {
+      case "KB":
+        return value * 1024;
+      case "MB":
+        return value * 1024 * 1024;
+      case "GB":
+        return value * 1024 * 1024 * 1024;
+    }
+  }
+
+  // Try parsing as plain number (bytes) - must be all digits
+  if (/^\d+$/.test(trimmed)) {
+    return Number.parseInt(trimmed, 10);
+  }
+
+  return defaultValue;
+};
+
+const DEFAULT_BODY_LIMIT = 50 * 1024 * 1024; // 50MB
+
+// Default OTEL OTLP endpoint for HTTP/Protobuf (4318). For gRPC, the typical port is 4317.
+const DEFAULT_OTEL_ENDPOINT = "http://localhost:4318";
+const DEFAULT_OTEL_CONTENT_MAX_LENGTH = 10_000; // 10KB
+const OTEL_TRACES_PATH = "/v1/traces";
+const OTEL_LOGS_PATH = "/v1/logs";
+
+/**
+ * Get OTEL exporter endpoint for traces.
+ * Reads from ARCHESTRA_OTEL_EXPORTER_OTLP_ENDPOINT and intelligently ensures
+ * the URL ends with /v1/traces.
+ *
+ * @param envValue - The environment variable value (for testing)
+ * @returns The full OTEL endpoint URL with /v1/traces suffix
+ */
+export const getOtelExporterOtlpEndpoint = (
+  envValue?: string | undefined,
+): string => {
+  const rawValue =
+    envValue ?? process.env.ARCHESTRA_OTEL_EXPORTER_OTLP_ENDPOINT;
+  const value = rawValue?.trim();
+
+  if (!value) {
+    return `${DEFAULT_OTEL_ENDPOINT}${OTEL_TRACES_PATH}`;
+  }
+
+  // Remove trailing slashes for consistent comparison
+  const normalizedUrl = value.replace(/\/+$/, "");
+
+  // If already ends with /v1/traces, return as-is
+  if (normalizedUrl.endsWith(OTEL_TRACES_PATH)) {
+    return normalizedUrl;
+  }
+
+  // Fix common typo: /v1/trace (missing 's') -> /v1/traces
+  if (normalizedUrl.endsWith("/v1/trace")) {
+    return `${normalizedUrl}s`;
+  }
+
+  // If ends with /v1, just append /traces
+  if (normalizedUrl.endsWith("/v1")) {
+    return `${normalizedUrl}/traces`;
+  }
+
+  // Otherwise, append the full /v1/traces path
+  return `${normalizedUrl}${OTEL_TRACES_PATH}`;
+};
+
+/**
+ * Get OTEL exporter endpoint for logs.
+ * Reuses the same base ARCHESTRA_OTEL_EXPORTER_OTLP_ENDPOINT env var, but appends /v1/logs.
+ *
+ * @param envValue - The environment variable value (for testing)
+ * @returns The full OTEL endpoint URL with /v1/logs suffix
+ */
+export const getOtelExporterOtlpLogEndpoint = (
+  envValue?: string | undefined,
+): string => {
+  const rawValue =
+    envValue ?? process.env.ARCHESTRA_OTEL_EXPORTER_OTLP_ENDPOINT;
+  const value = rawValue?.trim();
+
+  if (!value) {
+    return `${DEFAULT_OTEL_ENDPOINT}${OTEL_LOGS_PATH}`;
+  }
+
+  const normalizedUrl = value.replace(/\/+$/, "");
+
+  if (normalizedUrl.endsWith(OTEL_LOGS_PATH)) {
+    return normalizedUrl;
+  }
+
+  if (normalizedUrl.endsWith("/v1")) {
+    return `${normalizedUrl}/logs`;
+  }
+
+  return `${normalizedUrl}${OTEL_LOGS_PATH}`;
+};
+
+export const parseContentMaxLength = (
+  envValue?: string | undefined,
+): number => {
+  const value = envValue?.trim();
+  if (!value) {
+    return DEFAULT_OTEL_CONTENT_MAX_LENGTH;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    logger.warn(
+      `Invalid ARCHESTRA_OTEL_CONTENT_MAX_LENGTH value "${value}", using default ${DEFAULT_OTEL_CONTENT_MAX_LENGTH}`,
+    );
+    return DEFAULT_OTEL_CONTENT_MAX_LENGTH;
+  }
+
+  return parsed;
+};
+
+/**
+ * Parse virtual key default expiration from environment variable.
+ * Must be a non-negative integer (seconds). 0 means "never expires".
+ * Returns the default (30 days) for invalid or negative values.
+ * Capped at 1 year (31,536,000 seconds) to prevent unreasonably long expirations.
+ */
+export const parseVirtualKeyDefaultExpiration = (
+  envValue: string | undefined,
+): number => {
+  const DEFAULT_EXPIRATION = 2592000; // 30 days in seconds
+  const MAX_EXPIRATION = 31_536_000; // 1 year in seconds
+  if (!envValue) return DEFAULT_EXPIRATION;
+
+  const trimmed = envValue.trim();
+  if (!trimmed) return DEFAULT_EXPIRATION;
+
+  const parsed = Number.parseInt(trimmed, 10);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    logger.warn(
+      `Invalid ARCHESTRA_LLM_PROXY_VIRTUAL_KEYS_DEFAULT_EXPIRATION_SECONDS value "${trimmed}", using default ${DEFAULT_EXPIRATION}`,
+    );
+    return DEFAULT_EXPIRATION;
+  }
+
+  if (parsed === 0) {
+    logger.info(
+      "ARCHESTRA_LLM_PROXY_VIRTUAL_KEYS_DEFAULT_EXPIRATION_SECONDS set to 0: virtual keys will not expire by default",
+    );
+    return 0;
+  }
+
+  if (parsed > MAX_EXPIRATION) {
+    logger.warn(
+      `ARCHESTRA_LLM_PROXY_VIRTUAL_KEYS_DEFAULT_EXPIRATION_SECONDS value "${trimmed}" exceeds maximum (${MAX_EXPIRATION}s / 1 year), capping to ${MAX_EXPIRATION}`,
+    );
+    return MAX_EXPIRATION;
+  }
+
+  return parsed;
+};
+
+/**
+ * Parse a positive integer from an environment variable string, with a default fallback.
+ */
+const parsePositiveInt = (
+  envValue: string | undefined,
+  defaultValue: number,
+): number => {
+  if (!envValue) return defaultValue;
+  const parsed = Number.parseInt(envValue, 10);
+  return !Number.isNaN(parsed) && parsed > 0 ? parsed : defaultValue;
+};
+
+export const parseSampleRate = (
+  envValue: string | undefined,
+  defaultRate: number,
+): number => {
+  if (!envValue) return defaultRate;
+  const parsed = Number.parseFloat(envValue);
+  if (Number.isNaN(parsed) || parsed < 0 || parsed > 1) return defaultRate;
+  return parsed;
+};
+
+/**
+ * Parse ARCHESTRA_TRUST_PROXY into the value Fastify's trustProxy option accepts.
+ *
+ * Fastify supports:
+ *   - true  – trust all proxies
+ *   - false – trust no proxies (default)
+ *   - a comma-separated string of IPs/CIDRs – trust specific proxies
+ *
+ * This maps the env var as follows:
+ *   undefined / ""  → false
+ *   "true"          → true
+ *   "false"         → false
+ *   anything else   → trimmed string passed directly to Fastify (IP/CIDR list)
+ */
+export const parseTrustProxy = (
+  envValue: string | undefined,
+): boolean | string => {
+  const trimmed = envValue?.trim();
+  if (!trimmed || trimmed === "false") return false;
+  if (trimmed === "true") return true;
+  return trimmed
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(",");
+};
+
+export const getAnalyticsConfig = () => ({
+  enabled: process.env.ARCHESTRA_ANALYTICS !== "disabled",
+  posthog: {
+    key:
+      process.env.ARCHESTRA_ANALYTICS_POSTHOG_KEY?.trim() ||
+      DEFAULT_POSTHOG_KEY,
+    host:
+      process.env.ARCHESTRA_ANALYTICS_POSTHOG_HOST?.trim() ||
+      DEFAULT_POSTHOG_HOST,
+  },
+});
+
+const config = {
+  frontendBaseUrl,
+  api: {
+    host: isDevelopment ? "127.0.0.1" : "0.0.0.0",
+    port: getPortFromUrl(),
+    name: DEFAULT_APP_NAME,
+    version: appVersion,
+    corsOrigins: getCorsOrigins(),
+    apiKeyAuthorizationHeaderName: "Authorization",
+    /**
+     * Maximum request body size for LLM proxy and chat routes.
+     * Default Fastify limit is 1MB, which is too small for long conversations
+     * with large context windows (100k+ tokens) or file attachments.
+     * Configurable via ARCHESTRA_API_BODY_LIMIT environment variable.
+     */
+    bodyLimit: parseBodyLimit(
+      process.env.ARCHESTRA_API_BODY_LIMIT,
+      DEFAULT_BODY_LIMIT,
+    ),
+    trustProxy: parseTrustProxy(process.env.ARCHESTRA_TRUST_PROXY),
+  },
+  websocket: {
+    path: "/ws",
+  },
+  mcpGateway: {
+    endpoint: "/v1/mcp",
+  },
+  a2aGateway: {
+    endpoint: "/v1/a2a",
+  },
+  agents: {
+    incomingEmail: {
+      provider: parseIncomingEmailProvider(),
+      outlook: {
+        tenantId:
+          process.env.ARCHESTRA_AGENTS_INCOMING_EMAIL_OUTLOOK_TENANT_ID || "",
+        clientId:
+          process.env.ARCHESTRA_AGENTS_INCOMING_EMAIL_OUTLOOK_CLIENT_ID || "",
+        clientSecret:
+          process.env.ARCHESTRA_AGENTS_INCOMING_EMAIL_OUTLOOK_CLIENT_SECRET ||
+          "",
+        mailboxAddress:
+          process.env.ARCHESTRA_AGENTS_INCOMING_EMAIL_OUTLOOK_MAILBOX_ADDRESS ||
+          "",
+        emailDomain:
+          process.env.ARCHESTRA_AGENTS_INCOMING_EMAIL_OUTLOOK_EMAIL_DOMAIN ||
+          undefined,
+        webhookUrl:
+          process.env.ARCHESTRA_AGENTS_INCOMING_EMAIL_OUTLOOK_WEBHOOK_URL ||
+          undefined,
+      },
+    },
+  },
+  auth: {
+    secret: process.env.ARCHESTRA_AUTH_SECRET,
+    trustedOrigins: getTrustedOrigins(),
+    adminDefaultEmail:
+      process.env[DEFAULT_ADMIN_EMAIL_ENV_VAR_NAME] || DEFAULT_ADMIN_EMAIL,
+    adminDefaultPassword:
+      process.env[DEFAULT_ADMIN_PASSWORD_ENV_VAR_NAME] ||
+      DEFAULT_ADMIN_PASSWORD,
+    cookieDomain: process.env.ARCHESTRA_AUTH_COOKIE_DOMAIN,
+    disableBasicAuth: process.env.ARCHESTRA_AUTH_DISABLE_BASIC_AUTH === "true",
+    disableInvitations:
+      process.env.ARCHESTRA_AUTH_DISABLE_INVITATIONS === "true",
+  },
+  analytics: getAnalyticsConfig(),
+  database: {
+    url: getDatabaseUrl(),
+  },
+  llm: {
+    openai: {
+      baseUrl:
+        process.env.ARCHESTRA_OPENAI_BASE_URL || "https://api.openai.com/v1",
+    },
+    openrouter: {
+      baseUrl:
+        process.env.ARCHESTRA_OPENROUTER_BASE_URL ||
+        "https://openrouter.ai/api/v1",
+      referer:
+        process.env.ARCHESTRA_OPENROUTER_REFERER ||
+        process.env.ARCHESTRA_FRONTEND_URL?.trim() ||
+        frontendBaseUrl,
+      title: process.env.ARCHESTRA_OPENROUTER_TITLE || DEFAULT_APP_NAME,
+    },
+    anthropic: {
+      baseUrl:
+        process.env.ARCHESTRA_ANTHROPIC_BASE_URL || "https://api.anthropic.com",
+    },
+    gemini: {
+      baseUrl:
+        process.env.ARCHESTRA_GEMINI_BASE_URL ||
+        "https://generativelanguage.googleapis.com",
+      vertexAi: {
+        enabled: process.env.ARCHESTRA_GEMINI_VERTEX_AI_ENABLED === "true",
+        project: process.env.ARCHESTRA_GEMINI_VERTEX_AI_PROJECT || "",
+        location:
+          process.env.ARCHESTRA_GEMINI_VERTEX_AI_LOCATION || "us-central1",
+        // Path to service account JSON key file for authentication (optional)
+        // If not set, uses default ADC (Workload Identity, attached service account, etc.)
+        credentialsFile:
+          process.env.ARCHESTRA_GEMINI_VERTEX_AI_CREDENTIALS_FILE || "",
+      },
+    },
+    cohere: {
+      enabled: Boolean(process.env.ARCHESTRA_COHERE_BASE_URL),
+      baseUrl: process.env.ARCHESTRA_COHERE_BASE_URL || "https://api.cohere.ai",
+    },
+    cerebras: {
+      baseUrl:
+        process.env.ARCHESTRA_CEREBRAS_BASE_URL || "https://api.cerebras.ai/v1",
+    },
+    mistral: {
+      baseUrl:
+        process.env.ARCHESTRA_MISTRAL_BASE_URL || "https://api.mistral.ai/v1",
+    },
+    perplexity: {
+      baseUrl:
+        process.env.ARCHESTRA_PERPLEXITY_BASE_URL ||
+        "https://api.perplexity.ai",
+    },
+    groq: {
+      baseUrl:
+        process.env.ARCHESTRA_GROQ_BASE_URL || "https://api.groq.com/openai/v1",
+    },
+    xai: {
+      baseUrl: process.env.ARCHESTRA_XAI_BASE_URL || "https://api.x.ai/v1",
+    },
+    vllm: {
+      enabled: Boolean(process.env.ARCHESTRA_VLLM_BASE_URL),
+      baseUrl: process.env.ARCHESTRA_VLLM_BASE_URL,
+    },
+    ollama: {
+      enabled: Boolean(
+        process.env.ARCHESTRA_OLLAMA_BASE_URL ?? "http://localhost:11434/v1",
+      ),
+      baseUrl:
+        process.env.ARCHESTRA_OLLAMA_BASE_URL ?? "http://localhost:11434/v1",
+    },
+    zhipuai: {
+      baseUrl:
+        process.env.ARCHESTRA_ZHIPUAI_BASE_URL ||
+        "https://api.z.ai/api/paas/v4",
+    },
+    deepseek: {
+      baseUrl:
+        process.env.ARCHESTRA_DEEPSEEK_BASE_URL || "https://api.deepseek.com",
+    },
+    bedrock: {
+      enabled: Boolean(process.env.ARCHESTRA_BEDROCK_BASE_URL),
+      baseUrl: process.env.ARCHESTRA_BEDROCK_BASE_URL || "",
+      /** Enable AWS IAM authentication (IRSA, env vars, instance profile) instead of API key */
+      iamAuthEnabled: process.env.ARCHESTRA_BEDROCK_IAM_AUTH_ENABLED === "true",
+      /** Explicit AWS region override; falls back to extracting from base URL */
+      region: process.env.ARCHESTRA_BEDROCK_REGION || "",
+      /** Comma-separated list of provider prefixes to include (e.g., "anthropic,amazon"). Empty = allow all. */
+      allowedProviders: parseCommaSeparatedList(
+        process.env.ARCHESTRA_BEDROCK_ALLOWED_PROVIDERS || "",
+      ),
+      /** Comma-separated list of inference region prefixes to include (e.g., "us,global"). Empty = allow all. */
+      allowedInferenceRegions: parseCommaSeparatedList(
+        process.env.ARCHESTRA_BEDROCK_ALLOWED_INFERENCE_REGIONS || "",
+      ),
+    },
+    minimax: {
+      baseUrl:
+        process.env.ARCHESTRA_MINIMAX_BASE_URL || "https://api.minimax.io/v1",
+    },
+    azure: {
+      baseUrl: process.env.ARCHESTRA_AZURE_OPENAI_BASE_URL || "",
+      apiVersion:
+        process.env.ARCHESTRA_AZURE_OPENAI_API_VERSION || "2024-02-01",
+      responsesApiVersion:
+        process.env.ARCHESTRA_AZURE_OPENAI_RESPONSES_API_VERSION ||
+        "2025-04-01-preview",
+    },
+  },
+  chat: {
+    openai: {
+      apiKey: process.env.ARCHESTRA_CHAT_OPENAI_API_KEY || "",
+    },
+    openrouter: {
+      apiKey: process.env.ARCHESTRA_CHAT_OPENROUTER_API_KEY || "",
+    },
+    anthropic: {
+      apiKey: process.env.ARCHESTRA_CHAT_ANTHROPIC_API_KEY || "",
+    },
+    gemini: {
+      apiKey: process.env.ARCHESTRA_CHAT_GEMINI_API_KEY || "",
+    },
+    cerebras: {
+      apiKey: process.env.ARCHESTRA_CHAT_CEREBRAS_API_KEY || "",
+    },
+    mistral: {
+      apiKey: process.env.ARCHESTRA_CHAT_MISTRAL_API_KEY || "",
+    },
+    perplexity: {
+      apiKey: process.env.ARCHESTRA_CHAT_PERPLEXITY_API_KEY || "",
+    },
+    groq: {
+      apiKey: process.env.ARCHESTRA_CHAT_GROQ_API_KEY || "",
+    },
+    xai: {
+      apiKey: process.env.ARCHESTRA_CHAT_XAI_API_KEY || "",
+    },
+    vllm: {
+      apiKey: process.env.ARCHESTRA_CHAT_VLLM_API_KEY || "",
+    },
+    ollama: {
+      apiKey: process.env.ARCHESTRA_CHAT_OLLAMA_API_KEY || "",
+    },
+    cohere: {
+      apiKey: process.env.ARCHESTRA_CHAT_COHERE_API_KEY || "",
+    },
+    zhipuai: {
+      apiKey: process.env.ARCHESTRA_CHAT_ZHIPUAI_API_KEY || "",
+    },
+    deepseek: {
+      apiKey: process.env.ARCHESTRA_CHAT_DEEPSEEK_API_KEY || "",
+    },
+    bedrock: {
+      apiKey: process.env.ARCHESTRA_CHAT_BEDROCK_API_KEY || "",
+    },
+    minimax: {
+      apiKey: process.env.ARCHESTRA_CHAT_MINIMAX_API_KEY || "",
+    },
+    azure: {
+      apiKey: process.env.ARCHESTRA_CHAT_AZURE_OPENAI_API_KEY || "",
+    },
+    defaultModel:
+      process.env.ARCHESTRA_CHAT_DEFAULT_MODEL || "claude-opus-4-1-20250805",
+    defaultProvider: ((): SupportedProvider => {
+      const provider = process.env.ARCHESTRA_CHAT_DEFAULT_PROVIDER;
+      if (
+        provider &&
+        SupportedProviders.includes(provider as SupportedProvider)
+      ) {
+        return provider as SupportedProvider;
+      }
+      return "anthropic";
+    })(),
+  },
+  enterpriseFeatures: {
+    core: process.env.ARCHESTRA_ENTERPRISE_LICENSE_ACTIVATED === "true",
+    knowledgeBase:
+      process.env.ARCHESTRA_ENTERPRISE_LICENSE_KNOWLEDGE_BASE_ACTIVATED ===
+      "true",
+    fullWhiteLabeling:
+      process.env.ARCHESTRA_ENTERPRISE_LICENSE_FULL_WHITE_LABELING === "true",
+  },
+  /**
+   * Codegen mode is set when running `pnpm codegen` via turbo.
+   * This ensures enterprise routes are always included in generated API specs,
+   * regardless of whether the enterprise license is activated locally.
+   */
+  codegenMode: process.env.CODEGEN === "true",
+  orchestrator: {
+    mcpServerBaseImage:
+      process.env.ARCHESTRA_ORCHESTRATOR_MCP_SERVER_BASE_IMAGE ||
+      `europe-west1-docker.pkg.dev/friendly-path-465518-r6/archestra-public/mcp-server-base:${appVersion}`,
+    kubernetes: {
+      namespace: process.env.ARCHESTRA_ORCHESTRATOR_K8S_NAMESPACE || "default",
+      kubeconfig: process.env.ARCHESTRA_ORCHESTRATOR_KUBECONFIG,
+      loadKubeconfigFromCurrentCluster:
+        process.env
+          .ARCHESTRA_ORCHESTRATOR_LOAD_KUBECONFIG_FROM_CURRENT_CLUSTER ===
+        "true",
+      k8sNodeHost:
+        process.env.ARCHESTRA_ORCHESTRATOR_K8S_NODE_HOST || undefined,
+      clusterDomain:
+        process.env.ARCHESTRA_ORCHESTRATOR_K8S_CLUSTER_DOMAIN ||
+        "cluster.local",
+    },
+  },
+  vault: {
+    token: process.env.ARCHESTRA_HASHICORP_VAULT_TOKEN || DEFAULT_VAULT_TOKEN,
+  },
+  mcpSandbox: {
+    /**
+     * Optional wildcard domain for per-server sandbox origins.
+     * When set (e.g. "mcp.example.com"), each MCP server gets a hash-based
+     * subdomain (e.g. "a1b2c3d4e5f6.mcp.example.com") with a real origin,
+     * enabling localStorage, CORS, and OAuth for MCP Apps.
+     * Requires wildcard DNS + TLS for *.{domain}.
+     * When null (default), sandbox uses opaque origin (single-port, zero config).
+     */
+    domain: process.env.ARCHESTRA_MCP_SANDBOX_DOMAIN || null,
+    /** Path to the sandbox proxy HTML file (co-located in backend static dir). */
+    filePath: path.resolve(__dirname, "static/mcp-sandbox-proxy.html"),
+    /**
+     * Explicitly configured origins that are allowed to embed the sandbox iframe.
+     * Empty array means no restriction (open / dev deployment).
+     * Mirrors the CORS/trusted-origin configuration so all three stay in sync.
+     */
+    allowedOrigins: addLoopbackEquivalents(getConfiguredOrigins()),
+  },
+  observability: {
+    otel: {
+      captureContent: process.env.ARCHESTRA_OTEL_CAPTURE_CONTENT !== "false",
+      contentMaxLength: parseContentMaxLength(
+        process.env.ARCHESTRA_OTEL_CONTENT_MAX_LENGTH,
+      ),
+      tracesSampleRate: parseSampleRate(
+        process.env.ARCHESTRA_OTEL_TRACES_SAMPLE_RATE,
+        1.0,
+      ),
+      verboseTracing: process.env.ARCHESTRA_OTEL_VERBOSE_TRACING === "true",
+      traceExporter: {
+        url: getOtelExporterOtlpEndpoint(),
+        headers: getOtlpAuthHeaders(),
+      } satisfies Partial<OTLPExporterNodeConfigBase>,
+      logExporter: {
+        url: getOtelExporterOtlpLogEndpoint(),
+        headers: getOtlpAuthHeaders(),
+      } satisfies Partial<OTLPExporterNodeConfigBase>,
+    },
+    metrics: {
+      endpoint: "/metrics",
+      port: 9050,
+      secret: process.env.ARCHESTRA_METRICS_SECRET,
+    },
+    sentry: {
+      enabled: sentryDsn !== "",
+      dsn: sentryDsn,
+      environment:
+        process.env.ARCHESTRA_SENTRY_ENVIRONMENT?.toLowerCase() || environment,
+      tracesSampleRate: parseSampleRate(
+        process.env.ARCHESTRA_SENTRY_TRACES_SAMPLE_RATE,
+        0.1,
+      ),
+      mcpGatewayTracesSampleRate: parseSampleRate(
+        process.env.ARCHESTRA_SENTRY_MCP_GATEWAY_TRACES_SAMPLE_RATE,
+        0.01,
+      ),
+      profilesSampleRate: parseSampleRate(
+        process.env.ARCHESTRA_SENTRY_PROFILES_SAMPLE_RATE,
+        0.2,
+      ),
+    },
+  },
+  debug: isDevelopment,
+  production: isProduction,
+  environment,
+  llmProxy: {
+    maxVirtualKeysPerApiKey: parsePositiveInt(
+      process.env.ARCHESTRA_LLM_PROXY_MAX_VIRTUAL_KEYS,
+      10,
+    ),
+    virtualKeyDefaultExpirationSeconds: parseVirtualKeyDefaultExpiration(
+      process.env.ARCHESTRA_LLM_PROXY_VIRTUAL_KEYS_DEFAULT_EXPIRATION_SECONDS,
+    ),
+  },
+  kb: {
+    hybridSearchEnabled:
+      process.env.ARCHESTRA_KNOWLEDGE_BASE_HYBRID_SEARCH_ENABLED !== "false",
+    connectorSyncMaxDurationSeconds: parseConnectorSyncMaxDuration(
+      process.env.ARCHESTRA_KNOWLEDGE_BASE_CONNECTOR_SYNC_MAX_DURATION_SECONDS,
+    ),
+    taskWorkerPollIntervalSeconds: Number.parseInt(
+      process.env.ARCHESTRA_KNOWLEDGE_BASE_TASK_WORKER_POLL_INTERVAL_SECONDS ||
+        "5",
+      10,
+    ),
+    taskWorkerMaxConcurrent: Number.parseInt(
+      process.env.ARCHESTRA_KNOWLEDGE_BASE_TASK_WORKER_MAX_CONCURRENT || "2",
+      10,
+    ),
+    taskWorkerShutdownTimeoutSeconds: Number.parseInt(
+      process.env
+        .ARCHESTRA_KNOWLEDGE_BASE_TASK_WORKER_SHUTDOWN_TIMEOUT_SECONDS || "30",
+      10,
+    ),
+  },
+  secretsManager: {
+    type: process.env.ARCHESTRA_SECRETS_MANAGER?.toUpperCase() || "DB",
+    vaultKvVersion: process.env.ARCHESTRA_HASHICORP_VAULT_KV_VERSION || "2",
+  },
+  test: {
+    enableE2eTestEndpoints: process.env.ENABLE_E2E_TEST_ENDPOINTS === "true",
+    enableTestMcpServer: process.env.ENABLE_TEST_MCP_SERVER === "true",
+    testValue: process.env.TEST_VALUE ?? null,
+  },
+  authRateLimitDisabled:
+    process.env.ARCHESTRA_AUTH_RATE_LIMIT_DISABLED === "true",
+  isQuickstart: process.env.ARCHESTRA_QUICKSTART === "true",
+  ngrokDomain: process.env.ARCHESTRA_NGROK_DOMAIN || "",
+  processType: parseProcessType(process.env.ARCHESTRA_PROCESS_TYPE),
+};
+
+export const shouldRunWebServer = config.processType !== "worker";
+export const shouldRunWorker = config.processType !== "web";
+
+export default config;
+
+// ===== Internal helpers =====
+
+export function parseConnectorSyncMaxDuration(
+  value: string | undefined,
+): number | undefined {
+  const DEFAULT = 3300; // 55 minutes
+  const seconds = Number.parseInt(value || String(DEFAULT), 10);
+  if (Number.isNaN(seconds) || seconds <= 0) return undefined;
+  return seconds;
+}
+
+/**
+ * Get the environment variable API key for a provider.
+ * Centralizes the config.chat[provider].apiKey lookup to avoid duplication.
+ */
+export function getProviderEnvApiKey(
+  provider: SupportedProvider,
+): string | undefined {
+  const entry = config.chat[provider as keyof typeof config.chat];
+  if (typeof entry === "object" && entry !== null && "apiKey" in entry) {
+    return entry.apiKey || undefined;
+  }
+  return undefined;
+}
+
+export function parseProcessType(value: string | undefined): ProcessType {
+  const normalized = value?.toLowerCase();
+  if (normalized === "web" || normalized === "worker") return normalized;
+  return "all";
+}
+
+export function parseCommaSeparatedList(value: string): string[] {
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "../shared/tsconfig.base.json",
+  "include": [
+    "*.ts",
+    "tests/**/*.ts",
+    "utils/**/*.ts"
+  ],
+  "exclude": ["test-mcp-servers/**/*"],
+  "compilerOptions": {
+    "types": ["node"]
+  }
+}

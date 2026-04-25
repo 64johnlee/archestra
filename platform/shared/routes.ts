@@ -1,0 +1,428 @@
+export const RouteId = {
+  // Agent Routes
+  GetAgents: "getAgents",
+  GetAllAgents: "getAllAgents",
+  CreateAgent: "createAgent",
+  GetAgent: "getAgent",
+  GetDefaultMcpGateway: "getDefaultMcpGateway",
+  GetDefaultLlmProxy: "getDefaultLlmProxy",
+  UpdateAgent: "updateAgent",
+  DeleteAgent: "deleteAgent",
+  GetLabelKeys: "getLabelKeys",
+  GetLabelValues: "getLabelValues",
+
+  // Schedule Trigger Routes
+  GetScheduleTriggers: "getScheduleTriggers",
+  CreateScheduleTrigger: "createScheduleTrigger",
+  GetScheduleTrigger: "getScheduleTrigger",
+  UpdateScheduleTrigger: "updateScheduleTrigger",
+  DeleteScheduleTrigger: "deleteScheduleTrigger",
+  EnableScheduleTrigger: "enableScheduleTrigger",
+  DisableScheduleTrigger: "disableScheduleTrigger",
+  RunScheduleTriggerNow: "runScheduleTriggerNow",
+  GetScheduleTriggerRuns: "getScheduleTriggerRuns",
+  GetScheduleTriggerRun: "getScheduleTriggerRun",
+  CreateScheduleTriggerRunConversation: "createScheduleTriggerRunConversation",
+
+  // Agent Tool Routes
+  AssignToolToAgent: "assignToolToAgent",
+  BulkAssignTools: "bulkAssignTools",
+  BulkUpdateAgentTools: "bulkUpdateAgentTools",
+  AutoConfigureAgentToolPolicies: "autoConfigureAgentToolPolicies",
+  UnassignToolFromAgent: "unassignToolFromAgent",
+  GetAgentTools: "getAgentTools",
+  GetAllAgentTools: "getAllAgentTools",
+  UpdateAgentTool: "updateAgentTool",
+  GetAgentAvailableTokens: "getAgentAvailableTokens",
+
+  // Agent Delegation Routes (internal agents only)
+  GetAgentDelegations: "getAgentDelegations",
+  SyncAgentDelegations: "syncAgentDelegations",
+  DeleteAgentDelegation: "deleteAgentDelegation",
+  GetAllDelegationConnections: "getAllDelegationConnections",
+
+  // Config Routes
+  GetConfig: "getConfig",
+  GetPublicConfig: "getPublicConfig",
+
+  // Auth Routes
+  GetDefaultCredentialsStatus: "getDefaultCredentialsStatus",
+
+  // MCP Catalog Routes
+  GetInternalMcpCatalog: "getInternalMcpCatalog",
+  CreateInternalMcpCatalogItem: "createInternalMcpCatalogItem",
+  GetInternalMcpCatalogItem: "getInternalMcpCatalogItem",
+  GetInternalMcpCatalogTools: "getInternalMcpCatalogTools",
+  UpdateInternalMcpCatalogItem: "updateInternalMcpCatalogItem",
+  DeleteInternalMcpCatalogItem: "deleteInternalMcpCatalogItem",
+  DeleteInternalMcpCatalogItemByName: "deleteInternalMcpCatalogItemByName",
+  GetInternalMcpCatalogLabelKeys: "getInternalMcpCatalogLabelKeys",
+  GetInternalMcpCatalogLabelValues: "getInternalMcpCatalogLabelValues",
+  GetDeploymentYamlPreview: "getDeploymentYamlPreview",
+  ValidateDeploymentYaml: "validateDeploymentYaml",
+  ResetDeploymentYaml: "resetDeploymentYaml",
+  GetK8sImagePullSecrets: "getK8sImagePullSecrets",
+
+  // MCP Server Routes
+  GetMcpServers: "getMcpServers",
+  GetMcpServer: "getMcpServer",
+  GetMcpServerTools: "getMcpServerTools",
+  InspectMcpServer: "inspectMcpServer",
+  InstallMcpServer: "installMcpServer",
+  DeleteMcpServer: "deleteMcpServer",
+  ReauthenticateMcpServer: "reauthenticateMcpServer",
+  ReinstallMcpServer: "reinstallMcpServer",
+  GetMcpServerInstallationStatus: "getMcpServerInstallationStatus",
+  // MCP Gateway Routes
+  McpGatewayGet: "mcpGatewayGet",
+  McpGatewayPost: "mcpGatewayPost",
+  McpProxyPost: "mcpProxyPost", // Frontend session-based proxy to MCP Gateway
+
+  // MCP Server Installation Request Routes
+  GetMcpServerInstallationRequests: "getMcpServerInstallationRequests",
+  CreateMcpServerInstallationRequest: "createMcpServerInstallationRequest",
+  GetMcpServerInstallationRequest: "getMcpServerInstallationRequest",
+  UpdateMcpServerInstallationRequest: "updateMcpServerInstallationRequest",
+  ApproveMcpServerInstallationRequest: "approveMcpServerInstallationRequest",
+  DeclineMcpServerInstallationRequest: "declineMcpServerInstallationRequest",
+  AddMcpServerInstallationRequestNote: "addMcpServerInstallationRequestNote",
+  DeleteMcpServerInstallationRequest: "deleteMcpServerInstallationRequest",
+
+  // OAuth Routes
+  InitiateOAuth: "initiateOAuth",
+  HandleOAuthCallback: "handleOAuthCallback",
+  GetOAuthClientInfo: "getOAuthClientInfo",
+  SubmitOAuthConsent: "submitOAuthConsent",
+
+  // Team Routes
+  GetMembers: "getMembers",
+  GetTeams: "getTeams",
+  CreateTeam: "createTeam",
+  GetTeam: "getTeam",
+  UpdateTeam: "updateTeam",
+  DeleteTeam: "deleteTeam",
+  GetTeamMembers: "getTeamMembers",
+  AddTeamMember: "addTeamMember",
+  RemoveTeamMember: "removeTeamMember",
+
+  // Team External Group Routes (SSO Team Sync)
+  GetTeamExternalGroups: "getTeamExternalGroups",
+  AddTeamExternalGroup: "addTeamExternalGroup",
+  RemoveTeamExternalGroup: "removeTeamExternalGroup",
+
+  // Team Vault Folder Routes (BYOS - Bring Your Own Secrets)
+  GetTeamVaultFolder: "getTeamVaultFolder",
+  SetTeamVaultFolder: "setTeamVaultFolder",
+  DeleteTeamVaultFolder: "deleteTeamVaultFolder",
+  CheckTeamVaultFolderConnectivity: "checkTeamVaultFolderConnectivity",
+  ListTeamVaultFolderSecrets: "listTeamVaultFolderSecrets",
+  GetTeamVaultSecretKeys: "getTeamVaultSecretKeys",
+
+  // Role Routes
+  GetRoles: "getRoles",
+  CreateRole: "createRole",
+  GetRole: "getRole",
+  UpdateRole: "updateRole",
+  DeleteRole: "deleteRole",
+
+  // Tool Routes
+  GetTools: "getTools",
+  GetToolsWithAssignments: "getToolsWithAssignments",
+  GetUnassignedTools: "getUnassignedTools",
+  DeleteTool: "deleteTool",
+
+  // Interaction Routes
+  GetInteractions: "getInteractions",
+  GetInteraction: "getInteraction",
+  GetInteractionSessions: "getInteractionSessions",
+  GetUniqueExternalAgentIds: "getUniqueExternalAgentIds",
+  GetUniqueUserIds: "getUniqueUserIds",
+
+  // MCP Tool Call Routes
+  GetMcpToolCalls: "getMcpToolCalls",
+  GetMcpToolCall: "getMcpToolCall",
+
+  // Autonomy Policy Routes
+  GetOperators: "getOperators",
+  GetToolInvocationPolicies: "getToolInvocationPolicies",
+  CreateToolInvocationPolicy: "createToolInvocationPolicy",
+  GetToolInvocationPolicy: "getToolInvocationPolicy",
+  UpdateToolInvocationPolicy: "updateToolInvocationPolicy",
+  DeleteToolInvocationPolicy: "deleteToolInvocationPolicy",
+  GetTrustedDataPolicies: "getTrustedDataPolicies",
+  CreateTrustedDataPolicy: "createTrustedDataPolicy",
+  GetTrustedDataPolicy: "getTrustedDataPolicy",
+  UpdateTrustedDataPolicy: "updateTrustedDataPolicy",
+  DeleteTrustedDataPolicy: "deleteTrustedDataPolicy",
+  BulkUpsertDefaultCallPolicy: "bulkUpsertDefaultCallPolicy",
+  BulkUpsertDefaultResultPolicy: "bulkUpsertDefaultResultPolicy",
+
+  // Proxy Routes - OpenAI
+  OpenAiChatCompletionsWithDefaultAgent:
+    "openAiChatCompletionsWithDefaultAgent",
+  OpenAiChatCompletionsWithAgent: "openAiChatCompletionsWithAgent",
+
+  // Proxy Routes - Anthropic
+  AnthropicMessagesWithDefaultAgent: "anthropicMessagesWithDefaultAgent",
+  AnthropicMessagesWithAgent: "anthropicMessagesWithAgent",
+
+  // Proxy Routes - Cohere
+  CohereChatWithDefaultAgent: "cohereChatWithDefaultAgent",
+  CohereChatWithAgent: "cohereChatWithAgent",
+  // Proxy Routes - Cerebras
+  CerebrasChatCompletionsWithDefaultAgent:
+    "cerebrasChatCompletionsWithDefaultAgent",
+  CerebrasChatCompletionsWithAgent: "cerebrasChatCompletionsWithAgent",
+
+  // Proxy Routes - Mistral
+  MistralChatCompletionsWithDefaultAgent:
+    "mistralChatCompletionsWithDefaultAgent",
+  MistralChatCompletionsWithAgent: "mistralChatCompletionsWithAgent",
+
+  // Proxy Routes - Perplexity
+  PerplexityChatCompletionsWithDefaultAgent:
+    "perplexityChatCompletionsWithDefaultAgent",
+  PerplexityChatCompletionsWithAgent: "perplexityChatCompletionsWithAgent",
+
+  // Proxy Routes - Groq
+  GroqChatCompletionsWithDefaultAgent: "groqChatCompletionsWithDefaultAgent",
+  GroqChatCompletionsWithAgent: "groqChatCompletionsWithAgent",
+
+  // Proxy Routes - xAI
+  XaiChatCompletionsWithDefaultAgent: "xaiChatCompletionsWithDefaultAgent",
+  XaiChatCompletionsWithAgent: "xaiChatCompletionsWithAgent",
+
+  // Proxy Routes - OpenRouter
+  OpenrouterChatCompletionsWithDefaultAgent:
+    "openrouterChatCompletionsWithDefaultAgent",
+  OpenrouterChatCompletionsWithAgent: "openrouterChatCompletionsWithAgent",
+
+  // Proxy Routes - vLLM
+  VllmChatCompletionsWithDefaultAgent: "vllmChatCompletionsWithDefaultAgent",
+  VllmChatCompletionsWithAgent: "vllmChatCompletionsWithAgent",
+
+  // Proxy Routes - Ollama
+  OllamaChatCompletionsWithDefaultAgent:
+    "ollamaChatCompletionsWithDefaultAgent",
+  OllamaChatCompletionsWithAgent: "ollamaChatCompletionsWithAgent",
+  // Proxy Routes - Zhipu AI
+  ZhipuaiChatCompletionsWithDefaultAgent:
+    "zhipuaiChatCompletionsWithDefaultAgent",
+  ZhipuaiChatCompletionsWithAgent: "zhipuaiChatCompletionsWithAgent",
+
+  // Proxy Routes - DeepSeek
+  DeepSeekChatCompletionsWithDefaultAgent:
+    "deepseekChatCompletionsWithDefaultAgent",
+  DeepSeekChatCompletionsWithAgent: "deepseekChatCompletionsWithAgent",
+
+  // Proxy Routes - AWS Bedrock
+  BedrockConverseWithDefaultAgent: "bedrockConverseWithDefaultAgent",
+  BedrockConverseWithAgent: "bedrockConverseWithAgent",
+  BedrockConverseStreamWithDefaultAgent:
+    "bedrockConverseStreamWithDefaultAgent",
+  BedrockConverseStreamWithAgent: "bedrockConverseStreamWithAgent",
+  // AI SDK compatible routes (model ID in URL)
+  BedrockConverseWithAgentAndModel: "bedrockConverseWithAgentAndModel",
+  BedrockConverseStreamWithAgentAndModel:
+    "bedrockConverseStreamWithAgentAndModel",
+  // OpenAI-compatible routes (translate OpenAI chat/completions ↔ Converse)
+  BedrockOpenaiChatCompletionsWithDefaultAgent:
+    "bedrockOpenaiChatCompletionsWithDefaultAgent",
+  BedrockOpenaiChatCompletionsWithAgent:
+    "bedrockOpenaiChatCompletionsWithAgent",
+  BedrockOpenaiListModelsWithDefaultAgent:
+    "bedrockOpenaiListModelsWithDefaultAgent",
+  BedrockOpenaiListModelsWithAgent: "bedrockOpenaiListModelsWithAgent",
+
+  // Proxy Routes - MiniMax
+  MinimaxChatCompletionsWithDefaultAgent:
+    "minimaxChatCompletionsWithDefaultAgent",
+  MinimaxChatCompletionsWithAgent: "minimaxChatCompletionsWithAgent",
+
+  // Proxy Routes - Azure AI Foundry
+  AzureChatCompletionsWithDefaultAgent: "azureChatCompletionsWithDefaultAgent",
+  AzureChatCompletionsWithAgent: "azureChatCompletionsWithAgent",
+  AzureResponsesWithDefaultAgent: "azureResponsesWithDefaultAgent",
+  AzureResponsesWithAgent: "azureResponsesWithAgent",
+
+  // Chat Routes
+  StreamChat: "streamChat",
+  StopChatStream: "stopChatStream",
+  GetChatConversations: "getChatConversations",
+  GetChatConversation: "getChatConversation",
+  GetChatAgentMcpTools: "getChatAgentMcpTools",
+  CreateChatConversation: "createChatConversation",
+  UpdateChatConversation: "updateChatConversation",
+  DeleteChatConversation: "deleteChatConversation",
+  GenerateChatConversationTitle: "generateChatConversationTitle",
+  GetChatMcpTools: "getChatMcpTools",
+  UpdateChatMessage: "updateChatMessage",
+  GetConversationEnabledTools: "getConversationEnabledTools",
+  UpdateConversationEnabledTools: "updateConversationEnabledTools",
+  DeleteConversationEnabledTools: "deleteConversationEnabledTools",
+  ShareConversation: "shareConversation",
+  UnshareConversation: "unshareConversation",
+  GetConversationShare: "getConversationShare",
+  GetSharedConversation: "getSharedConversation",
+  ForkSharedConversation: "forkSharedConversation",
+  GetLlmModels: "getLlmModels",
+  SyncLlmModels: "syncLlmModels",
+
+  // LLM Provider API Key Routes
+  GetLlmProviderApiKeys: "getLlmProviderApiKeys",
+  GetAvailableLlmProviderApiKeys: "getAvailableLlmProviderApiKeys",
+  CreateLlmProviderApiKey: "createLlmProviderApiKey",
+  GetLlmProviderApiKey: "getLlmProviderApiKey",
+  UpdateLlmProviderApiKey: "updateLlmProviderApiKey",
+  DeleteLlmProviderApiKey: "deleteLlmProviderApiKey",
+
+  // User API Key Routes
+  GetApiKeys: "getApiKeys",
+  GetApiKey: "getApiKey",
+  CreateApiKey: "createApiKey",
+  DeleteApiKey: "deleteApiKey",
+
+  // Virtual API Key Routes
+  GetVirtualApiKeys: "getVirtualApiKeys",
+  GetAllVirtualApiKeys: "getAllVirtualApiKeys",
+  CreateVirtualApiKey: "createVirtualApiKey",
+  UpdateVirtualApiKey: "updateVirtualApiKey",
+  DeleteVirtualApiKey: "deleteVirtualApiKey",
+
+  // Models with API Keys Routes
+  GetModelsWithApiKeys: "getModelsWithApiKeys",
+  UpdateModel: "updateModel",
+
+  // Limits Routes
+  GetLimits: "getLimits",
+  CreateLimit: "createLimit",
+  GetLimit: "getLimit",
+  UpdateLimit: "updateLimit",
+  DeleteLimit: "deleteLimit",
+
+  // Organization Routes
+  GetOrganization: "getOrganization",
+  GetOnboardingStatus: "getOnboardingStatus",
+  GetMemberSignupStatus: "getMemberSignupStatus",
+  GetOrganizationMembers: "getOrganizationMembers",
+  GetOrganizationMember: "getOrganizationMember",
+  DeletePendingSignupMember: "deletePendingSignupMember",
+  CompleteOnboarding: "completeOnboarding",
+
+  // Appearance Settings Routes
+  GetAppearanceSettings: "getAppearanceSettings",
+  UpdateAppearanceSettings: "updateAppearanceSettings",
+
+  // Security Settings Routes
+  UpdateSecuritySettings: "updateSecuritySettings",
+
+  // LLM Settings Routes (organization-level)
+  UpdateLlmSettings: "updateLlmSettings",
+
+  // Agent Settings Routes (organization-level)
+  UpdateAgentSettings: "updateAgentSettings",
+
+  // MCP Settings Routes (organization-level)
+  UpdateMcpSettings: "updateMcpSettings",
+
+  // Connection Settings Routes (organization-level)
+  UpdateConnectionSettings: "updateConnectionSettings",
+
+  // Knowledge Settings Routes (organization-level)
+  UpdateKnowledgeSettings: "updateKnowledgeSettings",
+  DropEmbeddingConfig: "dropEmbeddingConfig",
+  TestEmbeddingConnection: "testEmbeddingConnection",
+
+  // Identity Provider Routes
+  GetPublicIdentityProviders: "getPublicIdentityProviders",
+  GetIdentityProviders: "getIdentityProviders",
+  GetIdentityProvider: "getIdentityProvider",
+  CreateIdentityProvider: "createIdentityProvider",
+  UpdateIdentityProvider: "updateIdentityProvider",
+  DeleteIdentityProvider: "deleteIdentityProvider",
+  GetIdentityProviderIdpLogoutUrl: "getIdentityProviderIdpLogoutUrl",
+
+  // Member Routes
+  GetMemberDefaultAgent: "getMemberDefaultAgent",
+
+  // User Routes
+  GetUserPermissions: "getUserPermissions",
+
+  // Team Token Routes
+  GetTokens: "getTokens",
+  GetTokenValue: "getTokenValue",
+  RotateToken: "rotateToken",
+
+  // User Token Routes (Personal Tokens)
+  GetUserToken: "getUserToken",
+  GetUserTokenValue: "getUserTokenValue",
+  RotateUserToken: "rotateUserToken",
+
+  // Statistics Routes
+  GetTeamStatistics: "getTeamStatistics",
+  GetAgentStatistics: "getAgentStatistics",
+  GetModelStatistics: "getModelStatistics",
+  GetOverviewStatistics: "getOverviewStatistics",
+  GetCostSavingsStatistics: "getCostSavingsStatistics",
+
+  // Optimization Rule Routes
+  GetOptimizationRules: "getOptimizationRules",
+  CreateOptimizationRule: "createOptimizationRule",
+  UpdateOptimizationRule: "updateOptimizationRule",
+  DeleteOptimizationRule: "deleteOptimizationRule",
+
+  // Secrets Routes
+  GetSecretsType: "getSecretsType",
+  GetSecret: "getSecret",
+  CheckSecretsConnectivity: "checkSecretsConnectivity",
+
+  // Incoming Email Routes
+  GetIncomingEmailStatus: "getIncomingEmailStatus",
+  SetupIncomingEmailWebhook: "setupIncomingEmailWebhook",
+  RenewIncomingEmailSubscription: "renewIncomingEmailSubscription",
+  DeleteIncomingEmailSubscription: "deleteIncomingEmailSubscription",
+  GetAgentEmailAddress: "getAgentEmailAddress",
+
+  // ChatOps Routes
+  GetChatOpsStatus: "getChatOpsStatus",
+  ListChatOpsBindings: "listChatOpsBindings",
+  DeleteChatOpsBinding: "deleteChatOpsBinding",
+  UpdateChatOpsBinding: "updateChatOpsBinding",
+  BulkUpdateChatOpsBindings: "bulkUpdateChatOpsBindings",
+  CreateChatOpsDmBinding: "createChatOpsDmBinding",
+  UpdateChatOpsConfigInQuickstart: "updateChatOpsConfigInQuickstart",
+  UpdateSlackChatOpsConfig: "updateSlackChatOpsConfig",
+  RefreshChatOpsChannelDiscovery: "refreshChatOpsChannelDiscovery",
+
+  // Knowledge Base Routes
+  GetKnowledgeBases: "getKnowledgeBases",
+  CreateKnowledgeBase: "createKnowledgeBase",
+  GetKnowledgeBase: "getKnowledgeBase",
+  UpdateKnowledgeBase: "updateKnowledgeBase",
+  DeleteKnowledgeBase: "deleteKnowledgeBase",
+  GetKnowledgeBaseHealth: "getKnowledgeBaseHealth",
+
+  // Knowledge Base Connector Routes
+  GetConnectors: "getConnectors",
+  CreateConnector: "createConnector",
+  GetConnector: "getConnector",
+  UpdateConnector: "updateConnector",
+  DeleteConnector: "deleteConnector",
+  SyncConnector: "syncConnector",
+  ForceResyncConnector: "forceResyncConnector",
+  TestConnectorConnection: "testConnectorConnection",
+
+  // Connector Knowledge Base Assignment Routes
+  AssignConnectorToKnowledgeBases: "assignConnectorToKnowledgeBases",
+  UnassignConnectorFromKnowledgeBase: "unassignConnectorFromKnowledgeBase",
+  GetConnectorKnowledgeBases: "getConnectorKnowledgeBases",
+
+  // Connector Run Routes
+  GetConnectorRuns: "getConnectorRuns",
+  GetConnectorRun: "getConnectorRun",
+
+  // Invitation Routes
+  CheckInvitation: "checkInvitation",
+} as const;
+
+export type RouteId = (typeof RouteId)[keyof typeof RouteId];

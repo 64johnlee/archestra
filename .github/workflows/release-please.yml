@@ -1,0 +1,171 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+      - "release/*"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  # Never preempt an in-flight release for the same branch. Subsequent pushes queue
+  # behind the active run so artifact publishing can complete atomically.
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: write # Required to update manifests and release metadata in the repository.
+      pull-requests: write # Required for release-please PR creation and updates.
+      issues: write # Required for release-please issue comments and labels.
+      id-token: write # Required for Workload Identity Federation in downstream release jobs.
+    outputs:
+      platform_release_created: ${{ steps.release-please.outputs['platform--release_created'] }}
+      platform_version: ${{ steps.release-please.outputs['platform--version'] }}
+      platform_tag_name: ${{ steps.release-please.outputs['platform--tag_name'] }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Generate a token
+        id: generate-token
+        uses: ./.github/actions/generate-release-token
+        with:
+          app-id: ${{ secrets.ARCHESTRA_RELEASER_GITHUB_APP_ID }}
+          private-key: ${{ secrets.ARCHESTRA_RELEASER_GITHUB_APP_PRIVATE_KEY }}
+
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        id: release-please
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          config-file: .github/release-please/release-please-config.json
+          manifest-file: .github/release-please/.release-please-manifest.json
+          target-branch: ${{ github.ref_name }}
+
+      - name: Log release-please outputs
+        # HACK to get toJson to sorta print the output to the console without failing this job
+        continue-on-error: true
+        env:
+          OUTPUTS: ${{ toJson(steps.release-please.outputs) }}
+        run: |
+          echo "$OUTPUTS"
+
+      # Re-draft the release so it's not visible until all artifacts are built.
+      # We removed "draft: true" from release-please-config.json because draft releases
+      # don't create git tags, and release-please needs the tag to exist when calculating
+      # the next version (otherwise it creates bogus PRs with stale versions).
+      - name: Re-draft release until artifacts are ready
+        if: steps.release-please.outputs['platform--release_created']
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ steps.release-please.outputs['platform--tag_name'] }}
+        run: gh release edit "$TAG_NAME" --draft=true
+
+  build-and-push-mcp-server-docker-image:
+    name: Build and push MCP Server Docker image
+    if: needs.release-please.outputs.platform_release_created
+    uses: ./.github/workflows/build-base-mcp-server-docker-image.yml
+    needs:
+      - release-please
+    permissions:
+      contents: read # Required to invoke the reusable image build workflow.
+      id-token: write # Required for Workload Identity Federation.
+    with:
+      push_to_gcr: true
+      version: ${{ needs.release-please.outputs.platform_version }}
+    secrets:
+      GCP_SERVICE_ACCOUNT_NAME: ${{ secrets.DEVELOPMENT_OAUTH_PROXY_RELEASER_GCP_SERVICE_ACCOUNT_NAME }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER_IDENTIFIER: ${{ secrets.DEVELOPMENT_OAUTH_PROXY_RELEASER_GCP_WORKLOAD_IDENTITY_PROVIDER_IDENTIFIER }}
+
+  build-and-push-platform-docker-image-to-dockerhub:
+    name: Build and push platform Docker image to Docker Hub
+    # The platform Docker image references the MCP server base image tag via
+    # ARCHESTRA_ORCHESTRATOR_MCP_SERVER_BASE_IMAGE env var, but does NOT use it as a FROM base image.
+    # The tag is baked as a default value at build time, so the MCP server image doesn't need to
+    # exist yet. Both images are built in parallel and the publish-github-release job gates on
+    # all artifacts being ready before un-drafting the release.
+    if: needs.release-please.outputs.platform_release_created
+    uses: ./.github/workflows/build-dockerhub-image.yml
+    needs:
+      - release-please
+    permissions:
+      contents: read # Required to invoke the reusable Docker build workflow.
+      id-token: write # Required for Workload Identity Federation.
+    with:
+      image_directory: ./platform
+      image_name: platform
+      version: ${{ needs.release-please.outputs.platform_version }}
+      push_image: true
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      PLATFORM_NEXTJS_SOURCE_MAP_SENTRY_AUTH_TOKEN: ${{ secrets.PLATFORM_NEXTJS_SOURCE_MAP_SENTRY_AUTH_TOKEN }}
+      TURBOREPO_REMOTE_CACHING_TOKEN: ${{ secrets.TURBOREPO_REMOTE_CACHING_TOKEN }}
+      TURBOREPO_REMOTE_CACHING_TEAM: ${{ secrets.TURBOREPO_REMOTE_CACHING_TEAM }}
+
+  publish-platform-helm-chart:
+    name: Publish platform Helm chart
+    # The Helm chart only references the version tag (not image content), so it can run
+    # in parallel with Docker image builds. The publish-github-release job ensures all
+    # artifacts are ready before the release is made visible.
+    if: needs.release-please.outputs.platform_release_created
+    uses: ./.github/workflows/publish-platform-helm-chart.yml
+    needs:
+      - release-please
+    permissions:
+      contents: write # Required to publish Helm chart metadata from the repository.
+      id-token: write # Required for Workload Identity Federation.
+    with:
+      version: ${{ needs.release-please.outputs.platform_version }}
+      push_chart: true
+    secrets:
+      GCP_SERVICE_ACCOUNT_NAME: ${{ secrets.DEVELOPMENT_OAUTH_PROXY_RELEASER_GCP_SERVICE_ACCOUNT_NAME }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER_IDENTIFIER: ${{ secrets.DEVELOPMENT_OAUTH_PROXY_RELEASER_GCP_WORKLOAD_IDENTITY_PROVIDER_IDENTIFIER }}
+
+  publish-github-release:
+    name: Publish GitHub Release
+    # Un-drafts the GitHub release and triggers the website deploy only after ALL artifacts
+    # (MCP server image, platform Docker image, Helm chart) are published.
+    if: needs.release-please.outputs.platform_release_created
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    needs:
+      - release-please
+      - build-and-push-mcp-server-docker-image
+      - build-and-push-platform-docker-image-to-dockerhub
+      - publish-platform-helm-chart
+    permissions:
+      contents: write # Required to publish the GitHub release draft.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Generate a token
+        id: generate-token
+        uses: ./.github/actions/github-app-token
+        with:
+          app-id: ${{ secrets.ARCHESTRA_RELEASER_GITHUB_APP_ID }}
+          private-key: ${{ secrets.ARCHESTRA_RELEASER_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ needs.release-please.outputs.platform_tag_name }}
+        run: gh release edit "$TAG_NAME" --draft=false
+
+      - name: Trigger website deploy
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.WEBSITE_VERCEL_DEPLOY_HOOK_URL }}
+        run: curl -X POST "$VERCEL_DEPLOY_HOOK_URL"
