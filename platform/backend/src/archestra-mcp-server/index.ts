@@ -47,6 +47,10 @@ import {
   toolEntries as toolAssignmentToolEntries,
   tools as toolAssignmentTools,
 } from "./tool-assignment";
+import {
+  toolEntries as toolDiscoveryToolEntries,
+  tools as toolDiscoveryTools,
+} from "./tool-discovery";
 import type { ArchestraContext } from "./types";
 
 export { archestraMcpBranding } from "./branding";
@@ -67,6 +71,7 @@ const toolEntries: Partial<
   ...toolAssignmentToolEntries,
   ...knowledgeManagementToolEntries,
   ...chatToolEntries,
+  ...toolDiscoveryToolEntries,
 };
 
 export function getArchestraMcpTools() {
@@ -81,6 +86,7 @@ export function getArchestraMcpTools() {
     ...toolAssignmentTools,
     ...knowledgeManagementTools,
     ...chatTools,
+    ...toolDiscoveryTools,
   ];
 
   if (archestraMcpBranding.toolPrefix === ARCHESTRA_TOOL_PREFIX) {

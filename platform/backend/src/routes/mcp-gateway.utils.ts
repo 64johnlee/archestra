@@ -18,6 +18,8 @@ import {
   OAUTH_TOKEN_ID_PREFIX,
   parseFullToolName,
   TOOL_QUERY_KNOWLEDGE_SOURCES_SHORT_NAME,
+  TOOL_SEARCH_TOOLS_SHORT_NAME,
+  TOOL_RUN_TOOL_SHORT_NAME,
 } from "@shared";
 import type { FastifyRequest } from "fastify";
 import {
@@ -180,7 +182,18 @@ export async function createAgentServer(
       tokenAuth?.userId,
       tokenAuth?.organizationId,
     );
-    const permittedTools = mcpTools.filter((t) => permittedNames.has(t.name));
+    let permittedTools = mcpTools.filter((t) => permittedNames.has(t.name));
+
+    // Search-and-run mode: only expose search_tools + run_tool meta-tools
+    if (agent.toolExposureMode === "search_and_run") {
+      const searchAndRunToolNames = new Set([
+        archestraMcpBranding.getToolName(TOOL_SEARCH_TOOLS_SHORT_NAME),
+        archestraMcpBranding.getToolName(TOOL_RUN_TOOL_SHORT_NAME),
+      ]);
+      permittedTools = permittedTools.filter((t) =>
+        searchAndRunToolNames.has(t.name),
+      );
+    }
 
     // Dynamically enrich the knowledge sources tool description with
     // the agent's actual knowledge base names and connector types
