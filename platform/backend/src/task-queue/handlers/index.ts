@@ -4,6 +4,7 @@ import { handleCheckDueConnectors } from "./check-due-connectors-handler";
 import { handleCheckDueScheduleTriggers } from "./check-due-schedule-triggers-handler";
 import { handleConnectorSync } from "./connector-sync-handler";
 import { handleScheduleTriggerRunExecution } from "./schedule-trigger-run-handler";
+import { handleAssignAgentToolsFromLabels } from "./assign-label-tools-handler";
 
 export function registerTaskHandlers(taskQueueService: TaskQueueService): void {
   taskQueueService.registerHandler("connector_sync", handleConnectorSync);

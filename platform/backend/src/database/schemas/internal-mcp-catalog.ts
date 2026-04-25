@@ -70,6 +70,12 @@ const internalMcpCatalogTable = pgTable(
       onDelete: "set null",
     }),
     scope: mcpCatalogScopeEnum("scope").notNull().default("org"),
+
+    /** Labels for label-based tool assignment (MCP gateways in automatic mode) */
+    mcpCatalogLabels: jsonb("mcp_catalog_labels").$type<
+      Array<{ key: string; value: string }>
+    >(),
+
     createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" })
       .notNull()

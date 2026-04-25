@@ -184,6 +184,20 @@ class AgentModel {
       await AgentLabelModel.syncAgentLabels(createdAgent.id, labels);
     }
 
+    // If in automatic mode, reconcile tools based on labels
+    if (
+      createdAgent.toolAssignmentMode === "automatic" ||
+      (agent as Record<string, unknown>).toolAssignmentMode === "automatic"
+    ) {
+      const { reconcileAgentToolsFromLabels } = await import(
+        "@/agents/reconcile-label-tools"
+      );
+      await reconcileAgentToolsFromLabels(
+        createdAgent.id,
+        createdAgent.organizationId,
+      );
+    }
+
     // Assign knowledge bases if provided
     if (knowledgeBaseIds && knowledgeBaseIds.length > 0) {
       await AgentKnowledgeBaseModel.syncForAgent(
@@ -1342,6 +1356,23 @@ class AgentModel {
     // Sync label assignments if labels is provided
     if (labels !== undefined) {
       await AgentLabelModel.syncAgentLabels(id, labels);
+    }
+
+    // Reconcile tools if agent is in automatic mode and labels changed
+    if (labels !== undefined) {
+      const [row] = await db
+        .select({ toolAssignmentMode: schema.agentsTable.toolAssignmentMode })
+        .from(schema.agentsTable)
+        .where(eq(schema.agentsTable.id, id));
+      if (row?.toolAssignmentMode === "automatic") {
+        const { reconcileAgentToolsFromLabels } = await import(
+          "@/agents/reconcile-label-tools"
+        );
+        await reconcileAgentToolsFromLabels(
+          id,
+          existingAgent.organizationId,
+        );
+      }
     }
 
     // Sync knowledge base assignments if knowledgeBaseIds is provided

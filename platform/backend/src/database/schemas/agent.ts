@@ -105,6 +105,12 @@ const agentsTable = pgTable(
       (): SQL => sql`${agentsTable.builtInAgentConfig} IS NOT NULL`,
     ),
 
+    /** Tool assignment mode for MCP gateways: 'manual' (default) or 'automatic' (label-driven) */
+    toolAssignmentMode: text("tool_assignment_mode")
+      .$type<"manual" | "automatic">()
+      .notNull()
+      .default("manual"),
+
     createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" })
       .notNull()
