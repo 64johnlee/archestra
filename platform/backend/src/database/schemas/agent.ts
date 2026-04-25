@@ -1,4 +1,12 @@
 import type { IncomingEmailSecurityMode } from "@shared";
+
+/**
+ * Controls what tools are exposed in MCP tools/list for agents and gateways.
+ * - "all": Expose all assigned tools (default, existing behavior)
+ * - "search_and_run": Expose only search_tools + run_tool meta-tools
+ */
+export const TOOL_EXPOSURE_MODES = ["all", "search_and_run"] as const;
+export type ToolExposureMode = (typeof TOOL_EXPOSURE_MODES)[number];
 import { type SQL, sql } from "drizzle-orm";
 import {
   boolean,
@@ -104,6 +112,12 @@ const agentsTable = pgTable(
     builtIn: boolean("built_in").generatedAlwaysAs(
       (): SQL => sql`${agentsTable.builtInAgentConfig} IS NOT NULL`,
     ),
+
+    /** Tool exposure mode: controls what tools are visible in MCP tools/list */
+    toolExposureMode: text("tool_exposure_mode")
+      .$type<ToolExposureMode>()
+      .notNull()
+      .default("all"),
 
     createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" })
