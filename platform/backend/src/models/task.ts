@@ -23,8 +23,7 @@ class TaskModel {
       )
       UPDATE tasks
       SET status = 'processing',
-          started_at = NOW(),
-          attempt = attempt + 1
+          started_at = NOW()
       FROM next_task
       WHERE tasks.id = next_task.id
       RETURNING
@@ -53,7 +52,32 @@ class TaskModel {
     return result ?? null;
   }
 
-  static async fail(params: {
+  /**
+   * Mark a task as dead (no more retries).
+   * Does NOT increment attempt - use fail() for retry scheduling.
+   */
+  static async dead(params: {
+    id: string;
+    error: string;
+  }): Promise<Task | null> {
+    const { id, error } = params;
+    const [result] = await db
+      .update(schema.tasksTable)
+      .set({
+        status: "dead",
+        lastError: error,
+        completedAt: new Date(),
+      })
+      .where(eq(schema.tasksTable.id, id))
+      .returning();
+    return result ?? null;
+  }
+
+  /**
+   * Schedule a failed task for retry (increment attempt + set backoff delay).
+   * Returns null if max attempts exceeded (caller should call dead() instead).
+   */
+  static async retry(params: {
     id: string;
     error: string;
     attempt: number;
@@ -62,16 +86,7 @@ class TaskModel {
     const { id, error, attempt, maxAttempts } = params;
 
     if (attempt >= maxAttempts) {
-      const [result] = await db
-        .update(schema.tasksTable)
-        .set({
-          status: "dead",
-          lastError: error,
-          completedAt: new Date(),
-        })
-        .where(eq(schema.tasksTable.id, id))
-        .returning();
-      return result ?? null;
+      return null; // Caller should call dead() instead
     }
 
     // Exponential backoff: 30s * 2^(attempt-1)
@@ -84,12 +99,36 @@ class TaskModel {
         status: "pending",
         lastError: error,
         scheduledFor,
+        attempt: attempt + 1, // Increment attempt on actual failure
       })
       .where(eq(schema.tasksTable.id, id))
       .returning();
     return result ?? null;
   }
 
+  /**
+   * Fail a task: if max attempts exceeded, mark dead; otherwise schedule for retry.
+   * Attempt is only incremented when actually failing (not for stuck tasks reset).
+   */
+  static async fail(params: {
+    id: string;
+    error: string;
+    attempt: number;
+    maxAttempts: number;
+  }): Promise<Task | null> {
+    const { id, error, attempt, maxAttempts } = params;
+
+    if (attempt >= maxAttempts) {
+      return this.dead({ id, error });
+    }
+
+    return this.retry({ id, error, attempt, maxAttempts });
+  }
+
+  /**
+   * Reset stuck tasks back to pending queue without counting as a failure attempt.
+   * Uses exponential backoff but does NOT increment attempt (stuck != failed).
+   */
   static async resetStuckTasks(timeoutMs: number): Promise<number> {
     const cutoff = new Date(Date.now() - timeoutMs);
     const t = schema.tasksTable;
@@ -101,12 +140,20 @@ class TaskModel {
 
     let count = 0;
     for (const task of stuck) {
-      await TaskModel.fail({
-        id: task.id,
-        error: "Task timed out (stuck in processing)",
-        attempt: task.attempt,
-        maxAttempts: task.maxAttempts,
-      });
+      // Exponential backoff for stuck tasks, but DO NOT increment attempt.
+      // Stuck tasks were not actually failed - they were interrupted (e.g., worker crash).
+      const delayMs = 30_000 * 2 ** (task.attempt - 1);
+      const scheduledFor = new Date(Date.now() + delayMs);
+
+      await db
+        .update(schema.tasksTable)
+        .set({
+          status: "pending",
+          lastError: "Task timed out (stuck in processing)",
+          scheduledFor,
+          startedAt: null, // Clear started_at so it can be dequeued again
+        })
+        .where(eq(t.id, task.id));
       count++;
     }
     return count;
