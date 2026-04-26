@@ -100,18 +100,10 @@ export async function getOptimizedModel<
         "[CostOptimization] resolved organizationId from team",
       );
     }
-  } else {
-    // If agent has no teams, check if there are any organization optimization rules to apply (fallback)
-    // TODO: this fallback doesn't work if there are multiple organizations.
-    organizationId = await OptimizationRuleModel.getFirstOrganizationId();
-
-    if (organizationId) {
-      logger.info(
-        { agentId, organizationId },
-        "[CostOptimization] agent has no teams - using fallback organization",
-      );
-    }
-  }
+  // Note: If agent has no teams, we cannot reliably apply org-level optimization rules
+  // because there is no org context. Previously this would fall back to an arbitrary
+  // organization, which could apply wrong rules to agents from different orgs.
+  // Instead, we skip cost optimization for such agents.
 
   if (!organizationId) {
     logger.warn(
