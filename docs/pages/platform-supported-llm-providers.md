@@ -74,6 +74,64 @@ Model Router translation is text-first. Anthropic, Gemini, and Cohere routes cur
 - **Authentication**: Pass your Anthropic API key in the `x-api-key` header
 - **Messages path**: `POST /v1/anthropic/{profile-id}/v1/messages`
 
+### Anthropic Workload Identity Federation (Keyless Auth)
+
+Workload Identity Federation (WIF) lets Archestra authenticate to `api.anthropic.com` using a cloud-provider OIDC token instead of a static Anthropic API key. This is the recommended approach for GKE (GCP), EKS (AWS), AKS (Azure), and any Kubernetes cluster that projects short-lived service-account tokens.
+
+#### How it works
+
+1. Archestra reads an OIDC identity token from a file (e.g. a Kubernetes projected service-account token) or an environment variable.
+2. It POSTs the token to `POST /v1/oauth/token` on `api.anthropic.com` using the RFC 7523 `urn:ietf:params:oauth:grant-type:jwt-bearer` grant.
+3. Anthropic returns a short-lived Bearer access token.
+4. Archestra caches the token and refreshes it proactively before expiry.
+
+Before enabling WIF you must configure a **federation rule** in the [Anthropic Console](https://console.anthropic.com) that trusts your cloud provider's OIDC issuer.
+
+#### Environment variables
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `ARCHESTRA_ANTHROPIC_WIF_ENABLED` | Yes | Set to `true` to enable WIF |
+| `ARCHESTRA_ANTHROPIC_WIF_FEDERATION_RULE_ID` | Yes | Federation rule ID from the Anthropic Console |
+| `ARCHESTRA_ANTHROPIC_WIF_ORGANIZATION_ID` | Yes | Organization UUID from the Anthropic Console |
+| `ARCHESTRA_ANTHROPIC_WIF_IDENTITY_TOKEN_FILE` | Yes* | Path to a file containing the OIDC JWT (e.g. a Kubernetes projected SA token) |
+| `ARCHESTRA_ANTHROPIC_WIF_IDENTITY_TOKEN` | Yes* | Inline OIDC JWT. Prefer `_TOKEN_FILE` in production. |
+| `ARCHESTRA_ANTHROPIC_WIF_WORKSPACE_ID` | No | Workspace ID to scope the minted token |
+
+\* One of `ARCHESTRA_ANTHROPIC_WIF_IDENTITY_TOKEN_FILE` or `ARCHESTRA_ANTHROPIC_WIF_IDENTITY_TOKEN` must be set.
+
+#### Kubernetes example
+
+Mount a projected service-account token and point Archestra at it:
+
+```yaml
+env:
+  - name: ARCHESTRA_ANTHROPIC_WIF_ENABLED
+    value: "true"
+  - name: ARCHESTRA_ANTHROPIC_WIF_FEDERATION_RULE_ID
+    value: "<your-federation-rule-id>"
+  - name: ARCHESTRA_ANTHROPIC_WIF_ORGANIZATION_ID
+    value: "<your-anthropic-org-uuid>"
+  - name: ARCHESTRA_ANTHROPIC_WIF_IDENTITY_TOKEN_FILE
+    value: /var/run/secrets/anthropic/token
+volumeMounts:
+  - name: anthropic-token
+    mountPath: /var/run/secrets/anthropic
+    readOnly: true
+volumes:
+  - name: anthropic-token
+    projected:
+      sources:
+        - serviceAccountToken:
+            audience: anthropic  # must match your federation rule's audience
+            expirationSeconds: 3600
+            path: token
+```
+
+Archestra re-reads the token file on every exchange, so Kubernetes token rotation is handled automatically.
+
+WIF is mutually exclusive with `ARCHESTRA_ANTHROPIC_AZURE_FOUNDRY_ENTRA_ID_ENABLED`. Use WIF for direct `api.anthropic.com` access and Azure Foundry Entra ID for Azure-hosted Claude deployments.
+
 ### Anthropic on Microsoft Foundry
 
 Claude models deployed in Microsoft Foundry use the Anthropic Messages API at `https://<resource>.services.ai.azure.com/anthropic`. Set `ARCHESTRA_ANTHROPIC_BASE_URL` to that `/anthropic` base URL. For keyless Microsoft Entra ID authentication, also set `ARCHESTRA_ANTHROPIC_AZURE_FOUNDRY_ENTRA_ID_ENABLED=true`; Archestra sends a bearer token scoped to `https://ai.azure.com/.default`.

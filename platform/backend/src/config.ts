@@ -587,6 +587,25 @@ const config = {
       azureFoundryEntraIdEnabled:
         process.env.ARCHESTRA_ANTHROPIC_AZURE_FOUNDRY_ENTRA_ID_ENABLED ===
         "true",
+      wif: {
+        enabled:
+          process.env.ARCHESTRA_ANTHROPIC_WIF_ENABLED === "true",
+        /** Path to a file containing the OIDC identity token (e.g. a k8s projected SA token). */
+        identityTokenFile:
+          process.env.ARCHESTRA_ANTHROPIC_WIF_IDENTITY_TOKEN_FILE || "",
+        /** Inline OIDC identity token. Prefer identityTokenFile in production. */
+        identityToken:
+          process.env.ARCHESTRA_ANTHROPIC_WIF_IDENTITY_TOKEN || "",
+        /** Federation rule ID from the Anthropic console. */
+        federationRuleId:
+          process.env.ARCHESTRA_ANTHROPIC_WIF_FEDERATION_RULE_ID || "",
+        /** Organization UUID from the Anthropic console. */
+        organizationId:
+          process.env.ARCHESTRA_ANTHROPIC_WIF_ORGANIZATION_ID || "",
+        /** Optional workspace ID to scope the minted token. */
+        workspaceId:
+          process.env.ARCHESTRA_ANTHROPIC_WIF_WORKSPACE_ID || "",
+      },
     },
     gemini: {
       baseUrl:

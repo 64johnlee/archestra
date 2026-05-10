@@ -6,6 +6,11 @@ import {
   getAzureAiFoundryBearerTokenProvider,
   isAnthropicAzureFoundryEntraIdEnabled,
 } from "@/clients/azure-openai-credentials";
+import {
+  ANTHROPIC_WIF_OAUTH_BETA_HEADER,
+  getAnthropicWifBearerToken,
+  isAnthropicWifEnabled,
+} from "@/clients/anthropic-credentials";
 import config from "@/config";
 import logger from "@/logging";
 import { ModelModel } from "@/models";
@@ -1158,6 +1163,22 @@ export const anthropicAdapterFactory: LLMProvider<
     const token = isAuthToken && apiKey ? apiKey.slice(7) : undefined;
     const regularApiKey = isAuthToken ? undefined : apiKey;
 
+    if (!apiKey && isAnthropicWifEnabled()) {
+      return new AnthropicProvider({
+        apiKey: null,
+        authToken: null,
+        baseURL: options.baseUrl,
+        fetch: createAnthropicWifFetch(customFetch),
+        defaultHeaders: {
+          ...options.defaultHeaders,
+          // The fetch wrapper replaces this sentinel with a fresh WIF access token on every request.
+          Authorization: "Bearer <wif-managed>",
+          // Required for all API calls that use a WIF-minted Bearer token.
+          "anthropic-beta": ANTHROPIC_WIF_OAUTH_BETA_HEADER,
+        },
+      });
+    }
+
     if (!apiKey && isAnthropicAzureFoundryEntraIdEnabled()) {
       return new AnthropicProvider({
         apiKey: null,
@@ -1249,6 +1270,22 @@ function createAnthropicAzureFoundryFetch(
     const tokenProvider = getAzureAiFoundryBearerTokenProvider();
     const headers = new Headers(init?.headers);
     headers.set("Authorization", `Bearer ${await tokenProvider()}`);
+
+    const fetchFn = baseFetch ?? globalThis.fetch;
+    return fetchFn(input, {
+      ...init,
+      headers,
+    });
+  };
+}
+
+function createAnthropicWifFetch(
+  baseFetch: typeof globalThis.fetch | undefined,
+): typeof globalThis.fetch {
+  return async (input, init) => {
+    const token = await getAnthropicWifBearerToken();
+    const headers = new Headers(init?.headers);
+    headers.set("Authorization", `Bearer ${token}`);
 
     const fetchFn = baseFetch ?? globalThis.fetch;
     return fetchFn(input, {

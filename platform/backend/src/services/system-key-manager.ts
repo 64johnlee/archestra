@@ -3,6 +3,7 @@ import {
   isAnthropicAzureFoundryEntraIdEnabled,
   isAzureOpenAiEntraIdEnabled,
 } from "@/clients/azure-openai-credentials";
+import { isAnthropicWifEnabled } from "@/clients/anthropic-credentials";
 import { isAzureAiFoundryBaseUrl } from "@/clients/azure-url";
 import { isBedrockIamAuthEnabled } from "@/clients/bedrock-credentials";
 import { isVertexAiEnabled } from "@/clients/gemini-client";
@@ -68,10 +69,11 @@ class SystemKeyManager {
     },
     {
       provider: "anthropic",
-      name: "Anthropic Azure Foundry Entra ID",
+      name: "Anthropic keyless auth",
       isEnabled: () =>
-        isAnthropicAzureFoundryEntraIdEnabled() &&
-        isAzureAiFoundryBaseUrl(config.llm.anthropic.baseUrl),
+        isAnthropicWifEnabled() ||
+        (isAnthropicAzureFoundryEntraIdEnabled() &&
+          isAzureAiFoundryBaseUrl(config.llm.anthropic.baseUrl)),
       customFetch: async () => {
         const models = await fetchAnthropicModels(
           "",
