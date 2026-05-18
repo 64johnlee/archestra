@@ -88,6 +88,7 @@ const DEFAULT_FORM_VALUES: LlmProviderApiKeyFormValues = {
 const EMBEDDING_DEFAULT_FORM_VALUES: LlmProviderApiKeyFormValues = {
   ...DEFAULT_FORM_VALUES,
 };
+const EMBEDDING_PROVIDERS: (keyof typeof PROVIDER_CONFIG)[] = ["openai", "gemini", "azure"];
 const KNOWLEDGE_MODEL_POPOVER_CLASS =
   "w-max min-w-[var(--radix-popover-trigger-width)] max-w-[min(32rem,calc(100vw-2rem))]";
 const KNOWLEDGE_MODEL_POPOVER_LIST_CLASS =
@@ -199,11 +200,12 @@ function AddApiKeyDialog({
             bedrockIamAuthEnabled={bedrockIamAuthEnabled}
             geminiVertexAiEnabled={geminiVertexAiEnabled}
             hideScopeAndPrimary
+                            allowedProviders={forEmbedding ? EMBEDDING_PROVIDERS : undefined}
           />
         </DialogBody>
         <DialogStickyFooter className="mt-0">
           <Button
-            type="button"
+                            type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
           >
