@@ -79,6 +79,7 @@ import {
   resolveSmartDefaultLlmForChat,
 } from "@/utils/llm-resolution";
 import { estimateMessagesSize } from "@/utils/message-size";
+import { compactMessages } from "./context-compaction";
 import {
   parseMaxInputTokens,
   shouldProbeTextStreamForContextTrimRetry,
@@ -336,13 +337,41 @@ const chatRoutes: FastifyPluginAsyncZod = async (fastify) => {
             providerPreparedMessages as unknown as Omit<UIMessage, "id">[],
           );
 
+          // Proactively compact context when the conversation history grows very large.
+          // On compaction: older messages are replaced with a system-level summary, and
+          // the summary is persisted so subsequent turns don't recompact from scratch.
+          // Compaction failures are non-fatal — the original messages are used instead.
+          let messagesForLLM = modelMessages;
+          const compaction = await compactMessages({
+            messages: modelMessages,
+            model,
+            existingSummary: conversation.contextSummary,
+          }).catch((err) => {
+            logger.warn(
+              { err, conversationId },
+              "Context compaction error, skipping",
+            );
+            return null;
+          });
+          if (compaction) {
+            messagesForLLM = compaction.messages;
+            ConversationModel.update(conversationId, user.id, organizationId, {
+              contextSummary: compaction.summary,
+            }).catch((err) => {
+              logger.warn(
+                { err, conversationId },
+                "Failed to persist context summary",
+              );
+            });
+          }
+
           // Perplexity does NOT support tool calling - it has built-in web search instead
           // @see https://docs.perplexity.ai/api-reference/chat-completions-post
           const supportsToolCalling = provider !== "perplexity";
 
           const streamTextConfig: Parameters<typeof streamText>[0] = {
             model,
-            messages: modelMessages,
+            messages: messagesForLLM,
             ...(supportsToolCalling && { tools: mcpTools }),
             stopWhen: buildChatStopConditions(),
             abortSignal: chatAbortController.signal,

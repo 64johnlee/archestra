@@ -91,4 +91,6 @@ export type UpdateConversationInput = z.infer<typeof UpdateConversationSchema>;
 /** Model-level type (pinnedAt coerced to Date) */
 export type UpdateConversation = Omit<UpdateConversationInput, "pinnedAt"> & {
   pinnedAt?: Date | null;
+  /** Not in the API schema — updated internally by context compaction */
+  contextSummary?: string | null;
 };
